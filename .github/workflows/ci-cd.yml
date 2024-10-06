@@ -30,7 +30,18 @@ jobs:
         poetry install
     - name: Set up test environment
       run: |
-        cp .env.test .env
+        echo "DATABASE_URL=${{ vars.TEST_DATABASE_URL }}" >> .env
+        echo "SECRET_KEY=${{ secrets.DATABASE_SECRET_KEY }}" >> .env
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+        echo "REACT_APP_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> frontend/.env
+        echo "REACT_APP_GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> frontend/.env
+        echo "REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> frontend/.env
+        echo "REACT_APP_FIREBASE_AUTH_DOMAIN=${{ vars.FIREBASE_AUTH_DOMAIN }}" >> frontend/.env
+        echo "REACT_APP_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> frontend/.env
+        echo "REACT_APP_FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> frontend/.env
+        echo "REACT_APP_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}" >> frontend/.env
+        echo "REACT_APP_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}" >> frontend/.env
+        echo "REACT_APP_FIREBASE_MEASUREMENT_ID=${{ secrets.FIREBASE_MEASUREMENT_ID }}" >> frontend/.env
     - name: Run tests
       run: |
         poetry run pytest --cov=app tests/

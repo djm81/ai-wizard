@@ -42,6 +42,16 @@ The application is a Single Page Application (SPA) that interacts with users to 
 
 The frontend communicates with the backend API hosted at `http://localhost:8000/api`. Ensure the backend is running to make API calls.
 
+## Authentication
+
+This application uses Google's Federated Credential Management (FedCM) for user authentication. This allows users with Google accounts to sign in to the app securely and easily.
+
+### Setup
+
+1. Ensure you have a Google Cloud Platform project set up with the necessary credentials.
+2. Configure the OAuth consent screen in the Google Cloud Console.
+3. Create OAuth 2.0 Client IDs for your application.
+
 ## Backend Setup
 
 ### Prerequisites
