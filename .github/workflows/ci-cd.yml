@@ -33,6 +33,7 @@ jobs:
         echo "DATABASE_URL=${{ vars.TEST_DATABASE_URL }}" >> .env
         echo "SECRET_KEY=${{ secrets.DATABASE_SECRET_KEY }}" >> .env
         echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+        echo "${{ secrets.FIREBASE_ADMINSDK_JSON }}" >> app/config/firebase-adminsdk.json
         echo "REACT_APP_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> frontend/.env
         echo "REACT_APP_GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> frontend/.env
         echo "REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> frontend/.env
