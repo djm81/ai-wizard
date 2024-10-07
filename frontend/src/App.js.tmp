@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initializeGoogleAuth, signInWithGoogle, signOut } from './auth/fedcmAuth';
+import Header from './components/Header';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -13,6 +14,7 @@ function App() {
   const handleSignIn = async () => {
     try {
       const user = await signInWithGoogle();
+      console.log('User:', user);
       setUser(user);
     } catch (error) {
       console.error('Error signing in:', error);
@@ -30,6 +32,7 @@ function App() {
 
   return (
     <div className="App">
+      {user && <Header />}
       <header className="App-header">
         {user ? (
           <>

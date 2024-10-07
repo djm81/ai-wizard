@@ -1,8 +1,15 @@
 import React from 'react';
 import { AppBar, Toolbar, Typography, Button } from '@mui/material';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Header: React.FC = () => {
+  const { user, signIn, signOut, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
   return (
     <AppBar position="static">
       <Toolbar>
@@ -12,12 +19,23 @@ const Header: React.FC = () => {
         <Button color="inherit" component={Link} to="/">
           Home
         </Button>
-        <Button color="inherit" component={Link} to="/projects">
-          Projects
-        </Button>
-        <Button color="inherit" component={Link} to="/ai-interactions">
-          AI Interactions
-        </Button>
+        {user ? (
+          <>
+            <Button color="inherit" component={Link} to="/projects">
+              Projects
+            </Button>
+            <Button color="inherit" component={Link} to="/ai-interactions">
+              AI Interactions
+            </Button>
+            <Button color="inherit" onClick={signOut}>
+              Sign Out
+            </Button>
+          </>
+        ) : (
+          <Button color="inherit" onClick={signIn}>
+            Sign In
+          </Button>
+        )}
       </Toolbar>
     </AppBar>
   );

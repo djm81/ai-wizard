@@ -1,7 +1,11 @@
-/* global google */
-
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, signInWithCredential, GoogleAuthProvider, User as FirebaseUser } from 'firebase/auth';
+
+declare global {
+    interface Window {
+        google: any;
+    }
+}
 
 // Initialize Firebase (make sure to replace with your actual config)
 const firebaseConfig = {
@@ -17,9 +21,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-let googleClient;
+interface GoogleClient {
+  requestAccessToken: () => void;
+  access_token?: string;
+}
 
-export function initializeGoogleAuth() {
+let googleClient: GoogleClient | null = null;
+
+export interface User {
+  displayName: string | null;
+  email: string | null;
+  photoURL: string | null;
+  uid: string;
+}
+
+export function initializeGoogleAuth(): Promise<void> {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
@@ -37,30 +53,34 @@ export function initializeGoogleAuth() {
   });
 }
 
-export async function signInWithGoogle() {
-  if (typeof google === 'undefined' || !google.accounts) {
+export async function signInWithGoogle(): Promise<User> {
+  if (typeof window.google === 'undefined' || !window.google.accounts) {
     await initializeGoogleAuth();
   }
 
   return new Promise((resolve, reject) => {
     try {
       console.log('Initializing Google client with Client ID:', process.env.REACT_APP_GOOGLE_CLIENT_ID);
-      googleClient = google.accounts.oauth2.initTokenClient({
-        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+      googleClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID!,
         scope: 'email profile',
-        callback: async (response) => {
+        callback: async (response: { error?: string; access_token?: string }) => {
           if (response.error) {
             console.error('Google Auth Error:', response.error);
             reject(new Error(response.error));
             return;
           }
 
-          console.log('Received access token from Google');
+          console.log('Received access token from Google:', response.access_token);
           try {
             const credential = GoogleAuthProvider.credential(null, response.access_token);
             const userCredential = await signInWithCredential(auth, credential);
             console.log('Successfully signed in with Firebase');
-            resolve(userCredential.user);
+            // Store the access token for later use
+            if (googleClient) {
+              googleClient.access_token = response.access_token;
+            }
+            resolve(convertFirebaseUserToUser(userCredential.user));
           } catch (error) {
             console.error('Error during Google authentication:', error);
             reject(error);
@@ -69,7 +89,11 @@ export async function signInWithGoogle() {
       });
 
       console.log('Requesting access token');
-      googleClient.requestAccessToken();
+      if (googleClient) {
+        googleClient.requestAccessToken();
+      } else {
+        console.error('Google client is null');
+      }    
     } catch (error) {
       console.error('Error initializing Google client:', error);
       reject(error);
@@ -77,18 +101,40 @@ export async function signInWithGoogle() {
   });
 }
 
-export async function signOut() {
+export async function signOut(): Promise<void> {
   try {
     await auth.signOut();
     console.log('Signed out from Firebase');
     // Revoke Google token
-    if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
-      google.accounts.oauth2.revoke(googleClient.access_token, () => {
-        console.log('Google token revoked');
-      });
+    if (typeof window.google !== 'undefined' && window.google.accounts && window.google.accounts.oauth2) {
+      if (googleClient && googleClient.access_token) {
+        window.google.accounts.oauth2.revoke(googleClient.access_token, () => {
+          console.log('Google token revoked');
+        });
+      } else {
+        console.error('No access token available to revoke');
+      }
     }
   } catch (error) {
     console.error('Error signing out:', error);
     throw error;
   }
+}
+
+export async function getIdToken(): Promise<string | null> {
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (user) {
+    return user.getIdToken();
+  }
+  return null;
+}
+
+function convertFirebaseUserToUser(firebaseUser: FirebaseUser): User {
+  return {
+    displayName: firebaseUser.displayName,
+    email: firebaseUser.email,
+    photoURL: firebaseUser.photoURL,
+    uid: firebaseUser.uid
+  };
 }

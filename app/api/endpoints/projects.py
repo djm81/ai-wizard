@@ -4,6 +4,7 @@ from app.services.auth_service import AuthService
 from app.schemas.project import ProjectCreate, ProjectUpdate, Project
 from app.schemas.ai_interaction import AIInteractionCreate, AIInteraction
 from app.models.user import User
+from app.api.auth import get_current_user
 
 router = APIRouter()
 
@@ -49,3 +50,8 @@ def read_project_interactions(project_id: int, current_user: User = Depends(Auth
     if db_project.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view interactions for this project")
     return project_service.get_project_interactions(project_id)
+
+@router.get("/", response_model=list[Project])
+def get_projects(current_user: dict = Depends(get_current_user)):
+    # Implementierung hier
+    pass
