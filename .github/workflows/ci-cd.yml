@@ -33,6 +33,7 @@ jobs:
         echo "DATABASE_URL=${{ vars.TEST_DATABASE_URL }}" >> .env
         echo "SECRET_KEY=${{ secrets.DATABASE_SECRET_KEY }}" >> .env
         echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+        cp .env .env.test
         echo "${{ secrets.FIREBASE_ADMINSDK_JSON }}" >> app/config/firebase-adminsdk.json
         echo "REACT_APP_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> frontend/.env
         echo "REACT_APP_GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> frontend/.env
@@ -43,6 +44,7 @@ jobs:
         echo "REACT_APP_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}" >> frontend/.env
         echo "REACT_APP_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}" >> frontend/.env
         echo "REACT_APP_FIREBASE_MEASUREMENT_ID=${{ secrets.FIREBASE_MEASUREMENT_ID }}" >> frontend/.env
+        cp frontend/.env frontend/.env.test
     - name: Run tests
       run: |
         poetry run pytest --cov=app tests/
