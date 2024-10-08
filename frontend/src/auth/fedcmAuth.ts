@@ -22,7 +22,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 interface GoogleClient {
-  requestAccessToken: () => void;
+  requestAccessToken: (options: { callback: (response: { error?: string; access_token?: string }) => void }) => void;
   access_token?: string;
 }
 
@@ -61,7 +61,7 @@ export async function signInWithGoogle(): Promise<User> {
   return new Promise((resolve, reject) => {
     try {
       console.log('Initializing Google client with Client ID:', process.env.REACT_APP_GOOGLE_CLIENT_ID);
-      googleClient = window.google.accounts.oauth2.initTokenClient({
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID!,
         scope: 'email profile',
         callback: async (response: { error?: string; access_token?: string }) => {
@@ -77,9 +77,10 @@ export async function signInWithGoogle(): Promise<User> {
             const userCredential = await signInWithCredential(auth, credential);
             console.log('Successfully signed in with Firebase');
             // Store the access token for later use
-            if (googleClient) {
-              googleClient.access_token = response.access_token;
-            }
+            googleClient = {
+              requestAccessToken: tokenClient.requestAccessToken,
+              access_token: response.access_token
+            };
             resolve(convertFirebaseUserToUser(userCredential.user));
           } catch (error) {
             console.error('Error during Google authentication:', error);
@@ -89,11 +90,7 @@ export async function signInWithGoogle(): Promise<User> {
       });
 
       console.log('Requesting access token');
-      if (googleClient) {
-        googleClient.requestAccessToken();
-      } else {
-        console.error('Google client is null');
-      }    
+      tokenClient.requestAccessToken();
     } catch (error) {
       console.error('Error initializing Google client:', error);
       reject(error);

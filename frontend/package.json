@@ -3,29 +3,38 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@emotion/react": "^11.11.0",
+    "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
-    "@mui/icons-material": "^6.1.2",
-    "@mui/material": "^6.1.2",
+    "@mui/icons-material": "^5.14.3",
+    "@mui/material": "^5.14.5",
     "axios": "^1.4.0",
-    "concurrently": "^9.0.1",
-    "cookie": "^0.7.1",
-    "firebase": "^10.14.0",
+    "concurrently": "^8.2.0",
+    "cookie": "^0.5.0",
+    "firebase": "^10.1.0",
     "nth-check": "^2.1.1",
-    "postcss": "^8.4.47",
+    "postcss": "^8.4.27",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.11.1",
-    "react-scripts": "^5.0.1",
+    "react-router-dom": "^6.15.0",
+    "react-scripts": "5.0.1",
     "resolve-url-loader": "^5.0.0",
-    "typescript": "^4.9.5",
-    "webpack-dev-server": "^5.1.0"
+    "typescript": "^4.9.5"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@babel/plugin-transform-private-property-in-object": "^7.25.7",
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^14.0.0",
+    "@types/jest": "^29.5.3",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7"
   },
   "scripts": {
-    "start": "HTTPS=false SSL_CRT_FILE=.ssl/localhost.cert SSL_KEY_FILE=.ssl/localhost.key react-scripts start",
+    "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "test": "node --trace-deprecation ./node_modules/.bin/react-scripts test",
+    "eject": "react-scripts eject",
+    "test:coverage": "node --trace-deprecation ./node_modules/.bin/react-scripts test --coverage --watchAll=false"
   },
   "eslintConfig": {
     "extends": [
@@ -45,5 +54,11 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:8000"
+  "proxy": "http://localhost:8000",
+  "jest": {
+    "moduleNameMapper": {
+      "^axios$": "axios/dist/node/axios.cjs"
+    },
+    "transformIgnorePatterns": ["node_modules\/(?!axios)"]
+  }
 }

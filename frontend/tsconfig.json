@@ -1,13 +1,20 @@
 {
     "compilerOptions": {
       "target": "es5", // Specify ECMAScript target version
-      "module": "commonjs", // Specify module code generation
-      "jsx": "react", // Specify JSX code generation
-      "strict": true, // Enable all strict type-checking options
-      "esModuleInterop": true, // Enables emit interoperability between CommonJS and ES Modules
+      "lib": ["dom", "dom.iterable", "esnext"], // Specify libraries for DOM and ESNext
+      "allowJs": true, // Allow JavaScript files to be compiled
       "skipLibCheck": true, // Skip type checking of declaration files
-      "forceConsistentCasingInFileNames": true // Disallow inconsistently-cased references to the same file
+      "esModuleInterop": true, // Enables emit interoperability between CommonJS and ES Modules
+      "allowSyntheticDefaultImports": true, // Allow default imports from modules with no default export
+      "strict": true, // Enable all strict type-checking options
+      "forceConsistentCasingInFileNames": true, // Disallow inconsistently-cased references to the same file
+      "noFallthroughCasesInSwitch": true, // Disallow fallthrough cases in switch statements
+      "module": "esnext", // Specify module code generation
+      "moduleResolution": "node", // Specify module resolution strategy
+      "resolveJsonModule": true, // Enable resolving JSON modules
+      "isolatedModules": true, // Enable isolated module compilation
+      "noEmit": true, // Disable emitting output files
+      "jsx": "react-jsx" // Specify JSX code generation
     },
-    "include": ["src/**/*"], // Include all files in the src directory
-    "exclude": ["node_modules"] // Exclude node_modules
+    "include": ["src"] // Include all files in the src directory
   }
