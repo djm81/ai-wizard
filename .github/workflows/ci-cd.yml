@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  AWS_REGION: eu-west-1  # Changed from us-west-2 to eu-west-1
+  AWS_REGION: eu-west-1
   ECR_REPOSITORY: ai-wizard
   ECS_SERVICE: ai-wizard-service
   ECS_CLUSTER: ai-wizard-cluster
@@ -18,9 +18,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
     - name: Install dependencies
@@ -65,10 +65,10 @@ jobs:
       image: ${{ steps.build-image.outputs.image }}
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -77,7 +77,7 @@ jobs:
     
     - name: Login to Amazon ECR
       id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+      uses: aws-actions/amazon-ecr-login@v2
       with:
         mask-password: 'true'
 
@@ -124,7 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -194,23 +194,11 @@ jobs:
           echo "status=failure" >> $GITHUB_OUTPUT
         fi
 
-    - name: Notify Slack on success
-      if: steps.check.outputs.status == 'success'
+    - name: Notify Slack
       uses: 8398a7/action-slack@v3
       with:
-        status: ${{ job.status }}
-        text: "Deployment succeeded! :rocket:"
-        fields: repo,message,commit,author,action,eventName,ref,workflow
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-    
-    - name: Notify Slack on failure
-      if: steps.check.outputs.status == 'failure'
-      uses: 8398a7/action-slack@v3
-      with:
-        status: ${{ job.status }}
-        text: "Deployment failed! :x:"
+        status: ${{ steps.check.outputs.status }}
+        text: ${{ steps.check.outputs.status == 'success' && 'Deployment succeeded! :rocket:' || 'Deployment failed! :x:' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
