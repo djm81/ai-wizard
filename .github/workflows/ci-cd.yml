@@ -197,6 +197,21 @@ jobs:
         container-name: ${{ env.CONTAINER_NAME }}
         image: ${{ needs.build-and-push.outputs.image }}
     
+    - name: Create ECS service if not exists
+      run: |
+        if ! aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'services[0].[serviceName]' --output text | grep -q ${{ env.ECS_SERVICE }}; then
+          echo "ECS service not found. Creating a new one..."
+          aws ecs create-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service-name ${{ env.ECS_SERVICE }} \
+            --task-definition ${{ steps.task-def.outputs.task-definition }} \
+            --desired-count 1 \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-12345678],securityGroups=[sg-87654321]}"
+        else
+          echo "ECS service ${{ env.ECS_SERVICE }} already exists."
+        fi
+    
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
