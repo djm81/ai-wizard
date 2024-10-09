@@ -142,24 +142,20 @@ jobs:
           echo "ECS cluster ${{ env.ECS_CLUSTER }} already exists."
         fi
 
-    - name: Download or create task definition
+    - name: Create or update task definition
       run: |
-        # Try to get the existing task definition
-        if ! aws ecs describe-task-definition --task-definition ai-wizard --query taskDefinition > task-definition.json; then
-          echo "Task definition not found. Creating a new one."
-          
-          # Create ECS task execution role if it doesn't exist
-          if ! aws iam get-role --role-name $ROLE_NAME > /dev/null 2>&1; then
-            echo "Creating ECS task execution role..."
-            aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-            aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-          fi
-          
-          # Get the role ARN
-          EXECUTION_ROLE_ARN=$(aws iam get-role --role-name $ROLE_NAME --query Role.Arn --output text)
-          
-          # Create the task definition JSON
-          cat <<EOF > task-definition.json
+        # Create ECS task execution role if it doesn't exist
+        if ! aws iam get-role --role-name $ROLE_NAME > /dev/null 2>&1; then
+          echo "Creating ECS task execution role..."
+          aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+          aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        fi
+        
+        # Get the role ARN
+        EXECUTION_ROLE_ARN=$(aws iam get-role --role-name $ROLE_NAME --query Role.Arn --output text)
+        
+        # Create the task definition JSON
+        cat <<EOF > task-definition.json
         {
           "family": "ai-wizard",
           "executionRoleArn": "$EXECUTION_ROLE_ARN",
@@ -187,16 +183,19 @@ jobs:
           "memory": "512"
         }
         EOF
-        fi
+
+        # Register the task definition
+        aws ecs register-task-definition --cli-input-json file://task-definition.json
     
-    - name: Fill in the new image ID in the Amazon ECS task definition
-      id: task-def
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
-      with:
-        task-definition: task-definition.json
-        container-name: ${{ env.CONTAINER_NAME }}
-        image: ${{ needs.build-and-push.outputs.image }}
-    
+    - name: Get VPC and Subnet IDs
+      run: |
+        VPC_ID=$(aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --query "Vpcs[0].VpcId" --output text)
+        SUBNET_ID=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --query "Subnets[0].SubnetId" --output text)
+        SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --query "SecurityGroups[0].GroupId" --output text)
+        echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
+        echo "SUBNET_ID=$SUBNET_ID" >> $GITHUB_ENV
+        echo "SECURITY_GROUP_ID=$SECURITY_GROUP_ID" >> $GITHUB_ENV
+
     - name: Create ECS service if not exists
       run: |
         if ! aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'services[0].[serviceName]' --output text | grep -q ${{ env.ECS_SERVICE }}; then
@@ -204,21 +203,21 @@ jobs:
           aws ecs create-service \
             --cluster ${{ env.ECS_CLUSTER }} \
             --service-name ${{ env.ECS_SERVICE }} \
-            --task-definition ${{ steps.task-def.outputs.task-definition }} \
+            --task-definition ai-wizard \
             --desired-count 1 \
             --launch-type FARGATE \
-            --network-configuration "awsvpcConfiguration={subnets=[subnet-12345678],securityGroups=[sg-87654321]}"
+            --network-configuration "awsvpcConfiguration={subnets=[${{ env.SUBNET_ID }}],securityGroups=[${{ env.SECURITY_GROUP_ID }}]}"
         else
           echo "ECS service ${{ env.ECS_SERVICE }} already exists."
         fi
     
-    - name: Deploy Amazon ECS task definition
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ${{ env.ECS_SERVICE }}
-        cluster: ${{ env.ECS_CLUSTER }}
-        wait-for-service-stability: true
+    - name: Update ECS service
+      run: |
+        aws ecs update-service \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --service ${{ env.ECS_SERVICE }} \
+          --task-definition ai-wizard \
+          --force-new-deployment
 
   notify:
     needs: [test, build-and-push, deploy]
