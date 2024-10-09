@@ -131,11 +131,37 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
         mask-aws-account-id: 'false'
     
-    - name: Download task definition
+    - name: Download or create task definition
       run: |
         if ! aws ecs describe-task-definition --task-definition ai-wizard --query taskDefinition > task-definition.json; then
-          echo "Failed to describe task definition"
-          exit 1
+          echo "Task definition not found. Creating a new one."
+          cat <<EOF > task-definition.json
+          {
+            "family": "ai-wizard",
+            "containerDefinitions": [
+              {
+                "name": "${{ env.CONTAINER_NAME }}",
+                "image": "${{ needs.build-and-push.outputs.image }}",
+                "cpu": 256,
+                "memory": 512,
+                "portMappings": [
+                  {
+                    "containerPort": 8000,
+                    "hostPort": 8000,
+                    "protocol": "tcp"
+                  }
+                ],
+                "essential": true
+              }
+            ],
+            "requiresCompatibilities": [
+              "FARGATE"
+            ],
+            "networkMode": "awsvpc",
+            "cpu": "256",
+            "memory": "512"
+          }
+          EOF
         fi
     
     - name: Fill in the new image ID in the Amazon ECS task definition
