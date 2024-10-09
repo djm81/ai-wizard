@@ -17,8 +17,9 @@ RUN pip install poetry==1.8.3 && \
 # Copy only the backend files, excluding the frontend folder
 COPY app app
 COPY tests tests
-COPY alembic.ini .
-COPY .env .
+# COPY alembic.ini .
+# COPY .env .
+# COPY migrations migrations
 COPY .env.* .
 COPY LICENSE README.md ./
 
