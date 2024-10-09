@@ -20,7 +20,6 @@ COPY tests tests
 COPY alembic.ini .
 COPY .env .
 COPY .env.* .
-COPY migrations migrations
 COPY LICENSE README.md ./
 
 # Change to the non-root user
