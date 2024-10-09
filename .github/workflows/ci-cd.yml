@@ -135,33 +135,33 @@ jobs:
       run: |
         if ! aws ecs describe-task-definition --task-definition ai-wizard --query taskDefinition > task-definition.json; then
           echo "Task definition not found. Creating a new one."
-          cat <<EOF > task-definition.json
-          {
-            "family": "ai-wizard",
-            "containerDefinitions": [
-              {
-                "name": "${{ env.CONTAINER_NAME }}",
-                "image": "${{ needs.build-and-push.outputs.image }}",
-                "cpu": 256,
-                "memory": 512,
-                "portMappings": [
-                  {
-                    "containerPort": 8000,
-                    "hostPort": 8000,
-                    "protocol": "tcp"
-                  }
-                ],
-                "essential": true
-              }
-            ],
-            "requiresCompatibilities": [
-              "FARGATE"
-            ],
-            "networkMode": "awsvpc",
-            "cpu": "256",
-            "memory": "512"
-          }
-          EOF
+          cat <<'EOF' > task-definition.json
+        {
+          "family": "ai-wizard",
+          "containerDefinitions": [
+            {
+              "name": "${{ env.CONTAINER_NAME }}",
+              "image": "${{ needs.build-and-push.outputs.image }}",
+              "cpu": 256,
+              "memory": 512,
+              "portMappings": [
+                {
+                  "containerPort": 8000,
+                  "hostPort": 8000,
+                  "protocol": "tcp"
+                }
+              ],
+              "essential": true
+            }
+          ],
+          "requiresCompatibilities": [
+            "FARGATE"
+          ],
+          "networkMode": "awsvpc",
+          "cpu": "256",
+          "memory": "512"
+        }
+        EOF
         fi
     
     - name: Fill in the new image ID in the Amazon ECS task definition
@@ -185,8 +185,17 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
+    - name: Check job status
+      id: check
+      run: |
+        if [[ ${{ needs.test.result }} == 'success' && ${{ needs.build-and-push.result }} == 'success' && ${{ needs.deploy.result }} == 'success' ]]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "status=failure" >> $GITHUB_OUTPUT
+        fi
+
     - name: Notify Slack on success
-      if: success()
+      if: steps.check.outputs.status == 'success'
       uses: 8398a7/action-slack@v3
       with:
         status: ${{ job.status }}
@@ -197,7 +206,7 @@ jobs:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     
     - name: Notify Slack on failure
-      if: failure()
+      if: steps.check.outputs.status == 'failure'
       uses: 8398a7/action-slack@v3
       with:
         status: ${{ job.status }}
