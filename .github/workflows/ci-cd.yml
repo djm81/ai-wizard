@@ -83,6 +83,8 @@ jobs:
 
     - name: Check ECR Login
       run: |
+        echo "ECR Registry: ${{ steps.login-ecr.outputs.registry }}"
+        echo "ECR Login Output: ${{ steps.login-ecr.outputs.login }}"
         if [ -z "${{ steps.login-ecr.outputs.registry }}" ]; then
           echo "ECR login failed"
           exit 1
@@ -96,6 +98,10 @@ jobs:
             exit 1
           }
         fi
+
+    - name: Verify Docker Configuration
+      run: |
+        cat ~/.docker/config.json
 
     - name: Build, tag, and push image to Amazon ECR
       id: build-image
