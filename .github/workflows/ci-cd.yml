@@ -133,6 +133,11 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
         mask-aws-account-id: 'false'
     
+    - name: Get AWS account ID
+      run: |
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+        echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
+
     - name: Create ECS cluster if not exists
       run: |
         if ! aws ecs describe-clusters --clusters ${{ env.ECS_CLUSTER }} --query 'clusters[0].[clusterName]' --output text | grep -q ${{ env.ECS_CLUSTER }}; then
@@ -172,7 +177,15 @@ jobs:
                   "protocol": "tcp"
                 }
               ],
-              "essential": true
+              "essential": true,
+              "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                  "awslogs-group": "/ecs/ai-wizard",
+                  "awslogs-region": "${{ env.AWS_REGION }}",
+                  "awslogs-stream-prefix": "ecs"
+                }
+              }
             }
           ],
           "requiresCompatibilities": [
@@ -187,6 +200,45 @@ jobs:
         # Register the task definition
         aws ecs register-task-definition --cli-input-json file://task-definition.json
     
+    - name: Set up CloudWatch logging
+      run: |
+        # Create CloudWatch log group if it doesn't exist
+        if ! aws logs describe-log-groups --log-group-name-prefix "/ecs/ai-wizard" | grep -q "/ecs/ai-wizard"; then
+          aws logs create-log-group --log-group-name "/ecs/ai-wizard"
+          # Set retention policy to 14 days for cost efficiency
+          aws logs put-retention-policy --log-group-name "/ecs/ai-wizard" --retention-in-days 14
+        fi
+
+    - name: Set up CloudWatch alarms
+      run: |
+        # Create CPU utilization alarm
+        aws cloudwatch put-metric-alarm \
+          --alarm-name "AI-Wizard-High-CPU" \
+          --alarm-description "Alarm when CPU exceeds 70% for 5 minutes" \
+          --metric-name CPUUtilization \
+          --namespace AWS/ECS \
+          --statistic Average \
+          --period 300 \
+          --threshold 70 \
+          --comparison-operator GreaterThanThreshold \
+          --dimensions Name=ClusterName,Value=${{ env.ECS_CLUSTER }} Name=ServiceName,Value=${{ env.ECS_SERVICE }} \
+          --evaluation-periods 1 \
+          --alarm-actions arn:aws:sns:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:AI-Wizard-Alerts
+
+        # Create memory utilization alarm
+        aws cloudwatch put-metric-alarm \
+          --alarm-name "AI-Wizard-High-Memory" \
+          --alarm-description "Alarm when memory exceeds 70% for 5 minutes" \
+          --metric-name MemoryUtilization \
+          --namespace AWS/ECS \
+          --statistic Average \
+          --period 300 \
+          --threshold 70 \
+          --comparison-operator GreaterThanThreshold \
+          --dimensions Name=ClusterName,Value=${{ env.ECS_CLUSTER }} Name=ServiceName,Value=${{ env.ECS_SERVICE }} \
+          --evaluation-periods 1 \
+          --alarm-actions arn:aws:sns:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:AI-Wizard-Alerts
+
     - name: Get VPC and Subnet IDs
       run: |
         VPC_ID=$(aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --query "Vpcs[0].VpcId" --output text)
