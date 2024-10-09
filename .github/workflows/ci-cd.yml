@@ -133,6 +133,15 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
         mask-aws-account-id: 'false'
     
+    - name: Create ECS cluster if not exists
+      run: |
+        if ! aws ecs describe-clusters --clusters ${{ env.ECS_CLUSTER }} --query 'clusters[0].[clusterName]' --output text | grep -q ${{ env.ECS_CLUSTER }}; then
+          echo "ECS cluster not found. Creating a new one..."
+          aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER }} --capacity-providers FARGATE
+        else
+          echo "ECS cluster ${{ env.ECS_CLUSTER }} already exists."
+        fi
+
     - name: Download or create task definition
       run: |
         # Try to get the existing task definition
