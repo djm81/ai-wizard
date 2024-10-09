@@ -64,31 +64,53 @@ jobs:
     outputs:
       image: ${{ steps.build-image.outputs.image }}
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout repo
+      uses: actions/checkout@v3
     
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
+        mask-aws-account-id: 'false'
     
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
+      with:
+        mask-password: 'true'
+
+    - name: Check ECR Login
+      run: |
+        if [ -z "${{ steps.login-ecr.outputs.registry }}" ]; then
+          echo "ECR login failed"
+          exit 1
+        fi
     
     - name: Create ECR repository if not exists
       run: |
-        aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" || aws ecr create-repository --repository-name "${ECR_REPOSITORY}"
-    
+        if ! aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" --region ${{ env.AWS_REGION }}; then
+          aws ecr create-repository --repository-name "${ECR_REPOSITORY}" --region ${{ env.AWS_REGION }} --image-scanning-configuration scanOnPush=true --tags Key=Environment,Value=Production || {
+            echo "Failed to create ECR repository"
+            exit 1
+          }
+        fi
+
     - name: Build, tag, and push image to Amazon ECR
       id: build-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        if ! docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .; then
+          echo "Docker build failed"
+          exit 1
+        fi
+        if ! docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG; then
+          echo "Docker push failed"
+          exit 1
+        fi
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   deploy:
@@ -96,16 +118,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
+        mask-aws-account-id: 'false'
     
     - name: Download task definition
       run: |
-        aws ecs describe-task-definition --task-definition ai-wizard \
-        --query taskDefinition > task-definition.json
+        if ! aws ecs describe-task-definition --task-definition ai-wizard --query taskDefinition > task-definition.json; then
+          echo "Failed to describe task definition"
+          exit 1
+        fi
     
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
