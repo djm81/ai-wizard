@@ -248,6 +248,48 @@ jobs:
         echo "SUBNET_ID=$SUBNET_ID" >> $GITHUB_ENV
         echo "SECURITY_GROUP_ID=$SECURITY_GROUP_ID" >> $GITHUB_ENV
 
+    - name: Get or create SSL certificate
+      run: |
+        DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
+        CERT_ARN=$(aws acm list-certificates --query "CertificateSummaryList[?DomainName=='$DOMAIN_NAME'].CertificateArn" --output text)
+        if [ -z "$CERT_ARN" ]; then
+          echo "Certificate not found. Creating a new one..."
+          CERT_ARN=$(aws acm request-certificate \
+            --domain-name $DOMAIN_NAME \
+            --validation-method DNS \
+            --query 'CertificateArn' \
+            --output text)
+          
+          # Wait for the certificate details to be available
+          sleep 10
+          
+          # Get the DNS validation record
+          DNS_VALIDATION=$(aws acm describe-certificate --certificate-arn $CERT_ARN --query 'Certificate.DomainValidationOptions[0].ResourceRecord' --output text)
+          DNS_NAME=$(echo $DNS_VALIDATION | cut -f1 -d' ')
+          DNS_VALUE=$(echo $DNS_VALIDATION | cut -f2 -d' ')
+          
+          # Create the DNS validation record in Route53
+          aws route53 change-resource-record-sets \
+            --hosted-zone-id ${{ secrets.ROUTE53_HOSTED_ZONE_ID }} \
+            --change-batch '{
+              "Changes": [{
+                "Action": "UPSERT",
+                "ResourceRecordSet": {
+                  "Name": "'$DNS_NAME'",
+                  "Type": "CNAME",
+                  "TTL": 300,
+                  "ResourceRecords": [{"Value": "'$DNS_VALUE'"}]
+                }
+              }]
+            }'
+          
+          echo "Certificate created. Waiting for validation..."
+          aws acm wait certificate-validated --certificate-arn $CERT_ARN
+        else
+          echo "Certificate found."
+        fi
+        echo "CERT_ARN=$CERT_ARN" >> $GITHUB_ENV
+
     - name: Create ALB if not exists
       run: |
         ALB_ARN=$(aws elbv2 describe-load-balancers --names ai-wizard-alb --query 'LoadBalancers[0].LoadBalancerArn' --output text)
@@ -273,9 +315,18 @@ jobs:
           
           aws elbv2 create-listener \
             --load-balancer-arn $ALB_ARN \
+            --protocol HTTPS \
+            --port 443 \
+            --certificates CertificateArn=${{ env.CERT_ARN }} \
+            --ssl-policy ELBSecurityPolicy-2016-08 \
+            --default-actions Type=forward,TargetGroupArn=$TG_ARN
+
+          # Optional: Create HTTP listener that redirects to HTTPS
+          aws elbv2 create-listener \
+            --load-balancer-arn $ALB_ARN \
             --protocol HTTP \
             --port 80 \
-            --default-actions Type=forward,TargetGroupArn=$TG_ARN
+            --default-actions "Type=redirect,RedirectConfig={Protocol=HTTPS,Port=443,StatusCode=HTTP_301}"
         else
           echo "ALB already exists."
           TG_ARN=$(aws elbv2 describe-target-groups \
@@ -312,10 +363,29 @@ jobs:
           --network-configuration "awsvpcConfiguration={subnets=[${{ env.SUBNET_ID }}],securityGroups=[${{ env.SECURITY_GROUP_ID }}],assignPublicIp=ENABLED}" \
           --load-balancers "targetGroupArn=${{ env.TG_ARN }},containerName=${{ env.CONTAINER_NAME }},containerPort=8000"
 
-    - name: Get ALB DNS Name
+    - name: Update Route53 DNS record
       run: |
         ALB_DNS=$(aws elbv2 describe-load-balancers --names ai-wizard-alb --query 'LoadBalancers[0].DNSName' --output text)
-        echo "Your application is accessible at: http://$ALB_DNS"
+        aws route53 change-resource-record-sets \
+          --hosted-zone-id ${{ secrets.ROUTE53_HOSTED_ZONE_ID }} \
+          --change-batch '{
+            "Changes": [{
+              "Action": "UPSERT",
+              "ResourceRecordSet": {
+                "Name": "${{ secrets.DOMAIN_NAME }}",
+                "Type": "A",
+                "AliasTarget": {
+                  "HostedZoneId": "Z32O12XQLNTSW2",
+                  "DNSName": "'$ALB_DNS'",
+                  "EvaluateTargetHealth": true
+                }
+              }
+            }]
+          }'
+
+    - name: Output application URL
+      run: |
+        echo "Your application is accessible at: https://${{ secrets.DOMAIN_NAME }}"
 
   notify:
     needs: [test, build-and-push, deploy]
@@ -331,11 +401,19 @@ jobs:
           echo "status=failure" >> $GITHUB_OUTPUT
         fi
 
+    - name: Get ALB DNS Name
+      if: steps.check.outputs.status == 'success'
+      run: |
+        ALB_DNS=$(aws elbv2 describe-load-balancers --names ai-wizard-alb --query 'LoadBalancers[0].DNSName' --output text)
+        echo "ALB_DNS=$ALB_DNS" >> $GITHUB_ENV
+
     - name: Notify Slack
       uses: 8398a7/action-slack@v3
       with:
         status: ${{ steps.check.outputs.status }}
-        text: ${{ steps.check.outputs.status == 'success' && 'Deployment succeeded! :rocket:' || 'Deployment failed! :x:' }}
+        text: |
+          ${{ steps.check.outputs.status == 'success' && 'Deployment succeeded! :rocket:' || 'Deployment failed! :x:' }}
+          ${{ steps.check.outputs.status == 'success' && format('Application is accessible at: https://{0}', secrets.DOMAIN_NAME) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
