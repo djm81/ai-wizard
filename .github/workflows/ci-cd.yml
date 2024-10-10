@@ -28,24 +28,28 @@ jobs:
         python -m pip install --upgrade pip
         pip install poetry
         poetry install
+      working-directory: backend
     - name: Set up test environment
       run: |
         echo "DATABASE_URL=${{ vars.TEST_DATABASE_URL }}" >> .env
         echo "SECRET_KEY=${{ secrets.DATABASE_SECRET_KEY }}" >> .env
         echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
         cp .env .env.test
-        cat <<EOF >> backend/app/config/firebase-adminsdk.json
+        cat <<EOF >> app/config/firebase-adminsdk.json
         ${{ secrets.FIREBASE_ADMINSDK_JSON }}
         EOF
+      working-directory: backend
     - name: Run tests
       run: |
         poetry run pytest --cov=app tests/
+      working-directory: backend
     - name: Upload coverage data to coveralls.io
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         pip install coveralls
         coveralls --service=github
+      working-directory: backend
 
   build-and-push:
     needs: test
@@ -99,7 +103,7 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        if ! docker build -f backend/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .; then
+        if ! docker build -f Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .; then
           echo "Docker build failed"
           exit 1
         fi
@@ -163,15 +167,14 @@ jobs:
 
     - name: Terraform Init
       run: |
-        cd backend
         terraform init \
           -backend-config="bucket=${TF_STATE_BUCKET}" \
           -backend-config="key=terraform.tfstate" \
           -backend-config="region=${{ vars.TF_VAR_aws_region }}"
+      working-directory: backend
 
     - name: Terraform Plan
       run: |
-        cd backend
         terraform plan \
           -var="aws_region=${{ vars.TF_VAR_aws_region }}" \
           -var="postgres_db_username=${{ secrets.POSTGRES_DB_USERNAME }}" \
@@ -181,16 +184,17 @@ jobs:
           -var="route53_zone_id=${{ secrets.ROUTE53_HOSTED_ZONE_ID }}" \
           -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
           -out=tfplan
+      working-directory: backend
 
     - name: Terraform Apply
       run: |
-        cd backend
         terraform apply -auto-approve tfplan
+      working-directory: backend
 
     - name: Output application URL
       run: |
-        cd backend
         echo "Your application is accessible at: https://$(terraform output -raw domain_name)"
+      working-directory: backend
 
   notify:
     needs: [test, build-and-push, deploy]
