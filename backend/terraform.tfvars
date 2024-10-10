@@ -1,4 +1,6 @@
-aws_region         = "eu-west-1"
+# Remove or comment out the aws_region line, as it will be provided by the GitHub variable
+# aws_region         = "eu-west-1"
+
 environment        = "prod"
 vpc_cidr           = "10.0.0.0/16"
 ecs_task_cpu       = 256

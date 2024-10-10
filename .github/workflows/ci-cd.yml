@@ -7,12 +7,12 @@ on:
     branches: [ main ]
 
 env:
-  AWS_REGION: eu-west-1
   ECR_REPOSITORY: ai-wizard
   ECS_SERVICE: ai-wizard-service
   ECS_CLUSTER: ai-wizard-cluster
   ECS_TASK_DEFINITION: .aws/task-definition.json
   CONTAINER_NAME: ai-wizard
+  TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_aws_region }}
 
 jobs:
   test:
@@ -62,7 +62,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+        aws-region: ${{ vars.TF_VAR_aws_region }}
         mask-aws-account-id: 'false'
     
     - name: Login to Amazon ECR
@@ -82,8 +82,8 @@ jobs:
     
     - name: Create ECR repository if not exists
       run: |
-        if ! aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" --region ${{ env.AWS_REGION }}; then
-          aws ecr create-repository --repository-name "${ECR_REPOSITORY}" --region ${{ env.AWS_REGION }} --image-scanning-configuration scanOnPush=true --tags Key=Environment,Value=Production || {
+        if ! aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" --region ${{ vars.TF_VAR_aws_region }}; then
+          aws ecr create-repository --repository-name "${ECR_REPOSITORY}" --region ${{ vars.TF_VAR_aws_region }} --image-scanning-configuration scanOnPush=true --tags Key=Environment,Value=Production || {
             echo "Failed to create ECR repository"
             exit 1
           }
@@ -112,8 +112,6 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    env:
-      TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.AWS_REGION }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -123,7 +121,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+        aws-region: ${{ vars.TF_VAR_aws_region }}
         mask-aws-account-id: 'false'
     
     - name: Get AWS account ID
@@ -139,8 +137,8 @@ jobs:
           echo "Creating Terraform state bucket"
           aws s3api create-bucket \
             --bucket ${TF_STATE_BUCKET} \
-            --region ${AWS_REGION} \
-            --create-bucket-configuration LocationConstraint=${AWS_REGION}
+            --region ${{ vars.TF_VAR_aws_region }} \
+            --create-bucket-configuration LocationConstraint=${{ vars.TF_VAR_aws_region }}
           
           # Enable versioning
           aws s3api put-bucket-versioning \
@@ -169,13 +167,13 @@ jobs:
         terraform init \
           -backend-config="bucket=${TF_STATE_BUCKET}" \
           -backend-config="key=terraform.tfstate" \
-          -backend-config="region=${{ env.AWS_REGION }}"
+          -backend-config="region=${{ vars.TF_VAR_aws_region }}"
 
     - name: Terraform Plan
       run: |
         cd backend
         terraform plan \
-          -var="aws_region=${{ env.AWS_REGION }}" \
+          -var="aws_region=${{ vars.TF_VAR_aws_region }}" \
           -var="postgres_db_username=${{ secrets.POSTGRES_DB_USERNAME }}" \
           -var="postgres_db_password=${{ secrets.POSTGRES_DB_PASSWORD }}" \
           -var="db_secret_key=${{ secrets.DATABASE_SECRET_KEY }}" \
