@@ -242,10 +242,10 @@ jobs:
     - name: Get VPC and Subnet IDs
       run: |
         VPC_ID=$(aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --query "Vpcs[0].VpcId" --output text)
-        SUBNET_ID=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --query "Subnets[0].SubnetId" --output text)
+        SUBNET_IDS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --query "Subnets[?MapPublicIpOnLaunch==`true`].SubnetId" --output text | tr '\t' ' ' | cut -d' ' -f1,2)
         SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --query "SecurityGroups[0].GroupId" --output text)
         echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
-        echo "SUBNET_ID=$SUBNET_ID" >> $GITHUB_ENV
+        echo "SUBNET_IDS=$SUBNET_IDS" >> $GITHUB_ENV
         echo "SECURITY_GROUP_ID=$SECURITY_GROUP_ID" >> $GITHUB_ENV
 
     - name: Get or create SSL certificate
@@ -299,7 +299,7 @@ jobs:
           echo "ALB not found. Creating a new one..."
           ALB_ARN=$(aws elbv2 create-load-balancer \
             --name ai-wizard-alb \
-            --subnets ${{ env.SUBNET_ID }} \
+            --subnets ${{ env.SUBNET_IDS }} \
             --security-groups ${{ env.SECURITY_GROUP_ID }} \
             --scheme internet-facing \
             --type application \
@@ -349,7 +349,7 @@ jobs:
             --task-definition ai-wizard \
             --desired-count 1 \
             --launch-type FARGATE \
-            --network-configuration "awsvpcConfiguration={subnets=[${{ env.SUBNET_ID }}],securityGroups=[${{ env.SECURITY_GROUP_ID }}],assignPublicIp=ENABLED}" \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ env.SUBNET_IDS }}],securityGroups=[${{ env.SECURITY_GROUP_ID }}],assignPublicIp=ENABLED}" \
             --load-balancers "targetGroupArn=${{ env.TG_ARN }},containerName=${{ env.CONTAINER_NAME }},containerPort=8000"
         else
           echo "ECS service ${{ env.ECS_SERVICE }} already exists."
@@ -362,7 +362,7 @@ jobs:
           --service ${{ env.ECS_SERVICE }} \
           --task-definition ai-wizard \
           --force-new-deployment \
-          --network-configuration "awsvpcConfiguration={subnets=[${{ env.SUBNET_ID }}],securityGroups=[${{ env.SECURITY_GROUP_ID }}],assignPublicIp=ENABLED}" \
+          --network-configuration "awsvpcConfiguration={subnets=[${{ env.SUBNET_IDS }}],securityGroups=[${{ env.SECURITY_GROUP_ID }}],assignPublicIp=ENABLED}" \
           --load-balancers "targetGroupArn=${{ env.TG_ARN }},containerName=${{ env.CONTAINER_NAME }},containerPort=8000"
 
     - name: Update Route53 DNS record

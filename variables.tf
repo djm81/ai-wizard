@@ -1,6 +1,6 @@
 variable "aws_region" {
   description = "The AWS region to deploy to"
-  default     = "eu-west-1"  # Changed from us-west-2 to eu-west-1
+  default     = "eu-west-1"
 }
 
 variable "db_username" {
@@ -13,4 +13,19 @@ variable "db_password" {
 
 variable "secret_key" {
   description = "Secret key for the application"
+}
+
+variable "domain_name" {
+  description = "The domain name for the application"
+  type        = string
+}
+
+variable "route53_zone_id" {
+  description = "The Route53 Hosted Zone ID"
+  type        = string
+}
+
+variable "openai_api_key" {
+  description = "OpenAI API Key"
+  type        = string
 }

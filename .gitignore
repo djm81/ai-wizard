@@ -30,6 +30,7 @@ build/
 .idea/
 *.sublime-project
 *.sublime-workspace
+*.local
 
 # OS generated files
 .DS_Store

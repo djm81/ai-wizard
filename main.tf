@@ -1,5 +1,12 @@
+# Add this at the beginning of the file, before the provider block
+data "aws_caller_identity" "current" {}
+
+# Assume the deployment role
 provider "aws" {
   region = var.aws_region
+  assume_role {
+    role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AIWizardDeploymentRole"
+  }
 }
 
 # VPC and Networking
@@ -16,16 +23,60 @@ module "vpc" {
 
   enable_nat_gateway = true
   single_nat_gateway = true
+
+  tags = {
+    Project = "ai-wizard"
+  }
 }
 
 # ECR Repository
 resource "aws_ecr_repository" "ai_wizard" {
-  name = "ai-wizard"
+  name                 = "ai-wizard"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  tags = {
+    Project = "ai-wizard"
+  }
 }
 
 # ECS Cluster
 resource "aws_ecs_cluster" "ai_wizard" {
   name = "ai-wizard-cluster"
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+# ECS Task Execution Role
+resource "aws_iam_role" "ecs_task_execution_role" {
+  name = "ai-wizard-ecs-task-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 # ECS Task Definition
@@ -35,29 +86,122 @@ resource "aws_ecs_task_definition" "ai_wizard" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
   memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
 
   container_definitions = jsonencode([
     {
       name  = "ai-wizard"
       image = "${aws_ecr_repository.ai_wizard.repository_url}:latest"
+      cpu   = 256
+      memory = 512
       portMappings = [
         {
           containerPort = 8000
           hostPort      = 8000
+          protocol      = "tcp"
         }
       ]
-      environment = [
+      essential = true
+      secrets = [
         {
-          name  = "DATABASE_URL"
-          value = "postgresql://${aws_db_instance.ai_wizard.username}:${aws_db_instance.ai_wizard.password}@${aws_db_instance.ai_wizard.endpoint}/${aws_db_instance.ai_wizard.name}"
+          name      = "DATABASE_URL"
+          valueFrom = aws_secretsmanager_secret.db_credentials.arn
         },
         {
-          name  = "SECRET_KEY"
-          value = aws_ssm_parameter.secret_key.value
+          name      = "OPENAI_API_KEY"
+          valueFrom = aws_ssm_parameter.openai_api_key.arn
+        },
+        {
+          name      = "SECRET_KEY"
+          valueFrom = aws_ssm_parameter.secret_key.arn
         }
       ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.ai_wizard.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
     }
   ])
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+# CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "ai_wizard" {
+  name              = "/ecs/ai-wizard"
+  retention_in_days = 14
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+# Application Load Balancer
+resource "aws_lb" "ai_wizard" {
+  name               = "ai-wizard-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = slice(module.vpc.public_subnets, 0, 2)  # Use the first two public subnets
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+resource "aws_lb_target_group" "ai_wizard" {
+  name        = "ai-wizard-tg"
+  port        = 8000
+  protocol    = "HTTP"
+  vpc_id      = module.vpc.vpc_id
+  target_type = "ip"
+
+  health_check {
+    path                = "/health"
+    healthy_threshold   = 2
+    unhealthy_threshold = 10
+    timeout             = 60
+    interval            = 300
+    matcher             = "200"
+  }
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.ai_wizard.arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = aws_acm_certificate.ai_wizard.arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.ai_wizard.arn
+  }
+}
+
+resource "aws_lb_listener" "http_redirect" {
+  load_balancer_arn = aws_lb.ai_wizard.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
 }
 
 # ECS Service
@@ -69,8 +213,9 @@ resource "aws_ecs_service" "ai_wizard" {
   desired_count   = 1
 
   network_configuration {
-    subnets         = module.vpc.private_subnets
-    security_groups = [aws_security_group.ecs_tasks.id]
+    subnets          = module.vpc.private_subnets
+    security_groups  = [aws_security_group.ecs_tasks.id]
+    assign_public_ip = false
   }
 
   load_balancer {
@@ -78,55 +223,11 @@ resource "aws_ecs_service" "ai_wizard" {
     container_name   = "ai-wizard"
     container_port   = 8000
   }
-}
 
-# RDS Instance
-resource "aws_db_instance" "ai_wizard" {
-  identifier           = "ai-wizard-db"
-  engine               = "postgres"
-  engine_version       = "13.7"
-  instance_class       = "db.t3.micro"
-  allocated_storage    = 20
-  storage_type         = "gp2"
-  username             = var.db_username
-  password             = var.db_password
-  publicly_accessible  = false
-  skip_final_snapshot  = true
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  db_subnet_group_name = aws_db_subnet_group.ai_wizard.name
-}
+  depends_on = [aws_lb_listener.https]
 
-# DB Subnet Group
-resource "aws_db_subnet_group" "ai_wizard" {
-  name       = "ai-wizard-db-subnet-group"
-  subnet_ids = module.vpc.private_subnets
-}
-
-# Application Load Balancer
-resource "aws_lb" "ai_wizard" {
-  name               = "ai-wizard-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = module.vpc.public_subnets
-}
-
-resource "aws_lb_target_group" "ai_wizard" {
-  name        = "ai-wizard-tg"
-  port        = 8000
-  protocol    = "HTTP"
-  vpc_id      = module.vpc.vpc_id
-  target_type = "ip"
-}
-
-resource "aws_lb_listener" "ai_wizard" {
-  load_balancer_arn = aws_lb.ai_wizard.arn
-  port              = "80"
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.ai_wizard.arn
+  tags = {
+    Project = "ai-wizard"
   }
 }
 
@@ -143,11 +244,22 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Project = "ai-wizard"
   }
 }
 
@@ -169,8 +281,143 @@ resource "aws_security_group" "ecs_tasks" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Project = "ai-wizard"
+  }
 }
 
+# ACM Certificate
+resource "aws_acm_certificate" "ai_wizard" {
+  domain_name       = var.domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+# Route53 record for ACM validation
+resource "aws_route53_record" "acm_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.ai_wizard.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = var.route53_zone_id
+}
+
+# Route53 record for the application
+resource "aws_route53_record" "ai_wizard" {
+  zone_id = var.route53_zone_id
+  name    = var.domain_name
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.ai_wizard.dns_name
+    zone_id                = aws_lb.ai_wizard.zone_id
+    evaluate_target_health = true
+  }
+}
+
+# CloudWatch Alarms
+resource "aws_cloudwatch_metric_alarm" "cpu_high" {
+  alarm_name          = "ai-wizard-high-cpu"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 70
+  alarm_description   = "Alarm when CPU exceeds 70% for 5 minutes"
+  alarm_actions       = [aws_sns_topic.ai_wizard_alerts.arn]
+
+  dimensions = {
+    ClusterName = aws_ecs_cluster.ai_wizard.name
+    ServiceName = aws_ecs_service.ai_wizard.name
+  }
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "memory_high" {
+  alarm_name          = "ai-wizard-high-memory"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "MemoryUtilization"
+  namespace           = "AWS/ECS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 70
+  alarm_description   = "Alarm when memory exceeds 70% for 5 minutes"
+  alarm_actions       = [aws_sns_topic.ai_wizard_alerts.arn]
+
+  dimensions = {
+    ClusterName = aws_ecs_cluster.ai_wizard.name
+    ServiceName = aws_ecs_service.ai_wizard.name
+  }
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+# SNS Topic for Alerts
+resource "aws_sns_topic" "ai_wizard_alerts" {
+  name = "ai-wizard-alerts"
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+# RDS Instance
+resource "aws_db_instance" "ai_wizard" {
+  identifier           = "ai-wizard-db"
+  engine               = "postgres"
+  engine_version       = "13.7"
+  instance_class       = "db.t3.micro"
+  allocated_storage    = 20
+  storage_type         = "gp2"
+  db_name              = "aiwizard"
+  username             = var.db_username
+  password             = var.db_password
+  publicly_accessible  = false
+  skip_final_snapshot  = true
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  db_subnet_group_name = aws_db_subnet_group.ai_wizard.name
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+# DB Subnet Group
+resource "aws_db_subnet_group" "ai_wizard" {
+  name       = "ai-wizard-db-subnet-group"
+  subnet_ids = module.vpc.private_subnets
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+# Security Group for RDS
 resource "aws_security_group" "rds" {
   name        = "ai-wizard-rds-sg"
   description = "Allow inbound access from ECS tasks only"
@@ -183,19 +430,9 @@ resource "aws_security_group" "rds" {
     security_groups = [aws_security_group.ecs_tasks.id]
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  tags = {
+    Project = "ai-wizard"
   }
-}
-
-# SSM Parameter for Secret Key
-resource "aws_ssm_parameter" "secret_key" {
-  name  = "/ai-wizard/secret-key"
-  type  = "SecureString"
-  value = var.secret_key
 }
 
 # Outputs
@@ -205,4 +442,57 @@ output "alb_dns_name" {
 
 output "ecr_repository_url" {
   value = aws_ecr_repository.ai_wizard.repository_url
+}
+
+output "rds_endpoint" {
+  value = aws_db_instance.ai_wizard.endpoint
+}
+
+# AWS Secrets Manager - for database credentials
+resource "aws_secretsmanager_secret" "db_credentials" {
+  name = "ai-wizard-db-credentials"
+  
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "db_credentials" {
+  secret_id     = aws_secretsmanager_secret.db_credentials.id
+  secret_string = jsonencode({
+    username = var.db_username
+    password = var.db_password
+  })
+}
+
+# AWS Systems Manager Parameter Store - for other application secrets
+resource "aws_ssm_parameter" "openai_api_key" {
+  name  = "/ai-wizard/openai-api-key"
+  type  = "SecureString"
+  value = var.openai_api_key
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+resource "aws_ssm_parameter" "secret_key" {
+  name  = "/ai-wizard/secret-key"
+  type  = "SecureString"
+  value = var.secret_key
+
+  tags = {
+    Project = "ai-wizard"
+  }
+}
+
+# Update the ECS task execution role to allow access to the secrets
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy_secrets" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy_ssm" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
 }
