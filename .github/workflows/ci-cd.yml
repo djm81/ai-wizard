@@ -34,19 +34,9 @@ jobs:
         echo "SECRET_KEY=${{ secrets.DATABASE_SECRET_KEY }}" >> .env
         echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
         cp .env .env.test
-        cat <<EOF >> app/config/firebase-adminsdk.json
+        cat <<EOF >> backend/app/config/firebase-adminsdk.json
         ${{ secrets.FIREBASE_ADMINSDK_JSON }}
         EOF
-        echo "REACT_APP_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> frontend/.env
-        echo "REACT_APP_GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> frontend/.env
-        echo "REACT_APP_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> frontend/.env
-        echo "REACT_APP_FIREBASE_AUTH_DOMAIN=${{ vars.FIREBASE_AUTH_DOMAIN }}" >> frontend/.env
-        echo "REACT_APP_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> frontend/.env
-        echo "REACT_APP_FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> frontend/.env
-        echo "REACT_APP_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}" >> frontend/.env
-        echo "REACT_APP_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}" >> frontend/.env
-        echo "REACT_APP_FIREBASE_MEASUREMENT_ID=${{ secrets.FIREBASE_MEASUREMENT_ID }}" >> frontend/.env
-        cp frontend/.env frontend/.env.test
     - name: Run tests
       run: |
         poetry run pytest --cov=app tests/
@@ -109,7 +99,7 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        if ! docker build -f Dockerfile.app -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .; then
+        if ! docker build -f backend/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .; then
           echo "Docker build failed"
           exit 1
         fi
@@ -123,8 +113,11 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     env:
-      ROLE_NAME: ecsTaskExecutionRole-ai-wizard
+      TF_STATE_BUCKET: ai-wizard-terraform-state-${{ env.AWS_REGION }}
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -138,256 +131,68 @@ jobs:
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
         echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
 
-    - name: Create ECS cluster if not exists
+    - name: Create S3 bucket for Terraform state
       run: |
-        if ! aws ecs describe-clusters --clusters ${{ env.ECS_CLUSTER }} --query 'clusters[0].[clusterName]' --output text | grep -q ${{ env.ECS_CLUSTER }}; then
-          echo "ECS cluster not found. Creating a new one..."
-          aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER }} --capacity-providers FARGATE
+        if ! aws s3 ls "s3://${TF_STATE_BUCKET}" 2>&1 | grep -q 'NoSuchBucket'; then
+          echo "Terraform state bucket already exists"
         else
-          echo "ECS cluster ${{ env.ECS_CLUSTER }} already exists."
+          echo "Creating Terraform state bucket"
+          aws s3api create-bucket \
+            --bucket ${TF_STATE_BUCKET} \
+            --region ${AWS_REGION} \
+            --create-bucket-configuration LocationConstraint=${AWS_REGION}
+          
+          # Enable versioning
+          aws s3api put-bucket-versioning \
+            --bucket ${TF_STATE_BUCKET} \
+            --versioning-configuration Status=Enabled
+
+          # Enable server-side encryption
+          aws s3api put-bucket-encryption \
+            --bucket ${TF_STATE_BUCKET} \
+            --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+
+          # Block public access
+          aws s3api put-public-access-block \
+            --bucket ${TF_STATE_BUCKET} \
+            --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
         fi
 
-    - name: Create or update task definition
-      run: |
-        # Create ECS task execution role if it doesn't exist
-        if ! aws iam get-role --role-name $ROLE_NAME > /dev/null 2>&1; then
-          echo "Creating ECS task execution role..."
-          aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-          aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-        fi
-        
-        # Get the role ARN
-        EXECUTION_ROLE_ARN=$(aws iam get-role --role-name $ROLE_NAME --query Role.Arn --output text)
-        
-        # Create the task definition JSON
-        cat <<EOF > task-definition.json
-        {
-          "family": "ai-wizard",
-          "executionRoleArn": "$EXECUTION_ROLE_ARN",
-          "containerDefinitions": [
-            {
-              "name": "${{ env.CONTAINER_NAME }}",
-              "image": "${{ needs.build-and-push.outputs.image }}",
-              "cpu": 256,
-              "memory": 512,
-              "portMappings": [
-                {
-                  "containerPort": 8000,
-                  "hostPort": 8000,
-                  "protocol": "tcp"
-                }
-              ],
-              "essential": true,
-              "logConfiguration": {
-                "logDriver": "awslogs",
-                "options": {
-                  "awslogs-group": "/ecs/ai-wizard",
-                  "awslogs-region": "${{ env.AWS_REGION }}",
-                  "awslogs-stream-prefix": "ecs"
-                }
-              }
-            }
-          ],
-          "requiresCompatibilities": [
-            "FARGATE"
-          ],
-          "networkMode": "awsvpc",
-          "cpu": "256",
-          "memory": "512"
-        }
-        EOF
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.0.0
 
-        # Register the task definition
-        aws ecs register-task-definition --cli-input-json file://task-definition.json
-    
-    - name: Set up CloudWatch logging
+    - name: Terraform Init
       run: |
-        # Create CloudWatch log group if it doesn't exist
-        if ! aws logs describe-log-groups --log-group-name-prefix "/ecs/ai-wizard" | grep -q "/ecs/ai-wizard"; then
-          aws logs create-log-group --log-group-name "/ecs/ai-wizard"
-          # Set retention policy to 14 days for cost efficiency
-          aws logs put-retention-policy --log-group-name "/ecs/ai-wizard" --retention-in-days 14
-        fi
+        cd backend
+        terraform init \
+          -backend-config="bucket=${TF_STATE_BUCKET}" \
+          -backend-config="key=terraform.tfstate" \
+          -backend-config="region=${{ env.AWS_REGION }}"
 
-    - name: Set up CloudWatch alarms
+    - name: Terraform Plan
       run: |
-        # Create CPU utilization alarm
-        aws cloudwatch put-metric-alarm \
-          --alarm-name "AI-Wizard-High-CPU" \
-          --alarm-description "Alarm when CPU exceeds 70% for 5 minutes" \
-          --metric-name CPUUtilization \
-          --namespace AWS/ECS \
-          --statistic Average \
-          --period 300 \
-          --threshold 70 \
-          --comparison-operator GreaterThanThreshold \
-          --dimensions Name=ClusterName,Value=${{ env.ECS_CLUSTER }} Name=ServiceName,Value=${{ env.ECS_SERVICE }} \
-          --evaluation-periods 1 \
-          --alarm-actions arn:aws:sns:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:AI-Wizard-Alerts
+        cd backend
+        terraform plan \
+          -var="aws_region=${{ env.AWS_REGION }}" \
+          -var="db_username=${{ secrets.DB_USERNAME }}" \
+          -var="db_password=${{ secrets.DB_PASSWORD }}" \
+          -var="secret_key=${{ secrets.SECRET_KEY }}" \
+          -var="domain_name=${{ secrets.DOMAIN_NAME }}" \
+          -var="route53_zone_id=${{ secrets.ROUTE53_ZONE_ID }}" \
+          -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
+          -out=tfplan
 
-        # Create memory utilization alarm
-        aws cloudwatch put-metric-alarm \
-          --alarm-name "AI-Wizard-High-Memory" \
-          --alarm-description "Alarm when memory exceeds 70% for 5 minutes" \
-          --metric-name MemoryUtilization \
-          --namespace AWS/ECS \
-          --statistic Average \
-          --period 300 \
-          --threshold 70 \
-          --comparison-operator GreaterThanThreshold \
-          --dimensions Name=ClusterName,Value=${{ env.ECS_CLUSTER }} Name=ServiceName,Value=${{ env.ECS_SERVICE }} \
-          --evaluation-periods 1 \
-          --alarm-actions arn:aws:sns:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:AI-Wizard-Alerts
-
-    - name: Get VPC and Subnet IDs
+    - name: Terraform Apply
       run: |
-        VPC_ID=$(aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --query "Vpcs[0].VpcId" --output text)
-        SUBNET_IDS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --query "Subnets[?MapPublicIpOnLaunch==`true`].SubnetId" --output text | tr '\t' ' ' | cut -d' ' -f1,2)
-        SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --query "SecurityGroups[0].GroupId" --output text)
-        echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
-        echo "SUBNET_IDS=$SUBNET_IDS" >> $GITHUB_ENV
-        echo "SECURITY_GROUP_ID=$SECURITY_GROUP_ID" >> $GITHUB_ENV
-
-    - name: Get or create SSL certificate
-      run: |
-        DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
-        CERT_ARN=$(aws acm list-certificates --query "CertificateSummaryList[?DomainName=='$DOMAIN_NAME'].CertificateArn" --output text)
-        if [ -z "$CERT_ARN" ]; then
-          echo "Certificate not found. Creating a new one..."
-          CERT_ARN=$(aws acm request-certificate \
-            --domain-name $DOMAIN_NAME \
-            --validation-method DNS \
-            --query 'CertificateArn' \
-            --output text)
-          
-          # Wait for the certificate details to be available
-          sleep 10
-          
-          # Get the DNS validation record
-          DNS_VALIDATION=$(aws acm describe-certificate --certificate-arn $CERT_ARN --query 'Certificate.DomainValidationOptions[0].ResourceRecord' --output text)
-          DNS_NAME=$(echo $DNS_VALIDATION | cut -f1 -d' ')
-          DNS_VALUE=$(echo $DNS_VALIDATION | cut -f2 -d' ')
-          
-          # Create the DNS validation record in Route53
-          aws route53 change-resource-record-sets \
-            --hosted-zone-id ${{ secrets.ROUTE53_HOSTED_ZONE_ID }} \
-            --change-batch '{
-              "Changes": [{
-                "Action": "UPSERT",
-                "ResourceRecordSet": {
-                  "Name": "'$DNS_NAME'",
-                  "Type": "CNAME",
-                  "TTL": 300,
-                  "ResourceRecords": [{"Value": "'$DNS_VALUE'"}]
-                }
-              }]
-            }'
-          
-          echo "Certificate created. Waiting for validation..."
-          aws acm wait certificate-validated --certificate-arn $CERT_ARN
-        else
-          echo "Certificate found."
-        fi
-        echo "CERT_ARN=$CERT_ARN" >> $GITHUB_ENV
-
-    - name: Create ALB if not exists
-      run: |
-        set +e
-        ALB_ARN=$(aws elbv2 describe-load-balancers --names ai-wizard-alb --query 'LoadBalancers[0].LoadBalancerArn' --output text)
-        set -e
-        if [ "$ALB_ARN" == "None" ] || [ -z "$ALB_ARN" ]; then
-          echo "ALB not found. Creating a new one..."
-          ALB_ARN=$(aws elbv2 create-load-balancer \
-            --name ai-wizard-alb \
-            --subnets ${{ env.SUBNET_IDS }} \
-            --security-groups ${{ env.SECURITY_GROUP_ID }} \
-            --scheme internet-facing \
-            --type application \
-            --query 'LoadBalancers[0].LoadBalancerArn' \
-            --output text)
-          
-          TG_ARN=$(aws elbv2 create-target-group \
-            --name ai-wizard-tg \
-            --protocol HTTP \
-            --port 8000 \
-            --vpc-id ${{ env.VPC_ID }} \
-            --target-type ip \
-            --query 'TargetGroups[0].TargetGroupArn' \
-            --output text)
-          
-          aws elbv2 create-listener \
-            --load-balancer-arn $ALB_ARN \
-            --protocol HTTPS \
-            --port 443 \
-            --certificates CertificateArn=${{ env.CERT_ARN }} \
-            --ssl-policy ELBSecurityPolicy-2016-08 \
-            --default-actions Type=forward,TargetGroupArn=$TG_ARN
-
-          # Optional: Create HTTP listener that redirects to HTTPS
-          aws elbv2 create-listener \
-            --load-balancer-arn $ALB_ARN \
-            --protocol HTTP \
-            --port 80 \
-            --default-actions "Type=redirect,RedirectConfig={Protocol=HTTPS,Port=443,StatusCode=HTTP_301}"
-        else
-          echo "ALB already exists."
-          TG_ARN=$(aws elbv2 describe-target-groups \
-            --names ai-wizard-tg \
-            --query 'TargetGroups[0].TargetGroupArn' \
-            --output text)
-        fi
-        echo "ALB_ARN=$ALB_ARN" >> $GITHUB_ENV
-        echo "TG_ARN=$TG_ARN" >> $GITHUB_ENV
-
-    - name: Create ECS service if not exists
-      run: |
-        if ! aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'services[0].[serviceName]' --output text | grep -q ${{ env.ECS_SERVICE }}; then
-          echo "ECS service not found. Creating a new one..."
-          aws ecs create-service \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --service-name ${{ env.ECS_SERVICE }} \
-            --task-definition ai-wizard \
-            --desired-count 1 \
-            --launch-type FARGATE \
-            --network-configuration "awsvpcConfiguration={subnets=[${{ env.SUBNET_IDS }}],securityGroups=[${{ env.SECURITY_GROUP_ID }}],assignPublicIp=ENABLED}" \
-            --load-balancers "targetGroupArn=${{ env.TG_ARN }},containerName=${{ env.CONTAINER_NAME }},containerPort=8000"
-        else
-          echo "ECS service ${{ env.ECS_SERVICE }} already exists."
-        fi
-    
-    - name: Update ECS service
-      run: |
-        aws ecs update-service \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --service ${{ env.ECS_SERVICE }} \
-          --task-definition ai-wizard \
-          --force-new-deployment \
-          --network-configuration "awsvpcConfiguration={subnets=[${{ env.SUBNET_IDS }}],securityGroups=[${{ env.SECURITY_GROUP_ID }}],assignPublicIp=ENABLED}" \
-          --load-balancers "targetGroupArn=${{ env.TG_ARN }},containerName=${{ env.CONTAINER_NAME }},containerPort=8000"
-
-    - name: Update Route53 DNS record
-      run: |
-        ALB_DNS=$(aws elbv2 describe-load-balancers --names ai-wizard-alb --query 'LoadBalancers[0].DNSName' --output text)
-        aws route53 change-resource-record-sets \
-          --hosted-zone-id ${{ secrets.ROUTE53_HOSTED_ZONE_ID }} \
-          --change-batch '{
-            "Changes": [{
-              "Action": "UPSERT",
-              "ResourceRecordSet": {
-                "Name": "${{ secrets.DOMAIN_NAME }}",
-                "Type": "A",
-                "AliasTarget": {
-                  "HostedZoneId": "Z32O12XQLNTSW2",
-                  "DNSName": "'$ALB_DNS'",
-                  "EvaluateTargetHealth": true
-                }
-              }
-            }]
-          }'
+        cd backend
+        terraform apply -auto-approve tfplan
 
     - name: Output application URL
       run: |
-        echo "Your application is accessible at: https://${{ secrets.DOMAIN_NAME }}"
+        cd backend
+        echo "Your application is accessible at: https://$(terraform output -raw domain_name)"
 
   notify:
     needs: [test, build-and-push, deploy]

@@ -21,7 +21,6 @@ COPY tests tests
 # COPY .env .
 # COPY migrations migrations
 COPY .env.* .
-COPY LICENSE README.md ./
 
 # Change to the non-root user
 USER appuser
