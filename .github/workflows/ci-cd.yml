@@ -292,8 +292,10 @@ jobs:
 
     - name: Create ALB if not exists
       run: |
+        set +e
         ALB_ARN=$(aws elbv2 describe-load-balancers --names ai-wizard-alb --query 'LoadBalancers[0].LoadBalancerArn' --output text)
-        if [ "$ALB_ARN" == "None" ]; then
+        set -e
+        if [ "$ALB_ARN" == "None" ] || [ -z "$ALB_ARN" ]; then
           echo "ALB not found. Creating a new one..."
           ALB_ARN=$(aws elbv2 create-load-balancer \
             --name ai-wizard-alb \
