@@ -1,3 +1,17 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0"
+    }
+  }
+  required_version = ">= 1.0.0"
+
+  backend "s3" {
+    # This will be filled in by the CI/CD pipeline
+  }
+}
+
 # Add this at the beginning of the file, before the provider block
 data "aws_caller_identity" "current" {}
 
@@ -6,6 +20,14 @@ provider "aws" {
   region = var.aws_region
   assume_role {
     role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AIWizardDeploymentRole"
+  }
+}
+
+locals {
+  common_tags = {
+    Project   = "ai-wizard"
+    ManagedBy = "Terraform"
+    Environment = var.environment
   }
 }
 
@@ -24,9 +46,9 @@ module "vpc" {
   enable_nat_gateway = true
   single_nat_gateway = true
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-vpc"
+  })
 }
 
 # ECR Repository
@@ -38,18 +60,18 @@ resource "aws_ecr_repository" "ai_wizard" {
     scan_on_push = true
   }
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-ecr"
+  })
 }
 
 # ECS Cluster
 resource "aws_ecs_cluster" "ai_wizard" {
   name = "ai-wizard-cluster"
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-cluster"
+  })
 }
 
 # ECS Task Execution Role
@@ -69,9 +91,9 @@ resource "aws_iam_role" "ecs_task_execution_role" {
     ]
   })
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-ecs-task-execution-role"
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
@@ -127,9 +149,9 @@ resource "aws_ecs_task_definition" "ai_wizard" {
     }
   ])
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-task-definition"
+  })
 }
 
 # CloudWatch Log Group
@@ -137,9 +159,9 @@ resource "aws_cloudwatch_log_group" "ai_wizard" {
   name              = "/ecs/ai-wizard"
   retention_in_days = 14
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-log-group"
+  })
 }
 
 # Application Load Balancer
@@ -150,9 +172,9 @@ resource "aws_lb" "ai_wizard" {
   security_groups    = [aws_security_group.alb.id]
   subnets            = slice(module.vpc.public_subnets, 0, 2)  # Use the first two public subnets
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-alb"
+  })
 }
 
 resource "aws_lb_target_group" "ai_wizard" {
@@ -171,9 +193,9 @@ resource "aws_lb_target_group" "ai_wizard" {
     matcher             = "200"
   }
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-target-group"
+  })
 }
 
 resource "aws_lb_listener" "https" {
@@ -226,9 +248,9 @@ resource "aws_ecs_service" "ai_wizard" {
 
   depends_on = [aws_lb_listener.https]
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-service"
+  })
 }
 
 # Security Groups
@@ -258,9 +280,9 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-alb-sg"
+  })
 }
 
 resource "aws_security_group" "ecs_tasks" {
@@ -282,9 +304,9 @@ resource "aws_security_group" "ecs_tasks" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-ecs-tasks-sg"
+  })
 }
 
 # ACM Certificate
@@ -296,9 +318,9 @@ resource "aws_acm_certificate" "ai_wizard" {
     create_before_destroy = true
   }
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-acm-certificate"
+  })
 }
 
 # Route53 record for ACM validation
@@ -350,9 +372,9 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
     ServiceName = aws_ecs_service.ai_wizard.name
   }
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-high-cpu-alarm"
+  })
 }
 
 resource "aws_cloudwatch_metric_alarm" "memory_high" {
@@ -372,18 +394,18 @@ resource "aws_cloudwatch_metric_alarm" "memory_high" {
     ServiceName = aws_ecs_service.ai_wizard.name
   }
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-high-memory-alarm"
+  })
 }
 
 # SNS Topic for Alerts
 resource "aws_sns_topic" "ai_wizard_alerts" {
   name = "ai-wizard-alerts"
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-alerts-sns-topic"
+  })
 }
 
 # RDS Instance
@@ -395,16 +417,16 @@ resource "aws_db_instance" "ai_wizard" {
   allocated_storage    = 20
   storage_type         = "gp2"
   db_name              = "aiwizard"
-  username             = var.db_username
-  password             = var.db_password
+  username             = var.postgres_db_username
+  password             = var.postgres_db_password
   publicly_accessible  = false
   skip_final_snapshot  = true
   vpc_security_group_ids = [aws_security_group.rds.id]
   db_subnet_group_name = aws_db_subnet_group.ai_wizard.name
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-db"
+  })
 }
 
 # DB Subnet Group
@@ -412,9 +434,9 @@ resource "aws_db_subnet_group" "ai_wizard" {
   name       = "ai-wizard-db-subnet-group"
   subnet_ids = module.vpc.private_subnets
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-db-subnet-group"
+  })
 }
 
 # Security Group for RDS
@@ -430,9 +452,9 @@ resource "aws_security_group" "rds" {
     security_groups = [aws_security_group.ecs_tasks.id]
   }
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-rds-sg"
+  })
 }
 
 # Outputs
@@ -452,16 +474,16 @@ output "rds_endpoint" {
 resource "aws_secretsmanager_secret" "db_credentials" {
   name = "ai-wizard-db-credentials"
   
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-db-credentials"
+  })
 }
 
 resource "aws_secretsmanager_secret_version" "db_credentials" {
   secret_id     = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
-    username = var.db_username
-    password = var.db_password
+    username = var.postgres_db_username
+    password = var.postgres_db_password
   })
 }
 
@@ -471,19 +493,19 @@ resource "aws_ssm_parameter" "openai_api_key" {
   type  = "SecureString"
   value = var.openai_api_key
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-openai-api-key"
+  })
 }
 
-resource "aws_ssm_parameter" "secret_key" {
-  name  = "/ai-wizard/secret-key"
+resource "aws_ssm_parameter" "db_secret_key" {
+  name  = "/ai-wizard/db-secret-key"
   type  = "SecureString"
-  value = var.secret_key
+  value = var.db_secret_key
 
-  tags = {
-    Project = "ai-wizard"
-  }
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-db-secret-key"
+  })
 }
 
 # Update the ECS task execution role to allow access to the secrets

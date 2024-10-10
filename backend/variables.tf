@@ -1,18 +1,25 @@
 variable "aws_region" {
   description = "The AWS region to deploy to"
   default     = "eu-west-1"
+  type        = string
 }
 
-variable "db_username" {
+variable "postgres_db_username" {
   description = "Username for the RDS instance"
+  type        = string
+  sensitive   = true
 }
 
-variable "db_password" {
+variable "postgres_db_password" {
   description = "Password for the RDS instance"
+  type        = string
+  sensitive   = true
 }
 
-variable "secret_key" {
-  description = "Secret key for the application"
+variable "db_secret_key" {
+  description = "Database secret key for the application"
+  type        = string
+  sensitive   = true
 }
 
 variable "domain_name" {
@@ -28,4 +35,29 @@ variable "route53_zone_id" {
 variable "openai_api_key" {
   description = "OpenAI API Key"
   type        = string
+  sensitive   = true
+}
+
+variable "environment" {
+  description = "The deployment environment (e.g., dev, staging, prod)"
+  type        = string
+  default     = "dev"
+}
+
+variable "vpc_cidr" {
+  description = "The CIDR block for the VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "ecs_task_cpu" {
+  description = "The amount of CPU to allocate for the ECS task"
+  type        = number
+  default     = 256
+}
+
+variable "ecs_task_memory" {
+  description = "The amount of memory to allocate for the ECS task"
+  type        = number
+  default     = 512
 }
