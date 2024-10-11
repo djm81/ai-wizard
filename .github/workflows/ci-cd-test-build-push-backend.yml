@@ -136,7 +136,6 @@ jobs:
         else
           echo "status=failure" >> $GITHUB_OUTPUT
         fi
-      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Notify Slack
       uses: 8398a7/action-slack@v3
