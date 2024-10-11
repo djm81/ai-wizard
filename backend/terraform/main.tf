@@ -107,6 +107,26 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# Generate a random string for SECRET_KEY
+resource "random_string" "secret_key" {
+  length  = 32
+  special = true
+}
+
+# Store the SECRET_KEY in AWS Secrets Manager
+resource "aws_secretsmanager_secret" "app_secrets" {
+  name = "ai-wizard-app-secrets-${var.environment}"
+}
+
+resource "aws_secretsmanager_secret_version" "app_secrets" {
+  secret_id     = aws_secretsmanager_secret.app_secrets.id
+  secret_string = jsonencode({
+    SECRET_KEY = random_string.secret_key.result
+    # You can add other secrets here as needed
+    OPENAI_API_KEY = var.openai_api_key
+  })
+}
+
 # ECS Task Definition
 resource "aws_ecs_task_definition" "ai_wizard" {
   family                   = "ai-wizard"
@@ -119,7 +139,7 @@ resource "aws_ecs_task_definition" "ai_wizard" {
   container_definitions = jsonencode([
     {
       name  = "ai-wizard"
-      image = "${aws_ecr_repository.ai_wizard.repository_url}:latest"
+      image = "${aws_ecr_repository.ai_wizard.repository_url}:${var.ecr_image_tag}"
       cpu   = 256
       memory = 512
       portMappings = [
@@ -132,17 +152,14 @@ resource "aws_ecs_task_definition" "ai_wizard" {
       essential = true
       secrets = [
         {
-          name      = "DATABASE_URL"
-          valueFrom = aws_secretsmanager_secret.db_credentials.arn
+          name      = "SECRET_KEY"
+          valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:SECRET_KEY::"
         },
         {
           name      = "OPENAI_API_KEY"
-          valueFrom = aws_ssm_parameter.openai_api_key.arn
-        },
-        {
-          name      = "SECRET_KEY"
-          valueFrom = aws_ssm_parameter.secret_key.arn
+          valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:OPENAI_API_KEY::"
         }
+        # Add other secrets as needed
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -523,4 +540,10 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy_secret
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy_ssm" {
   role       = aws_iam_role.ecs_task_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
+}
+
+# Ensure the ECS task role has permission to read the secret
+resource "aws_iam_role_policy_attachment" "ecs_task_secrets_manager" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
 }

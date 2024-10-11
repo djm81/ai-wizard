@@ -6,7 +6,7 @@ RUN useradd -m appuser
 WORKDIR /app
 
 # Copy poetry files
-COPY app/pyproject.toml app/poetry.lock ./
+COPY pyproject.toml poetry.lock ./
 
 RUN pip install poetry==1.8.3 && \
     poetry config virtualenvs.create false && \
@@ -14,8 +14,8 @@ RUN pip install poetry==1.8.3 && \
 
 # Copy backend files
 COPY app app
-COPY app/.env.* ./
-COPY app/pytest.ini ./
+COPY .env.* ./
+COPY pytest.ini ./
 COPY LICENSE ./
 
 # Change to the non-root user

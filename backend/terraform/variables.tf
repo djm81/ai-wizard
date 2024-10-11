@@ -60,3 +60,8 @@ variable "ecs_task_memory" {
   type        = number
   default     = 512
 }
+
+variable "ecr_image_tag" {
+  description = "The tag of the image to deploy"
+  type        = string
+}

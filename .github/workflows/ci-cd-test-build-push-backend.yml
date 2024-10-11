@@ -4,17 +4,17 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'backend/app/**'
-      - 'backend/docker/**'
+      - 'backend/**'
+      - '!backend/terraform/**'
   pull_request:
     branches: [ main ]
     paths:
-      - 'backend/app/**'
-      - 'backend/docker/**'
+      - 'backend/**'
+      - '!backend/terraform/**'
 
 env:
   ECR_REPOSITORY: ai-wizard
-  WORKING_DIRECTORY: backend/app
+  WORKING_DIRECTORY: backend
 
 jobs:
   test:
@@ -32,13 +32,19 @@ jobs:
         poetry install
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
-    - name: Set up test environment
+    - name: Set up environment
       run: |
-        echo "DATABASE_URL=${{ vars.TEST_DATABASE_URL }}" >> .env
-        echo "SECRET_KEY=${{ secrets.DATABASE_SECRET_KEY }}" >> .env
+        # Create .env file for production (without SECRET_KEY)
         echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
-        cp .env .env.test
-        cat <<EOF >> config/firebase-adminsdk.json
+        
+        # Create .env.test file for testing
+        echo "DATABASE_URL=${{ vars.TEST_DATABASE_URL }}" >> .env.test
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env.test
+        # For testing purposes, we'll use a dummy SECRET_KEY
+        echo "SECRET_KEY=dummy_secret_key_for_testing" >> .env.test
+        
+        # Create Firebase config file
+        cat <<EOF >> app/config/firebase-adminsdk.json
         ${{ secrets.FIREBASE_ADMINSDK_JSON }}
         EOF
       working-directory: ${{ env.WORKING_DIRECTORY }}
@@ -88,7 +94,7 @@ jobs:
           echo "ECR login failed"
           exit 1
         fi
-      working-directory: backend
+      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Create ECR repository if not exists
       run: |
@@ -98,7 +104,7 @@ jobs:
             exit 1
           }
         fi
-      working-directory: backend
+      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Build, tag, and push image to Amazon ECR
       id: build-image
@@ -115,7 +121,7 @@ jobs:
           exit 1
         fi
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-      working-directory: backend
+      working-directory: ${{ env.WORKING_DIRECTORY }}
 
   notify:
     needs: [test, build-and-push]
@@ -130,7 +136,7 @@ jobs:
         else
           echo "status=failure" >> $GITHUB_OUTPUT
         fi
-      working-directory: backend
+      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Notify Slack
       uses: 8398a7/action-slack@v3

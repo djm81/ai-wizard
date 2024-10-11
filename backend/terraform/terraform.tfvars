@@ -7,6 +7,7 @@ ecs_task_cpu       = 256
 ecs_task_memory    = 512
 domain_name        = "your-domain-name.com"
 route53_zone_id    = "your-route53-zone-id"
+ecr_image_tag      = "latest"
 
 # The following variables should be set via environment variables or a secure secret management system
 # postgres_db_username = "aiwizard"
