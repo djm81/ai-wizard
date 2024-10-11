@@ -12,12 +12,18 @@ terraform {
   }
 }
 
-# Add this at the beginning of the file, before the provider block
-data "aws_caller_identity" "current" {}
-
-# Assume the deployment role
 provider "aws" {
   region = var.aws_region
+  alias = "no_assume_role"
+}
+
+data "aws_caller_identity" "current" {
+  provider = aws.no_assume_role
+}
+
+provider "aws" {
+  region = var.aws_region
+  alias = "assume_role"
   assume_role {
     role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AIWizardDeploymentRole"
   }

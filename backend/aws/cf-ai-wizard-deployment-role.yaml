@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'IAM role for AI Wizard Terraform deployment with managed policies'
+
+Parameters:
+  TrustedAccount:
+    Type: String
+    Description: The AWS account ID that is allowed to assume this role
+
+Resources:
+  # Create the managed policy
+  AIWizardManagedPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: AIWizardManagedPolicy
+      Roles:
+        - !Ref AIWizardDeploymentRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # S3 Permissions for Terraform Backend
+          - Effect: Allow
+            Action:
+              - 's3:CreateBucket'
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:ListBucket'
+              - 's3:DeleteObject'
+            Resource: 
+              - "arn:aws:s3:::ai-wizard-terraform-state-*"
+              - "arn:aws:s3:::ai-wizard-terraform-state-*/*"
+            Condition:
+              StringEquals:
+                "aws:ResourceTag/Project": "ai-wizard"
+
+          # ECR Permissions
+          - Effect: Allow
+            Action:
+              - 'ecr:CreateRepository'
+              - 'ecr:PutImage'
+              - 'ecr:InitiateLayerUpload'
+              - 'ecr:UploadLayerPart'
+              - 'ecr:CompleteLayerUpload'
+              - 'ecr:DescribeRepositories'
+              - 'ecr:ListImages'
+              - 'ecr:DeleteRepository'
+              - 'ecr:DeleteRepositoryPolicy'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                "aws:ResourceTag/Project": "ai-wizard"
+
+          # ECS Permissions
+          - Effect: Allow
+            Action:
+              - 'ecs:CreateCluster'
+              - 'ecs:RegisterTaskDefinition'
+              - 'ecs:CreateService'
+              - 'ecs:UpdateService'
+              - 'ecs:DeleteService'
+              - 'ecs:DescribeClusters'
+              - 'ecs:DescribeServices'
+              - 'ecs:ListClusters'
+              - 'ecs:ListServices'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                "aws:ResourceTag/Project": "ai-wizard"
+
+          # RDS Permissions
+          - Effect: Allow
+            Action:
+              - 'rds:CreateDBInstance'
+              - 'rds:ModifyDBInstance'
+              - 'rds:DeleteDBInstance'
+              - 'rds:DescribeDBInstances'
+              - 'rds:CreateDBSubnetGroup'
+              - 'rds:DeleteDBSubnetGroup'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                "aws:ResourceTag/Project": "ai-wizard"
+
+          # VPC Permissions
+          - Effect: Allow
+            Action:
+              - 'ec2:CreateVpc'
+              - 'ec2:CreateSubnet'
+              - 'ec2:CreateSecurityGroup'
+              - 'ec2:AuthorizeSecurityGroupIngress'
+              - 'ec2:RevokeSecurityGroupIngress'
+              - 'ec2:DescribeVpcs'
+              - 'ec2:DescribeSubnets'
+              - 'ec2:DescribeSecurityGroups'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                "aws:ResourceTag/Project": "ai-wizard"
+
+          # Secrets Manager Permissions
+          - Effect: Allow
+            Action:
+              - 'secretsmanager:CreateSecret'
+              - 'secretsmanager:PutSecretValue'
+              - 'secretsmanager:UpdateSecret'
+              - 'secretsmanager:DeleteSecret'
+              - 'secretsmanager:GetSecretValue'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                "aws:ResourceTag/Project": "ai-wizard"
+
+          # SSM Permissions
+          - Effect: Allow
+            Action:
+              - 'ssm:PutParameter'
+              - 'ssm:GetParameter'
+              - 'ssm:DeleteParameter'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                "aws:ResourceTag/Project": "ai-wizard"
+
+  # Create the IAM role
+  AIWizardDeploymentRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: AIWizardDeploymentRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: 
+                - !Sub 'arn:aws:iam::${TrustedAccount}:root'
+                - !Sub 'arn:aws:iam::${TrustedAccount}:user/aws-deploy'
+            Action: 'sts:AssumeRole'
+      Policies: []  # No inline policies, managed policy will be attached
+
+Outputs:
+  RoleARN:
+    Description: The ARN of the created IAM role
+    Value: !GetAtt AIWizardDeploymentRole.Arn
+    Export:
+      Name: AIWizardDeploymentRoleARN
