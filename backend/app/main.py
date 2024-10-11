@@ -1,22 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.endpoints import projects, ai_interactions
+from app.api.router import api_router
 from app.core.config import settings
 
-app = FastAPI()
+app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
 
-# CORS-Konfiguration hinzufügen
+# Set up CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Fügen Sie hier die URL Ihres Frontends hinzu
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
-app.include_router(ai_interactions.router, prefix="/api/ai-interactions", tags=["ai-interactions"])
+# Include API router
+app.include_router(api_router, prefix="/api")
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to AI Wizard"}
+    return {"message": "Welcome to the AI Assistant API"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
