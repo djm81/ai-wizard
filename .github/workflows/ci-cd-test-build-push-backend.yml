@@ -1,4 +1,4 @@
-name: Backend CI/CD Pipeline
+name: Backend Test, Build & Push To ECR Pipeline
 
 on:
   push:
