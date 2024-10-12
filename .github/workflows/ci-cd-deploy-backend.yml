@@ -2,7 +2,7 @@ name: Backend Deploy Pipeline
 
 on:
   workflow_run:
-    workflows: ["Backend CI/CD Pipeline"]
+    workflows: ["Backend Test, Build & Push To ECR Pipeline"]
     types:
       - completed
   push:
