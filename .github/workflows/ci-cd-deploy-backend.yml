@@ -9,6 +9,7 @@ on:
     branches: [ main ]
     paths:
       - 'backend/terraform/**'
+      - '.github/workflows/ci-cd-deploy-backend.yml'
 
 env:
   ECR_REPOSITORY: ai-wizard
