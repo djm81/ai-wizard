@@ -3,7 +3,7 @@ import { Project } from './types/project';
 import { AIInteraction } from './types/aiInteraction';
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export const useProjects = () => {
   const { apiCall } = useApi();

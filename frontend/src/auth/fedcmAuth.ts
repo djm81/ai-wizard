@@ -9,14 +9,15 @@ declare global {
 
 // Initialize Firebase (make sure to replace with your actual config)
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.REACT_APP_FIREBASE_APP_ID,
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.PUBLIC_FIREBASE_APP_ID
 };
+
+console.log('Firebase config:', firebaseConfig); // Add this line for debugging
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -60,9 +61,9 @@ export async function signInWithGoogle(): Promise<User> {
 
   return new Promise((resolve, reject) => {
     try {
-      console.log('Initializing Google client with Client ID:', process.env.REACT_APP_GOOGLE_CLIENT_ID);
+      console.log('Initializing Google client with Client ID:', import.meta.env.PUBLIC_GOOGLE_CLIENT_ID);
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID!,
+        client_id: import.meta.env.PUBLIC_GOOGLE_CLIENT_ID,
         scope: 'email profile',
         callback: async (response: { error?: string; access_token?: string }) => {
           if (response.error) {
