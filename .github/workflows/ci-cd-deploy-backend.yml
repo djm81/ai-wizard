@@ -21,7 +21,10 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'push' && contains(github.event.head_commit.modified, 'backend/terraform/'))
+      (github.event_name == 'push' && (
+        contains(github.event.head_commit.modified, 'backend/terraform/') || 
+        contains(github.event.head_commit.modified, '.github/workflows/ci-cd-deploy-backend.yml')
+      ))
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
