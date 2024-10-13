@@ -101,7 +101,8 @@ jobs:
         terraform init \
           -backend-config="bucket=${TF_STATE_BUCKET}" \
           -backend-config="key=terraform.tfstate" \
-          -backend-config="region=${{ vars.TF_VAR_aws_region }}"
+          -backend-config="region=${{ vars.TF_VAR_aws_region }}" \
+          -reconfigure
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Terraform Plan

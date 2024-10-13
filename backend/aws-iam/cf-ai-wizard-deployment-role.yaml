@@ -42,9 +42,14 @@ Resources:
               - 'ecr:CompleteLayerUpload'
               - 'ecr:DescribeRepositories'
               - 'ecr:ListImages'
+              - 'ecr:BatchGetImage'
+              - 'ecr:BatchCheckLayerAvailability'
+              - 'ecr:GetDownloadUrlForLayer'
+              - 'ecr:GetRepositoryPolicy'
+              - 'ecr:DescribeImages'
+              - 'ecr:GetAuthorizationToken'
               - 'ecr:DeleteRepository'
               - 'ecr:DeleteRepositoryPolicy'
-              - 'ecr:GetAuthorizationToken'
             Resource: '*'
             Condition:
               StringEquals:
