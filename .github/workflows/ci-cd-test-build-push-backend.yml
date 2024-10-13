@@ -6,6 +6,7 @@ on:
     paths:
       - 'backend/**'
       - '!backend/terraform/**'
+      - '.github/workflows/ci-cd-test-build-push-backend.yml'
   pull_request:
     branches: [ main ]
     paths:
