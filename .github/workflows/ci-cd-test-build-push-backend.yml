@@ -78,8 +78,13 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ vars.TF_VAR_aws_region }}
+        role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
     
+    - name: Get Caller Identity
+      run: |
+        aws sts get-caller-identity
+
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
@@ -89,7 +94,6 @@ jobs:
     - name: Check ECR Login
       run: |
         echo "ECR Registry: ${{ steps.login-ecr.outputs.registry }}"
-        echo "ECR Login Output: ${{ steps.login-ecr.outputs.login }}"
         if [ -z "${{ steps.login-ecr.outputs.registry }}" ]; then
           echo "ECR login failed"
           exit 1
