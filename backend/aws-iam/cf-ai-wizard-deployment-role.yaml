@@ -44,6 +44,7 @@ Resources:
               - 'ecr:ListImages'
               - 'ecr:DeleteRepository'
               - 'ecr:DeleteRepositoryPolicy'
+              - 'ecr:GetAuthorizationToken'
             Resource: '*'
             Condition:
               StringEquals:
@@ -145,7 +146,7 @@ Resources:
               AWS: 
                 - !Sub 'arn:aws:iam::${TrustedAccount}:root'
                 - !Sub 'arn:aws:iam::${TrustedAccount}:user/aws-deploy'
-            Actions: 
+            Action: 
               - 'sts:AssumeRole'
               - 'sts:TagSession'
       Policies: []  # No inline policies, managed policy will be attached
