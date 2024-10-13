@@ -11,6 +11,7 @@ on:
     paths:
       - 'backend/**'
       - '!backend/terraform/**'
+      - '.github/workflows/ci-cd-test-build-push-backend.yml'
 
 env:
   ECR_REPOSITORY: ai-wizard
