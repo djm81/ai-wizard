@@ -1,4 +1,4 @@
-name: Backend Test, Build & Push To ECR Pipeline
+name: Build & Push Backend Image
 
 on:
   push:
