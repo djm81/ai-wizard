@@ -28,9 +28,11 @@ jobs:
       ))
     steps:
     - name: Checkout code
+      id: checkout_code
       uses: actions/checkout@v4
 
     - name: Debug AWS Credentials
+      id: debug_aws_credentials 
       run: |
         echo "AWS Access Key ID: ${{ secrets.AWS_ACCESS_KEY_ID }}"
         echo "AWS Region: ${{ vars.TF_VAR_aws_region }}"
@@ -44,7 +46,6 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ vars.TF_VAR_aws_region }}
         role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
-        # role-skip-session-tagging: 'true'
         mask-aws-account-id: 'false'
           
     - name: Get Caller Identity
@@ -53,12 +54,14 @@ jobs:
         aws sts get-caller-identity
 
     - name: Get latest image tag from ECR
+      id: get_latest_image_tag
       run: |
         LATEST_TAG=$(aws ecr describe-images --repository-name ${ECR_REPOSITORY} --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)
         echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Create S3 bucket for Terraform state
+      id: create_s3_bucket
       run: |
         if ! aws s3 ls "s3://${TF_STATE_BUCKET}" 2>&1 | grep -q 'NoSuchBucket'; then
           echo "Terraform state bucket already exists"
@@ -87,11 +90,13 @@ jobs:
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Setup Terraform
+      id: setup_terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.0.0
 
     - name: Terraform Init
+      id: terraform_init
       run: |
         terraform init \
           -backend-config="bucket=${TF_STATE_BUCKET}" \
@@ -100,6 +105,7 @@ jobs:
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Terraform Plan
+      id: terraform_plan
       run: |
         terraform plan \
           -var="aws_region=${{ vars.TF_VAR_aws_region }}" \
@@ -114,11 +120,13 @@ jobs:
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Apply
+      id: terraform_apply
       run: |
         terraform apply -auto-approve tfplan
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Output application URL
+      id: output_application_url
       run: |
         echo "Your application is accessible at: https://$(terraform output -raw domain_name)"
       working-directory: ${{ env.WORKING_DIRECTORY }}
@@ -129,7 +137,7 @@ jobs:
     if: always()
     steps:
     - name: Check job status
-      id: check
+      id: check_job_status
       run: |
         if [[ ${{ needs.deploy.result }} == 'success' ]]; then
           echo "status=success" >> $GITHUB_OUTPUT
@@ -140,10 +148,10 @@ jobs:
     - name: Notify Slack
       uses: 8398a7/action-slack@v3
       with:
-        status: ${{ steps.check.outputs.status }}
+        status: ${{ steps.check_job_status.outputs.status }}
         text: |
-          ${{ steps.check.outputs.status == 'success' && 'Deployment succeeded! :rocket:' || 'Deployment failed! :x:' }}
-          ${{ steps.check.outputs.status == 'success' && format('Application is accessible at: https://{0}', secrets.DOMAIN_NAME) || '' }}
+          ${{ steps.check_job_status.outputs.status == 'success' && 'Deployment succeeded! :rocket:' || 'Deployment failed! :x:' }}
+          ${{ steps.check_job_status.outputs.status == 'success' && format('Application is accessible at: https://{0}', secrets.DOMAIN_NAME) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

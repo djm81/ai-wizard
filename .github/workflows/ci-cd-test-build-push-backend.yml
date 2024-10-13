@@ -88,7 +88,6 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ vars.TF_VAR_aws_region }}
         role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
-        # role-skip-session-tagging: 'true'
         mask-aws-account-id: 'false'
     
     - name: Get Caller Identity
@@ -99,8 +98,8 @@ jobs:
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
-      with:
-        mask-password: 'true'
+      # with:
+      #  mask-password: 'true'
 
     - name: Check ECR Login
       id: check_ecr_login
