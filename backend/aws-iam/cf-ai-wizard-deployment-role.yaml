@@ -120,6 +120,18 @@ Resources:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
 
+          # Allow tagging the session
+          - Effect: Allow
+            Action: 
+              - 'sts:TagSession'
+              - 'sts:GetSessionToken'
+              - 'sts:GetCallerIdentity'
+            Resource: '*'
+
+          - Effect: Allow
+            Action: 'iam:PassRole'
+            Resource: '*'
+
   # Create the IAM role
   AIWizardDeploymentRole:
     Type: 'AWS::IAM::Role'

@@ -30,7 +30,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Debug AWS Credentials
+      run: |
+        echo "AWS Access Key ID: ${{ secrets.AWS_ACCESS_KEY_ID }}"
+        echo "AWS Region: ${{ vars.TF_VAR_aws_region }}"
+        echo "Role to Assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole"
+
     - name: Configure AWS credentials
+      id: configure_aws_credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -39,6 +46,11 @@ jobs:
         role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
           
+    - name: Get Caller Identity
+      id: get_caller_identity
+      run: |
+        aws sts get-caller-identity
+
     - name: Get latest image tag from ECR
       run: |
         LATEST_TAG=$(aws ecr describe-images --repository-name ${ECR_REPOSITORY} --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)
