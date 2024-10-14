@@ -8,9 +8,7 @@ terraform {
   required_version = ">= 1.0.0"
 
   backend "s3" {
-    bucket = "ai-wizard-terraform-state-${var.environment}"
-    key    = "ai-wizard-terraform.tfstate"
-    region = var.aws_region
+    /* Will be filled in dynamically by CI/CD pipeline */
   }
 }
 
