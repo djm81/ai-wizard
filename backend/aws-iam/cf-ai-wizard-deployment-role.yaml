@@ -47,13 +47,17 @@ Resources:
               - 'ecr:GetDownloadUrlForLayer'
               - 'ecr:GetRepositoryPolicy'
               - 'ecr:DescribeImages'
-              - 'ecr:GetAuthorizationToken'
               - 'ecr:DeleteRepository'
               - 'ecr:DeleteRepositoryPolicy'
             Resource: '*'
             Condition:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
+
+          # ECR Global Permissions
+          - Effect: Allow
+            Action:
+              - 'ecr:GetAuthorizationToken'
 
           # ECS Permissions
           - Effect: Allow
