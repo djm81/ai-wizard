@@ -58,6 +58,7 @@ Resources:
           - Effect: Allow
             Action:
               - 'ecr:GetAuthorizationToken'
+            Resource: '*'
 
           # ECS Permissions
           - Effect: Allow
