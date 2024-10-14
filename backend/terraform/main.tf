@@ -8,31 +8,24 @@ terraform {
   required_version = ">= 1.0.0"
 
   backend "s3" {
-    # This will be filled in by the CI/CD pipeline
+    bucket = "ai-wizard-terraform-state-${var.environment}"
+    key    = "ai-wizard-terraform.tfstate"
+    region = var.aws_region
   }
 }
 
 provider "aws" {
   region = var.aws_region
-  alias = "no_assume_role"
-}
-
-data "aws_caller_identity" "current" {
-  provider = aws.no_assume_role
-}
-
-provider "aws" {
-  region = var.aws_region
-  alias = "assume_role"
+  alias  = "assume_role"
   assume_role {
-    role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AIWizardDeploymentRole"
+    role_arn = "arn:aws:iam::${var.aws_account_id}:role/AIWizardDeploymentRole"
   }
 }
 
 locals {
   common_tags = {
-    Project   = "ai-wizard"
-    ManagedBy = "Terraform"
+    Project     = "ai-wizard"
+    ManagedBy   = "Terraform"
     Environment = var.environment
   }
 }
@@ -41,6 +34,10 @@ locals {
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 3.0"
+
+  providers = {
+    aws = aws.assume_role  # Use the assume_role provider
+  }
 
   name = "ai-wizard-vpc"
   cidr = "10.0.0.0/16"
@@ -59,6 +56,7 @@ module "vpc" {
 
 # ECR Repository
 resource "aws_ecr_repository" "ai_wizard" {
+  provider = aws.assume_role  # Use the assume_role provider
   name                 = "ai-wizard"
   image_tag_mutability = "MUTABLE"
 
@@ -73,6 +71,7 @@ resource "aws_ecr_repository" "ai_wizard" {
 
 # ECS Cluster
 resource "aws_ecs_cluster" "ai_wizard" {
+  provider = aws.assume_role  # Use the assume_role provider
   name = "ai-wizard-cluster"
 
   tags = merge(local.common_tags, {
@@ -82,6 +81,7 @@ resource "aws_ecs_cluster" "ai_wizard" {
 
 # ECS Task Execution Role
 resource "aws_iam_role" "ecs_task_execution_role" {
+  provider = aws.assume_role  # Use the assume_role provider
   name = "ai-wizard-ecs-task-execution-role"
 
   assume_role_policy = jsonencode({
@@ -103,6 +103,7 @@ resource "aws_iam_role" "ecs_task_execution_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
+  provider = aws.assume_role  # Use the assume_role provider
   role       = aws_iam_role.ecs_task_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
@@ -115,10 +116,12 @@ resource "random_string" "secret_key" {
 
 # Store the SECRET_KEY in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "app_secrets" {
+  provider = aws.assume_role  # Use the assume_role provider
   name = "ai-wizard-app-secrets-${var.environment}"
 }
 
 resource "aws_secretsmanager_secret_version" "app_secrets" {
+  provider = aws.assume_role  # Use the assume_role provider
   secret_id     = aws_secretsmanager_secret.app_secrets.id
   secret_string = jsonencode({
     SECRET_KEY = random_string.secret_key.result
@@ -129,6 +132,7 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
 
 # ECS Task Definition
 resource "aws_ecs_task_definition" "ai_wizard" {
+  provider = aws.assume_role  # Use the assume_role provider
   family                   = "ai-wizard"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
@@ -179,6 +183,7 @@ resource "aws_ecs_task_definition" "ai_wizard" {
 
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "ai_wizard" {
+  provider = aws.assume_role  # Use the assume_role provider
   name              = "/ecs/ai-wizard"
   retention_in_days = 14
 
@@ -189,6 +194,7 @@ resource "aws_cloudwatch_log_group" "ai_wizard" {
 
 # Application Load Balancer
 resource "aws_lb" "ai_wizard" {
+  provider = aws.assume_role  # Use the assume_role provider
   name               = "ai-wizard-alb"
   internal           = false
   load_balancer_type = "application"
@@ -201,6 +207,7 @@ resource "aws_lb" "ai_wizard" {
 }
 
 resource "aws_lb_target_group" "ai_wizard" {
+  provider = aws.assume_role  # Use the assume_role provider
   name        = "ai-wizard-tg"
   port        = 8000
   protocol    = "HTTP"
@@ -222,6 +229,7 @@ resource "aws_lb_target_group" "ai_wizard" {
 }
 
 resource "aws_lb_listener" "https" {
+  provider = aws.assume_role  # Use the assume_role provider
   load_balancer_arn = aws_lb.ai_wizard.arn
   port              = "443"
   protocol          = "HTTPS"
@@ -235,6 +243,7 @@ resource "aws_lb_listener" "https" {
 }
 
 resource "aws_lb_listener" "http_redirect" {
+  provider = aws.assume_role  # Use the assume_role provider
   load_balancer_arn = aws_lb.ai_wizard.arn
   port              = "80"
   protocol          = "HTTP"
@@ -251,6 +260,7 @@ resource "aws_lb_listener" "http_redirect" {
 
 # ECS Service
 resource "aws_ecs_service" "ai_wizard" {
+  provider = aws.assume_role  # Use the assume_role provider
   name            = "ai-wizard-service"
   cluster         = aws_ecs_cluster.ai_wizard.id
   task_definition = aws_ecs_task_definition.ai_wizard.arn
@@ -278,6 +288,7 @@ resource "aws_ecs_service" "ai_wizard" {
 
 # Security Groups
 resource "aws_security_group" "alb" {
+  provider = aws.assume_role  # Use the assume_role provider
   name        = "ai-wizard-alb-sg"
   description = "Controls access to the ALB"
   vpc_id      = module.vpc.vpc_id
@@ -309,6 +320,7 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_security_group" "ecs_tasks" {
+  provider = aws.assume_role  # Use the assume_role provider
   name        = "ai-wizard-ecs-tasks-sg"
   description = "Allow inbound access from the ALB only"
   vpc_id      = module.vpc.vpc_id
@@ -334,6 +346,7 @@ resource "aws_security_group" "ecs_tasks" {
 
 # ACM Certificate
 resource "aws_acm_certificate" "ai_wizard" {
+  provider = aws.assume_role  # Use the assume_role provider
   domain_name       = var.domain_name
   validation_method = "DNS"
 
@@ -348,6 +361,7 @@ resource "aws_acm_certificate" "ai_wizard" {
 
 # Route53 record for ACM validation
 resource "aws_route53_record" "acm_validation" {
+  provider = aws.assume_role  # Use the assume_role provider
   for_each = {
     for dvo in aws_acm_certificate.ai_wizard.domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
@@ -366,6 +380,7 @@ resource "aws_route53_record" "acm_validation" {
 
 # Route53 record for the application
 resource "aws_route53_record" "ai_wizard" {
+  provider = aws.assume_role  # Use the assume_role provider
   zone_id = var.route53_zone_id
   name    = var.domain_name
   type    = "A"
@@ -379,6 +394,7 @@ resource "aws_route53_record" "ai_wizard" {
 
 # CloudWatch Alarms
 resource "aws_cloudwatch_metric_alarm" "cpu_high" {
+  provider = aws.assume_role  # Use the assume_role provider
   alarm_name          = "ai-wizard-high-cpu"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
@@ -401,6 +417,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "memory_high" {
+  provider = aws.assume_role  # Use the assume_role provider
   alarm_name          = "ai-wizard-high-memory"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
@@ -424,6 +441,7 @@ resource "aws_cloudwatch_metric_alarm" "memory_high" {
 
 # SNS Topic for Alerts
 resource "aws_sns_topic" "ai_wizard_alerts" {
+  provider = aws.assume_role  # Use the assume_role provider
   name = "ai-wizard-alerts"
 
   tags = merge(local.common_tags, {
@@ -433,6 +451,7 @@ resource "aws_sns_topic" "ai_wizard_alerts" {
 
 # RDS Instance
 resource "aws_db_instance" "ai_wizard" {
+  provider = aws.assume_role  # Use the assume_role provider
   identifier           = "ai-wizard-db"
   engine               = "postgres"
   engine_version       = "13.7"
@@ -454,6 +473,7 @@ resource "aws_db_instance" "ai_wizard" {
 
 # DB Subnet Group
 resource "aws_db_subnet_group" "ai_wizard" {
+  provider = aws.assume_role  # Use the assume_role provider
   name       = "ai-wizard-db-subnet-group"
   subnet_ids = module.vpc.private_subnets
 
@@ -464,6 +484,7 @@ resource "aws_db_subnet_group" "ai_wizard" {
 
 # Security Group for RDS
 resource "aws_security_group" "rds" {
+  provider = aws.assume_role  # Use the assume_role provider
   name        = "ai-wizard-rds-sg"
   description = "Allow inbound access from ECS tasks only"
   vpc_id      = module.vpc.vpc_id
@@ -495,6 +516,7 @@ output "rds_endpoint" {
 
 # AWS Secrets Manager - for database credentials
 resource "aws_secretsmanager_secret" "db_credentials" {
+  provider = aws.assume_role  # Use the assume_role provider
   name = "ai-wizard-db-credentials"
   
   tags = merge(local.common_tags, {
@@ -503,6 +525,7 @@ resource "aws_secretsmanager_secret" "db_credentials" {
 }
 
 resource "aws_secretsmanager_secret_version" "db_credentials" {
+  provider = aws.assume_role  # Use the assume_role provider
   secret_id     = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
     username = var.postgres_db_username
@@ -512,6 +535,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
 
 # AWS Systems Manager Parameter Store - for other application secrets
 resource "aws_ssm_parameter" "openai_api_key" {
+  provider = aws.assume_role  # Use the assume_role provider
   name  = "/ai-wizard/openai-api-key"
   type  = "SecureString"
   value = var.openai_api_key
@@ -522,6 +546,7 @@ resource "aws_ssm_parameter" "openai_api_key" {
 }
 
 resource "aws_ssm_parameter" "db_secret_key" {
+  provider = aws.assume_role  # Use the assume_role provider
   name  = "/ai-wizard/db-secret-key"
   type  = "SecureString"
   value = var.db_secret_key
@@ -533,17 +558,20 @@ resource "aws_ssm_parameter" "db_secret_key" {
 
 # Update the ECS task execution role to allow access to the secrets
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy_secrets" {
+  provider = aws.assume_role  # Use the assume_role provider
   role       = aws_iam_role.ecs_task_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy_ssm" {
+  provider = aws.assume_role  # Use the assume_role provider
   role       = aws_iam_role.ecs_task_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
 }
 
 # Ensure the ECS task role has permission to read the secret
 resource "aws_iam_role_policy_attachment" "ecs_task_secrets_manager" {
+  provider = aws.assume_role  # Use the assume_role provider
   role       = aws_iam_role.ecs_task_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
 }

@@ -1,3 +1,8 @@
+variable "aws_account_id" {
+  description = "The AWS account ID for the deployment"
+  type        = string
+}
+
 variable "aws_region" {
   description = "The AWS region to deploy to"
   type        = string
@@ -40,7 +45,7 @@ variable "openai_api_key" {
 variable "environment" {
   description = "The deployment environment (e.g., dev, staging, prod)"
   type        = string
-  default     = "dev"
+  default     = "prod"
 }
 
 variable "vpc_cidr" {

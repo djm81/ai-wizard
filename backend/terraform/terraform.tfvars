@@ -1,4 +1,5 @@
 # Remove or comment out the aws_region line, as it will be provided by the GitHub variable
+# aws_account_id     = "123456789012"
 # aws_region         = "eu-west-1"
 
 environment        = "prod"
