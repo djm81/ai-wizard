@@ -45,8 +45,8 @@ jobs:
       id: get_caller_identity
       run: aws sts get-caller-identity
 
-    - name: Get latest image tag from ECR
-      id: get_latest_image_tag
+    - name: Get current image tag from ECR
+      id: get_current_image_tag
       run: |
         LATEST_TAG=$(aws ecr describe-images --repository-name ${ECR_REPOSITORY} --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)
         echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
@@ -120,6 +120,21 @@ jobs:
           -reconfigure
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
+    - name: Terraform Import ECR Repository
+      id: terraform_import_ecr_repository
+      run: |
+        terraform import aws_ecr_repository.ai_wizard ${ECR_REPOSITORY} \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="postgres_db_username=${{ secrets.POSTGRES_DB_USERNAME }}" \
+          -var="postgres_db_password=${{ secrets.POSTGRES_DB_PASSWORD }}" \
+          -var="domain_name=${{ secrets.DOMAIN_NAME }}" \
+          -var="route53_zone_id=${{ secrets.ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
+          -var="ecr_image_tag=${LATEST_TAG}" \
+          -var="environment=production"
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
     - name: Terraform Plan (Targeted)
       id: terraform_plan_targeted
       run: |
@@ -134,13 +149,35 @@ jobs:
           -var="ecr_image_tag=${LATEST_TAG}" \
           -var="environment=production" \
           -target=aws_acm_certificate.ai_wizard \
-          -target=aws_route53_record.acm_validation \
           -out=tfplan_targeted
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Apply (Targeted)
       id: terraform_apply_targeted
       run: terraform apply -auto-approve tfplan_targeted
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Terraform Plan (Validation)
+      id: terraform_plan_validation
+      run: |
+        terraform plan \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="postgres_db_username=${{ secrets.POSTGRES_DB_USERNAME }}" \
+          -var="postgres_db_password=${{ secrets.POSTGRES_DB_PASSWORD }}" \
+          -var="domain_name=${{ secrets.DOMAIN_NAME }}" \
+          -var="route53_zone_id=${{ secrets.ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
+          -var="ecr_image_tag=${LATEST_TAG}" \
+          -var="environment=production" \
+          -target=aws_route53_record.acm_validation \
+          -target=aws_acm_certificate_validation.ai_wizard \
+          -out=tfplan_validation
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Terraform Apply (Validation)
+      id: terraform_apply_validation
+      run: terraform apply -auto-approve tfplan_validation
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Plan (Full)
