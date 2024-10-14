@@ -2,13 +2,26 @@
 
 AI Wizard is a rapid application assistant that helps developers quickly prototype and build applications.
 
+## Project Status
+
+The project is currently in the early stages of development. The core functionality of collecting application requirements and generating corresponding code is implemented, but it is still missing many features and improvements.
+
+A release candidate (RC) will be released when the project is considered production-ready.
+
 ## Overview
 
-The application is a Single Page Application (SPA) that interacts with users to collect application specifications, refine requirements through iterative questioning, and ultimately generate the required code, tests, and documentation.
+The frontend application is a Single Page Application (SPA) that interacts with users to collect application specifications, refine requirements through iterative questioning, and ultimately generate the required code, tests, and documentation.
+
+The backend application is a RESTful API that provides the core functionality of the application. It is responsible for storing the application requirements, generating the corresponding code, and providing the generated code to the frontend application.
+
+The infrastructure is deployed using Terraform and AWS CloudFormation to AWS.
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+- AWS Account
+- AWS CLI
+- GitHub Account
+- Google Firebase Account
 - Node.js (v14 or later)
 - npm (Node Package Manager)
 - Python (v3.12 or later)
@@ -23,23 +36,33 @@ Before you begin, ensure you have the following installed:
    cd ai-wizard
    ```
 
-2. Set up the frontend:
+2. Set up the backend AWS resources:
+   - Navigate to the `backend/aws-setup` directory:
+     ```bash
+     cd backend/aws-setup
+     ```
+   - Run the setup script to create the necessary AWS CloudFormation stacks:
+     ```bash
+     ./setup.sh
+     ```
+
+3. Set up the frontend:
    ```bash
    cd frontend
    npm install
    ```
 
-3. Set up the backend:
+4. Set up the backend:
    ```bash
    cd ../backend
    poetry install
    ```
 
-4. Set up environment variables:
+5. Set up environment variables:
    - Copy `.env.example` to `.env` in both the frontend and backend directories
    - Fill in the required values (see "External Services Setup" below)
 
-5. Run database migrations:
+6. Run database migrations:
    ```bash
    poetry run alembic upgrade head
    ```
@@ -58,7 +81,7 @@ Before you begin, ensure you have the following installed:
    npm run dev
    ```
 
-The application should now be running at `http://localhost:3000` (frontend) and `http://localhost:8000` (backend API).
+The application should now be running at `http://localhost:8080` (frontend) and `http://localhost:8000` (backend API).
 
 ## External Services Setup
 
@@ -91,15 +114,6 @@ The application should now be running at `http://localhost:3000` (frontend) and 
    OPENAI_API_KEY=your_openai_api_key
    ```
 
-### AWS Setup (for deployment)
-
-1. Create an AWS account if you don't have one.
-2. Set up IAM user with necessary permissions for ECR and ECS.
-3. Configure AWS CLI with your credentials.
-4. Create an ECR repository named `ai-wizard`.
-5. Create an ECS cluster named `ai-wizard-cluster`.
-6. Create an ECS task definition and service named `ai-wizard-service`.
-
 ## Running Tests
 
 ### Frontend Tests
@@ -116,7 +130,7 @@ poetry run pytest
 
 ## Deployment
 
-For deployment, consider using Docker. A Dockerfile is provided for the backend. To build and run the Docker container:
+For deployment, consider using Docker. A Dockerfile is provided for the backend. To build and run the Docker container locally (if not using the CI/CD pipeline):
 
 1. Build the Docker image:
    ```bash
@@ -132,7 +146,7 @@ For deployment, consider using Docker. A Dockerfile is provided for the backend.
 
 MIT License
 
-Copyright (c) 2024 Dom
+Copyright (c) 2024 Dominikus Nold
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
