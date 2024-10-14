@@ -191,14 +191,47 @@ resource "aws_cloudwatch_log_group" "ai_wizard" {
   })
 }
 
+# ACM Certificate
+resource "aws_acm_certificate" "ai_wizard" {
+  provider = aws.assume_role
+  domain_name       = var.domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-acm-certificate"
+  })
+}
+
+# Route53 record for ACM validation
+resource "aws_route53_record" "acm_validation" {
+  provider = aws.assume_role
+  zone_id  = var.route53_zone_id
+
+  for_each = toset(aws_acm_certificate.ai_wizard.domain_validation_options)
+
+  name     = each.value.resource_record_name
+  type     = each.value.resource_record_type
+  records  = [each.value.resource_record_value]
+  ttl      = 60
+
+  allow_overwrite = true
+  depends_on = [aws_acm_certificate.ai_wizard]
+}
+
 # Application Load Balancer
 resource "aws_lb" "ai_wizard" {
-  provider = aws.assume_role  # Use the assume_role provider
+  provider = aws.assume_role
   name               = "ai-wizard-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = slice(module.vpc.public_subnets, 0, 2)  # Use the first two public subnets
+  subnets            = slice(module.vpc.public_subnets, 0, 2)
+
+  depends_on = [module.vpc]
 
   tags = merge(local.common_tags, {
     Name = "ai-wizard-alb"
@@ -228,7 +261,7 @@ resource "aws_lb_target_group" "ai_wizard" {
 }
 
 resource "aws_lb_listener" "https" {
-  provider = aws.assume_role  # Use the assume_role provider
+  provider = aws.assume_role
   load_balancer_arn = aws_lb.ai_wizard.arn
   port              = "443"
   protocol          = "HTTPS"
@@ -239,6 +272,8 @@ resource "aws_lb_listener" "https" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.ai_wizard.arn
   }
+
+  depends_on = [aws_acm_certificate.ai_wizard, aws_lb_target_group.ai_wizard]
 }
 
 resource "aws_lb_listener" "http_redirect" {
@@ -259,7 +294,7 @@ resource "aws_lb_listener" "http_redirect" {
 
 # ECS Service
 resource "aws_ecs_service" "ai_wizard" {
-  provider = aws.assume_role  # Use the assume_role provider
+  provider = aws.assume_role
   name            = "ai-wizard-service"
   cluster         = aws_ecs_cluster.ai_wizard.id
   task_definition = aws_ecs_task_definition.ai_wizard.arn
@@ -278,7 +313,7 @@ resource "aws_ecs_service" "ai_wizard" {
     container_port   = 8000
   }
 
-  depends_on = [aws_lb_listener.https]
+  depends_on = [aws_lb_listener.https, aws_iam_role_policy_attachment.ecs_task_execution_role_policy]
 
   tags = merge(local.common_tags, {
     Name = "ai-wizard-service"
@@ -343,39 +378,9 @@ resource "aws_security_group" "ecs_tasks" {
   })
 }
 
-# ACM Certificate
-resource "aws_acm_certificate" "ai_wizard" {
-  provider = aws.assume_role  # Use the assume_role provider
-  domain_name       = var.domain_name
-  validation_method = "DNS"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "ai-wizard-acm-certificate"
-  })
-}
-
-# Route53 record for ACM validation
-resource "aws_route53_record" "acm_validation" {
-  provider = aws.assume_role
-  zone_id  = var.route53_zone_id
-
-  for_each = aws_acm_certificate.ai_wizard.domain_validation_options
-
-  name     = each.value.resource_record_name
-  type     = each.value.resource_record_type
-  records  = [each.value.resource_record_value]
-  ttl      = 60
-
-  allow_overwrite = true
-}
-
 # Route53 record for the application
 resource "aws_route53_record" "ai_wizard" {
-  provider = aws.assume_role  # Use the assume_role provider
+  provider = aws.assume_role
   zone_id = var.route53_zone_id
   name    = var.domain_name
   type    = "A"
@@ -385,6 +390,8 @@ resource "aws_route53_record" "ai_wizard" {
     zone_id                = aws_lb.ai_wizard.zone_id
     evaluate_target_health = true
   }
+
+  depends_on = [aws_lb.ai_wizard]
 }
 
 # CloudWatch Alarms
