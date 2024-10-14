@@ -120,8 +120,21 @@ jobs:
           -reconfigure
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
+    - name: Check if ECR Repository is managed by Terraform
+      id: check_ecr_managed
+      run: |
+        if terraform state list | grep -q 'aws_ecr_repository.ai_wizard'; then
+          echo "ECR repository is already managed by Terraform"
+          echo "is_managed=true" >> $GITHUB_OUTPUT
+        else
+          echo "ECR repository is not managed by Terraform"
+          echo "is_managed=false" >> $GITHUB_OUTPUT
+        fi
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
     - name: Terraform Import ECR Repository
       id: terraform_import_ecr_repository
+      if: steps.check_ecr_managed.outputs.is_managed == 'false'
       run: |
         terraform import \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
