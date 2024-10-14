@@ -143,6 +143,12 @@ Resources:
             Action: 'iam:PassRole'
             Resource: '*'
 
+          - Effect: Allow
+            Action: 
+              - 'sts:AssumeRole'
+              - 'sts:TagSession'
+            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
+
   # Create the IAM role
   AIWizardDeploymentRole:
     Type: 'AWS::IAM::Role'
