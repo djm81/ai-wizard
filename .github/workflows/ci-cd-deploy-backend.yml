@@ -103,7 +103,7 @@ jobs:
           -backend-config="key=terraform.tfstate" \
           -backend-config="region=${{ vars.TF_VAR_aws_region }}" \
           -reconfigure
-      working-directory: ${{ env.WORKING_DIRECTORY }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Plan
       id: terraform_plan
@@ -124,13 +124,13 @@ jobs:
       id: terraform_apply
       run: |
         terraform apply -auto-approve tfplan
-      working-directory: ${{ env.WORKING_DIRECTORY }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Output application URL
+    - name: Terraform Output Application URL
       id: output_application_url
       run: |
         echo "Your application is accessible at: https://$(terraform output -raw domain_name)"
-      working-directory: ${{ env.WORKING_DIRECTORY }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
   notify:
     needs: deploy
