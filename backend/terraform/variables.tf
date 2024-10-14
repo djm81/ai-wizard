@@ -20,12 +20,6 @@ variable "postgres_db_password" {
   sensitive   = true
 }
 
-variable "db_secret_key" {
-  description = "Database secret key for the application"
-  type        = string
-  sensitive   = true
-}
-
 variable "domain_name" {
   description = "The domain name for the application"
   type        = string

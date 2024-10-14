@@ -122,8 +122,7 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
   provider = aws.assume_role  # Use the assume_role provider
   secret_id     = aws_secretsmanager_secret.app_secrets.id
   secret_string = jsonencode({
-    SECRET_KEY = random_string.secret_key.result
-    # You can add other secrets here as needed
+    SECRET_KEY = random_string.secret_key.result  # Use the generated secret key
     OPENAI_API_KEY = var.openai_api_key
   })
 }
@@ -161,7 +160,6 @@ resource "aws_ecs_task_definition" "ai_wizard" {
           name      = "OPENAI_API_KEY"
           valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:OPENAI_API_KEY::"
         }
-        # Add other secrets as needed
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -528,6 +526,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
   secret_string = jsonencode({
     username = var.postgres_db_username
     password = var.postgres_db_password
+    db_secret_key = random_string.secret_key.result  # Use the generated secret key
   })
 }
 
@@ -547,7 +546,7 @@ resource "aws_ssm_parameter" "db_secret_key" {
   provider = aws.assume_role  # Use the assume_role provider
   name  = "/ai-wizard/db-secret-key"
   type  = "SecureString"
-  value = var.db_secret_key
+  value = random_string.secret_key.result  # Use the generated secret key
 
   tags = merge(local.common_tags, {
     Name = "ai-wizard-db-secret-key"
