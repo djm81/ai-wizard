@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation stack to create a private ECR repository for the AI Wizard project'
+
+Resources:
+  ECRRepository:
+    Type: 'AWS::ECR::Repository'
+    Properties:
+      RepositoryName: ai-wizard
+      ImageScanningConfiguration:
+        scanOnPush: true
+      Tags:
+        - Key: Project
+          Value: ai-wizard
+
+Outputs:
+  ECRRepositoryUri:
+    Description: The URI of the created ECR repository
+    Value: !GetAtt ECRRepository.RepositoryUri
+    Export:
+      Name: ECRRepositoryUri
