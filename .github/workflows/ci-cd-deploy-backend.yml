@@ -132,7 +132,8 @@ jobs:
       id: terraform_plan
       run: |
         terraform plan \
-          -var="aws_region=${{ vars.TF_VAR_aws_region }}" \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="postgres_db_username=${{ secrets.POSTGRES_DB_USERNAME }}" \
           -var="postgres_db_password=${{ secrets.POSTGRES_DB_PASSWORD }}" \
           -var="domain_name=${{ secrets.DOMAIN_NAME }}" \

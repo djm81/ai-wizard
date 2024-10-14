@@ -51,3 +51,9 @@ firebase-adminsdk.json
 
 # SSL
 .ssl/
+
+# Terraform
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+.terraform.lock.hcl

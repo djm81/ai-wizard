@@ -98,15 +98,17 @@ The application should now be running at `http://localhost:8080` (frontend) and 
 4. In the Google Cloud Console (linked from Firebase), create OAuth 2.0 Client IDs for your application.
 5. Add the following to your frontend `.env` file:
    ```
-   REACT_APP_FIREBASE_API_KEY=your_api_key
-   REACT_APP_FIREBASE_AUTH_DOMAIN=your_auth_domain
-   REACT_APP_FIREBASE_PROJECT_ID=your_project_id
-   REACT_APP_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-   REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-   REACT_APP_FIREBASE_APP_ID=your_app_id
-   REACT_APP_FIREBASE_MEASUREMENT_ID=your_measurement_id
-   REACT_APP_GOOGLE_CLIENT_ID=your_google_client_id
+   PUBLIC_FIREBASE_API_KEY=your_api_key
+   PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+   PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+   PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+   PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+   PUBLIC_FIREBASE_APP_ID=your_app_id
+   PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
+   PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
    ```
+
+   Note: The `PUBLIC_` prefix is used to make the variables available to the frontend (rsbuild framework).
 
 6. Download the Firebase Admin SDK private key JSON file and save it as `app/config/firebase-adminsdk.json` in the backend directory.
 
