@@ -123,6 +123,7 @@ Resources:
               - 'ec2:CreateSecurityGroup'
               - 'ec2:CreateSubnet'
               - 'ec2:CreateVpc'
+              - 'ec2:DescribeAddresses'
               - 'ec2:DescribeSecurityGroups'
               - 'ec2:DescribeSubnets'
               - 'ec2:DescribeVpcs'
@@ -132,6 +133,16 @@ Resources:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
 
+          # VPC Permissions without tags
+          - Effect: Allow
+            Action:
+              - 'ec2:AllocateAddress'
+              - 'ec2:CreateTags'
+              - 'ec2:DeleteTags'
+              - 'ec2:DescribeTags'
+              - 'ec2:DescribeVpcs'
+            Resource: '*'
+              
           # Secrets Manager Permissions
           - Effect: Allow
             Action:
@@ -182,11 +193,15 @@ Resources:
           # AWS Certificate Manager Permissions
           - Effect: Allow
             Action:
+              - 'acm:AddTagsToCertificate'
               - 'acm:DeleteCertificate'
               - 'acm:DescribeCertificate'
               - 'acm:GetCertificate'
               - 'acm:ListCertificates'
+              - 'acm:ListTagsForCertificate'
               - 'acm:RequestCertificate'
+              - 'acm:RemoveTagsFromCertificate'
+              - 'acm:UpdateCertificateOptions'
             Resource: '*'
             Condition:
               StringEquals:
@@ -196,12 +211,16 @@ Resources:
           - Effect: Allow
             Action:
               - 'route53:ChangeResourceRecordSets'
+              - 'route53:ChangeTagsForResource'
               - 'route53:GetChange'
+              - 'route53:GetHostedZone'
               - 'route53:ListHostedZones'
+              - 'route53:ListResourceRecordSets'
+              - 'route53:ListTagsForResource'
+              - 'route53:ListHostedZonesByName'
+              - 'route53:ListHostedZonesByVPC'
+              - 'route53:ListTagsForResource'
             Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
 
   # Create the IAM role
   AIWizardDeploymentRole:

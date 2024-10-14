@@ -284,6 +284,10 @@ resource "aws_lb_listener" "https" {
   }
 
   depends_on = [aws_acm_certificate.ai_wizard, aws_lb_target_group.ai_wizard]
+  
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-https-listener"
+  })
 }
 
 resource "aws_lb_listener" "http_redirect" {
@@ -300,6 +304,10 @@ resource "aws_lb_listener" "http_redirect" {
       status_code = "HTTP_301"
     }
   }
+
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-http-redirect-listener"
+  })
 }
 
 # ECS Service
