@@ -31,6 +31,20 @@ Resources:
             Condition:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
+          
+          # CloudWatch Logs Permissions
+          - Effect: Allow
+            Action:
+              - 'logs:CreateLogGroup'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+              - 'logs:DescribeLogGroups'
+              - 'logs:DescribeLogStreams'
+              - 'logs:FilterLogEvents'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                "aws:ResourceTag/Project": "ai-wizard"
 
           # ECR Permissions
           - Effect: Allow
@@ -49,6 +63,9 @@ Resources:
               - 'ecr:DescribeImages'
               - 'ecr:DeleteRepository'
               - 'ecr:DeleteRepositoryPolicy'
+              - 'ecr:TagResource'
+              - 'ecr:UntagResource'
+              - 'ecr:SetRepositoryPolicy'
             Resource: '*'
             Condition:
               StringEquals:
@@ -70,8 +87,15 @@ Resources:
               - 'ecs:DeleteService'
               - 'ecs:DescribeClusters'
               - 'ecs:DescribeServices'
+              - 'ecs:DescribeTasks'
+              - 'ecs:DescribeTaskDefinition'
+              - 'ecs:DescribeContainerInstances'
               - 'ecs:ListClusters'
               - 'ecs:ListServices'
+              - 'ecs:ListTasks'
+              - 'ecs:ListContainerInstances'
+              - 'ecs:TagResource'
+              - 'ecs:UntagResource'
             Resource: '*'
             Condition:
               StringEquals:
@@ -144,10 +168,38 @@ Resources:
             Resource: '*'
 
           - Effect: Allow
+            Action: 'iam:CreateRole'
+            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-ecs-task-execution-role'
+
+          - Effect: Allow
             Action: 
               - 'sts:AssumeRole'
               - 'sts:TagSession'
             Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
+
+          # AWS Certificate Manager Permissions
+          - Effect: Allow
+            Action:
+              - 'acm:RequestCertificate'
+              - 'acm:DeleteCertificate'
+              - 'acm:DescribeCertificate'
+              - 'acm:GetCertificate'
+              - 'acm:ListCertificates'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                "aws:ResourceTag/Project": "ai-wizard"
+
+          # Route53 Permissions for DNS Validation
+          - Effect: Allow
+            Action:
+              - 'route53:ListHostedZones'
+              - 'route53:ChangeResourceRecordSets'
+              - 'route53:GetChange'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                "aws:ResourceTag/Project": "ai-wizard"
 
   # Create the IAM role
   AIWizardDeploymentRole:
