@@ -18,15 +18,20 @@ The infrastructure is deployed using Terraform and AWS CloudFormation to AWS.
 
 ## Prerequisites
 
-- AWS Account
-- AWS CLI
-- GitHub Account
-- Google Firebase Account
+### Accounts
+- AWS Account (AWS service deployment)
+- GitHub Account (CI/CD pipeline)
+- Google Firebase Account (Google OAuth provider)
+
+### Backend Tools
+- AWS CLI (AWS service deployment)
+- Python (v3.12 or later)
+- Poetry (Python dependency management)
+- Docker (optional, local container testing)
+
+### Frontend Tools
 - Node.js (v14 or later)
 - npm (Node Package Manager)
-- Python (v3.12 or later)
-- Poetry (for Python dependency management)
-- Docker (optional, for containerized deployment)
 
 ## Setup
 
