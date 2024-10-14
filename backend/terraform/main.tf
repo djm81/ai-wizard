@@ -115,7 +115,10 @@ resource "random_string" "secret_key" {
 # Store the SECRET_KEY in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "app_secrets" {
   provider = aws.assume_role  # Use the assume_role provider
-  name = "ai-wizard-app-secrets-${var.environment}"
+  # Name = "ai-wizard-app-secrets-${var.environment}"
+  tags = merge(local.common_tags, {
+    Name = "ai-wizard-app-secrets-${var.environment}"
+  })
 }
 
 resource "aws_secretsmanager_secret_version" "app_secrets" {
@@ -357,21 +360,17 @@ resource "aws_acm_certificate" "ai_wizard" {
 
 # Route53 record for ACM validation
 resource "aws_route53_record" "acm_validation" {
-  provider = aws.assume_role  # Use the assume_role provider
-  for_each = {
-    for dvo in aws_acm_certificate.ai_wizard.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
+  provider = aws.assume_role
+  zone_id  = var.route53_zone_id
+
+  for_each = aws_acm_certificate.ai_wizard.domain_validation_options
+
+  name     = each.value.resource_record_name
+  type     = each.value.resource_record_type
+  records  = [each.value.resource_record_value]
+  ttl      = 60
 
   allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
-  ttl             = 60
-  type            = each.value.type
-  zone_id         = var.route53_zone_id
 }
 
 # Route53 record for the application

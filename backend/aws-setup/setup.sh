@@ -1,8 +1,35 @@
 #!/bin/bash
 
-# Prompt for AWS account ID and region
-read -p "Enter your AWS Account ID: " aws_account_id
-read -p "Enter your AWS Region (e.g., eu-west-1): " aws_region
+# Function to display help
+function show_help() {
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  -a, --aws_account_id   AWS Account ID for the deployment"
+    echo "  -r, --aws_region       AWS Region (e.g., eu-west-1)"
+    echo "  -h, --help             Show this help message and exit"
+}
+
+# Parse command line arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        -a|--aws_account_id) aws_account_id="$2"; shift ;;
+        -r|--aws_region) aws_region="$2"; shift ;;
+        -h|--help) show_help; exit 0 ;;
+        *) echo "Unknown parameter passed: $1"; show_help; exit 1 ;;
+    esac
+    shift
+done
+
+# Prompt for AWS account ID if not provided
+if [ -z "$aws_account_id" ]; then
+    read -p "Enter your AWS Account ID: " aws_account_id
+fi
+
+# Prompt for AWS Region if not provided
+if [ -z "$aws_region" ]; then
+    read -p "Enter your AWS Region (e.g., eu-west-1): " aws_region
+fi
 
 # Define stack names
 ai_wizard_role_stack="AIWizardDeploymentRoleStack"
