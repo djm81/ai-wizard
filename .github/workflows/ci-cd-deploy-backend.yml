@@ -48,7 +48,7 @@ jobs:
     - name: Get current image tag from ECR
       id: get_current_image_tag
       run: |
-        LATEST_TAG=$(aws ecr describe-images --repository-name ${ECR_REPOSITORY} --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)
+        LATEST_TAG=$(aws ecr describe-images --repository-name ${{ env.ECR_REPOSITORY }} --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)
         echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
@@ -123,7 +123,7 @@ jobs:
     - name: Terraform Import ECR Repository
       id: terraform_import_ecr_repository
       run: |
-        terraform import aws_ecr_repository.ai_wizard ${ECR_REPOSITORY} \
+        terraform import \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="postgres_db_username=${{ secrets.POSTGRES_DB_USERNAME }}" \
@@ -132,7 +132,8 @@ jobs:
           -var="route53_zone_id=${{ secrets.ROUTE53_HOSTED_ZONE_ID }}" \
           -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
           -var="ecr_image_tag=${LATEST_TAG}" \
-          -var="environment=production"
+          -var="environment=production" \
+          aws_ecr_repository.ai_wizard ${{ env.ECR_REPOSITORY }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Plan (Targeted)
