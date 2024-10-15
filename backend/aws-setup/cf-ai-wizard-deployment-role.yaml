@@ -154,6 +154,7 @@ Resources:
               - 'elasticloadbalancing:DeleteTargetGroup'
               - 'elasticloadbalancing:DeregisterTargets'
               - 'elasticloadbalancing:ModifyListener'
+              - 'elasticloadbalancing:ModifyLoadBalancerAttributes'
               - 'elasticloadbalancing:ModifyTargetGroup'
               - 'elasticloadbalancing:ModifyTargetGroupAttributes'
               - 'elasticloadbalancing:RegisterTargets'
