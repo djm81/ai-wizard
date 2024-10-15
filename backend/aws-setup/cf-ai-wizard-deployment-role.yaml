@@ -17,13 +17,20 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          # S3 Permissions for Terraform Backend
+          # S3 Global Permissions
+          - Effect: Allow
+            Action:
+              - 's3:Describe*'
+              - 's3:Get*'
+              - 's3:List*'
+              - 's3:TagResource'
+            Resource: '*' 
+
+          # S3 Permissions
           - Effect: Allow
             Action:
               - 's3:CreateBucket'
               - 's3:DeleteObject'
-              - 's3:GetObject'
-              - 's3:ListBucket'
               - 's3:PutObject'
             Resource: 
               - "arn:aws:s3:::ai-wizard-terraform-state-*"
@@ -32,19 +39,35 @@ Resources:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
 
+          # CloudWatch Logs Global Permissions
+          - Effect: Allow
+            Action:
+              - 'logs:Describe*'
+              - 'logs:Get*'
+              - 'logs:List*'
+              - 'logs:TagResource'
+            Resource: '*'
+
           # CloudWatch Logs Permissions
           - Effect: Allow
             Action:
               - 'logs:CreateLogGroup'
               - 'logs:CreateLogStream'
-              - 'logs:DescribeLogGroups'
-              - 'logs:DescribeLogStreams'
               - 'logs:FilterLogEvents'
               - 'logs:PutLogEvents'
             Resource: '*'
             Condition:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
+
+          # ECR Global Permissions
+          - Effect: Allow
+            Action:
+              - 'ecr:Describe*'
+              - 'ecr:Get*'
+              - 'ecr:List*'
+              - 'ecr:TagResource'
+            Resource: '*'
 
           # ECR Permissions
           - Effect: Allow
@@ -55,16 +78,9 @@ Resources:
               - 'ecr:CreateRepository'
               - 'ecr:DeleteRepository'
               - 'ecr:DeleteRepositoryPolicy'
-              - 'ecr:DescribeImages'
-              - 'ecr:DescribeRepositories'
-              - 'ecr:GetDownloadUrlForLayer'
-              - 'ecr:GetRepositoryPolicy'
               - 'ecr:InitiateLayerUpload'
-              - 'ecr:ListImages'
-              - 'ecr:ListTagsForResource'
               - 'ecr:PutImage'
               - 'ecr:SetRepositoryPolicy'
-              - 'ecr:TagResource'
               - 'ecr:UntagResource'
               - 'ecr:UploadLayerPart'
             Resource: '*'
@@ -72,10 +88,13 @@ Resources:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
 
-          # ECR Global Permissions
+          # ECS Global Permissions
           - Effect: Allow
             Action:
-              - 'ecr:GetAuthorizationToken'
+              - 'ecs:Describe*'
+              - 'ecs:Get*'
+              - 'ecs:List*'
+              - 'ecs:TagResource'
             Resource: '*'
 
           # ECS Permissions
@@ -84,15 +103,6 @@ Resources:
               - 'ecs:CreateCluster'
               - 'ecs:CreateService'
               - 'ecs:DeleteService'
-              - 'ecs:DescribeClusters'
-              - 'ecs:DescribeServices'
-              - 'ecs:DescribeTasks'
-              - 'ecs:DescribeTaskDefinition'
-              - 'ecs:DescribeContainerInstances'
-              - 'ecs:ListClusters'
-              - 'ecs:ListServices'
-              - 'ecs:ListTasks'
-              - 'ecs:ListContainerInstances'
               - 'ecs:RegisterTaskDefinition'
               - 'ecs:TagResource'
               - 'ecs:UntagResource'
@@ -102,6 +112,15 @@ Resources:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
 
+          # RDS Global Permissions
+          - Effect: Allow
+            Action:
+              - 'rds:Describe*'
+              - 'rds:Get*'
+              - 'rds:List*'
+              - 'rds:TagResource'
+            Resource: '*'
+
           # RDS Permissions
           - Effect: Allow
             Action:
@@ -109,46 +128,51 @@ Resources:
               - 'rds:CreateDBSubnetGroup'
               - 'rds:DeleteDBSubnetGroup'
               - 'rds:DeleteDBInstance'
-              - 'rds:DescribeDBInstances'
               - 'rds:ModifyDBInstance'
             Resource: '*'
             Condition:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
 
+          # VPC Global Permissions
+          - Effect: Allow
+            Action:
+              - 'ec2:CreateTags'
+              - 'ec2:Describe*'
+              - 'ec2:Get*'
+              - 'ec2:List*'
+              - 'ec2:TagResource'
+            Resource: '*'
+
           # VPC Permissions
           - Effect: Allow
             Action:
+              - 'ec2:AllocateAddress'
               - 'ec2:AuthorizeSecurityGroupIngress'
               - 'ec2:CreateSecurityGroup'
               - 'ec2:CreateSubnet'
               - 'ec2:CreateVpc'
-              - 'ec2:DescribeAddresses'
-              - 'ec2:DescribeSecurityGroups'
-              - 'ec2:DescribeSubnets'
-              - 'ec2:DescribeVpcs'
+              - 'ec2:DeleteTags'
               - 'ec2:RevokeSecurityGroupIngress'
             Resource: '*'
             Condition:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
-
-          # VPC Permissions without tags
+               
+          # Secrets Manager Global Permissions
           - Effect: Allow
             Action:
-              - 'ec2:AllocateAddress'
-              - 'ec2:CreateTags'
-              - 'ec2:DeleteTags'
-              - 'ec2:DescribeTags'
-              - 'ec2:DescribeVpcs'
+              - 'secretsmanager:Describe*'
+              - 'secretsmanager:Get*'
+              - 'secretsmanager:List*'
+              - 'secretsmanager:TagResource'
             Resource: '*'
-              
+
           # Secrets Manager Permissions
           - Effect: Allow
             Action:
               - 'secretsmanager:CreateSecret'
               - 'secretsmanager:DeleteSecret'
-              - 'secretsmanager:GetSecretValue'
               - 'secretsmanager:PutSecretValue'
               - 'secretsmanager:UpdateSecret'
             Resource: '*'
@@ -156,49 +180,64 @@ Resources:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
 
+          # SSM Global Permissions
+          - Effect: Allow
+            Action:
+              - 'ssm:Describe*'
+              - 'ssm:Get*'
+              - 'ssm:List*'
+              - 'ssm:TagResource'
+            Resource: '*'
+
           # SSM Permissions
           - Effect: Allow
             Action:
               - 'ssm:DeleteParameter'
-              - 'ssm:GetParameter'
               - 'ssm:PutParameter'
             Resource: '*'
             Condition:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
 
-          # Allow tagging the session
+          # STS Global Permissions
           - Effect: Allow
             Action: 
-              - 'sts:AssumeRole'
               - 'sts:GetCallerIdentity'
               - 'sts:GetSessionToken'
               - 'sts:TagSession'
             Resource: '*'
 
+          # STS Permissions
           - Effect: Allow
-            Action: 'iam:CreateRole'
-            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-ecs-task-execution-role'
+            Action: 
+              - 'sts:AssumeRole'
+            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
 
+
+          # IAM Global Permissions
           - Effect: Allow
             Action: 'iam:PassRole'
             Resource: '*'
 
+          # IAM Permissions
           - Effect: Allow
-            Action: 
-              - 'sts:TagSession'
-              - 'sts:AssumeRole'
-            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
+            Action: 'iam:CreateRole'
+            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-ecs-task-execution-role'
+
+          # AWS Certificate Manager Global Permissions
+          - Effect: Allow
+            Action:
+              - 'acm:Describe*'
+              - 'acm:Get*'
+              - 'acm:List*'
+              - 'acm:TagResource'
+            Resource: '*'
 
           # AWS Certificate Manager Permissions
           - Effect: Allow
             Action:
               - 'acm:AddTagsToCertificate'
               - 'acm:DeleteCertificate'
-              - 'acm:DescribeCertificate'
-              - 'acm:GetCertificate'
-              - 'acm:ListCertificates'
-              - 'acm:ListTagsForCertificate'
               - 'acm:RequestCertificate'
               - 'acm:RemoveTagsFromCertificate'
               - 'acm:UpdateCertificateOptions'
@@ -207,20 +246,24 @@ Resources:
               StringEquals:
                 "aws:ResourceTag/Project": "ai-wizard"
 
-          # Route53 Permissions for DNS Validation
+          # Route53 Global Permissions
+          - Effect: Allow
+            Action:
+              - 'route53:Describe*'
+              - 'route53:Get*'
+              - 'route53:List*'
+              - 'route53:TagResource'
+            Resource: '*'
+
+          # Route53 Permissions
           - Effect: Allow
             Action:
               - 'route53:ChangeResourceRecordSets'
               - 'route53:ChangeTagsForResource'
-              - 'route53:GetChange'
-              - 'route53:GetHostedZone'
-              - 'route53:ListHostedZones'
-              - 'route53:ListResourceRecordSets'
-              - 'route53:ListTagsForResource'
-              - 'route53:ListHostedZonesByName'
-              - 'route53:ListHostedZonesByVPC'
-              - 'route53:ListTagsForResource'
             Resource: '*'
+            Condition:
+              StringEquals:
+                "aws:ResourceTag/Project": "ai-wizard"
 
   # Create the IAM role
   AIWizardDeploymentRole:
