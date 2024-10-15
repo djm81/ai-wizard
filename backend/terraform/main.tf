@@ -474,8 +474,8 @@ resource "aws_db_instance" "ai_wizard" {
   provider = aws.assume_role  # Use the assume_role provider
   identifier           = "ai-wizard-db"
   engine               = "postgres"
-  engine_version       = "13.7"
-  instance_class       = "db.t3.micro"
+  engine_version       = "16.3-R2"
+  instance_class       = "db.t4g.micro"
   allocated_storage    = 20
   storage_type         = "gp2"
   db_name              = "aiwizard"
