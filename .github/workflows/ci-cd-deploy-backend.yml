@@ -218,7 +218,12 @@ jobs:
     - name: Terraform Output Application URL
       id: output_application_url
       run: |
-        echo "Your application is accessible at: https://$(terraform output -raw domain_name)"
+        DOMAIN_NAME=$(terraform output -raw domain_name || echo "not_found")
+        if [ "$DOMAIN_NAME" == "not_found" ]; then
+          echo "Output 'domain_name' not found. Please check your Terraform configuration."
+          exit 1
+        fi
+        echo "Your application is accessible at: https://$DOMAIN_NAME"
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
   notify:

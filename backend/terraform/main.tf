@@ -534,6 +534,10 @@ output "rds_endpoint" {
   value = aws_db_instance.ai_wizard.endpoint
 }
 
+output "domain_name" {
+  value = aws_route53_record.acm_validation.fqdn
+}
+
 # AWS Secrets Manager - for database credentials
 resource "aws_secretsmanager_secret" "db_credentials" {
   provider = aws.assume_role  # Use the assume_role provider
