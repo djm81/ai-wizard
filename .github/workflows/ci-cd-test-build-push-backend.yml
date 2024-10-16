@@ -54,7 +54,7 @@ jobs:
         echo "SECRET_KEY=dummy_secret_key_for_testing" >> .env.test
         
         # Create Firebase config file
-        cat <<EOF >> {{ $env.WORKING_DIRECTORY }}/app/config/firebase-adminsdk.json
+        cat <<EOF >> app/config/firebase-adminsdk.json
         ${{ secrets.FIREBASE_ADMINSDK_JSON }}
         EOF
       working-directory: ${{ env.WORKING_DIRECTORY }}
