@@ -3,7 +3,7 @@ FROM python:3.12
 # Create a non-root user
 RUN useradd -m appuser
 
-WORKDIR /app
+WORKDIR /backend
 
 # Copy poetry files
 COPY pyproject.toml poetry.lock ./
@@ -16,7 +16,7 @@ RUN pip install poetry==1.8.3 && \
 COPY app app
 COPY .env.* ./
 COPY pytest.ini ./
-COPY LICENSE ./
+COPY ../LICENSE ./
 
 # Change to the non-root user
 USER appuser
