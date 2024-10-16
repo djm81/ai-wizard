@@ -535,7 +535,7 @@ output "rds_endpoint" {
 }
 
 output "domain_name" {
-  value = aws_route53_record.acm_validation.fqdn
+  value = [for record in aws_route53_record.acm_validation : record.fqdn]
 }
 
 # AWS Secrets Manager - for database credentials
