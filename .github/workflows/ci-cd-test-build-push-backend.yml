@@ -54,7 +54,7 @@ jobs:
         echo "SECRET_KEY=dummy_secret_key_for_testing" >> .env.test
         
         # Create Firebase config file
-        cat <<EOF >> app/config/firebase-adminsdk.json
+        cat <<EOF >> {{ $env.WORKING_DIRECTORY }}/app/config/firebase-adminsdk.json
         ${{ secrets.FIREBASE_ADMINSDK_JSON }}
         EOF
       working-directory: ${{ env.WORKING_DIRECTORY }}
@@ -83,6 +83,18 @@ jobs:
       id: checkout_repo
       uses: actions/checkout@v4
     
+    - name: Set up production environment
+      id: setup_prod_environment
+      run: |
+        # Create .env file for production (without SECRET_KEY)
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+
+        # Create Firebase config file
+        cat <<EOF >> app/config/firebase-adminsdk.json
+        ${{ secrets.FIREBASE_ADMINSDK_JSON }}
+        EOF
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
     - name: Configure AWS credentials
       id: configure_aws_credentials
       uses: aws-actions/configure-aws-credentials@v4

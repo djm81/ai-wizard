@@ -15,7 +15,7 @@ RUN pip install poetry==1.8.3 && \
 # Copy backend files
 COPY app app
 COPY app/config/firebase-adminsdk.json ./app/config/firebase-adminsdk.json
-COPY .env.* ./
+COPY .env* ./
 COPY pytest.ini ./
 COPY ../LICENSE ./
 
