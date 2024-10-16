@@ -6,7 +6,7 @@ from firebase_admin import credentials, auth
 
 # Pfad zur firebase-adminsdk.json Datei
 current_dir = os.path.dirname(os.path.abspath(__file__))
-firebase_config_path = os.path.join(current_dir, '..', 'config', 'firebase-adminsdk.json')
+firebase_config_path = os.path.abspath(os.path.join(current_dir, '..', 'config', 'firebase-adminsdk.json'))
 
 # Initialisieren Sie den Firebase Admin SDK
 cred = credentials.Certificate(firebase_config_path)
