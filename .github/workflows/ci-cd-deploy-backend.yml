@@ -218,7 +218,7 @@ jobs:
     - name: Terraform Output Application URL
       id: output_application_url
       run: |
-        DOMAIN_NAME=$(terraform output -raw domain_name || echo "not_found")
+        DOMAIN_NAME=$(terraform output -json domain_name || echo "not_found")
         if [ "$DOMAIN_NAME" == "not_found" ]; then
           echo "Output 'domain_name' not found. Please check your Terraform configuration."
           exit 1

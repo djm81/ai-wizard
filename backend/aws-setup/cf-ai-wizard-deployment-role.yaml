@@ -138,6 +138,7 @@ Resources:
           - Effect: Allow
             Action:
               - 'ecs:Describe*'
+              - 'ecs:DeregisterTaskDefinition'
               - 'ecs:Get*'
               - 'ecs:List*'
               - 'ecs:TagResource'
