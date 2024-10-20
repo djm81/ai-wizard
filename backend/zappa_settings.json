@@ -1,0 +1,15 @@
+{
+    "production": {
+        "aws_region": "your-region",
+        "s3_bucket": "ai-wizard-zappa-deployments",
+        "profile_name": "default",
+        "project_name": "ai-wizard",
+        "runtime": "python3.12",
+        "environment_variables": {
+            "OPENAI_API_KEY": "your-openai-api-key",
+            "DATABASE_URL": "your-database-url"
+        },
+        "timeout": 30,
+        "memory_size": 512
+    }
+}

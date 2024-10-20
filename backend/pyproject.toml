@@ -1,38 +1,40 @@
 [tool.poetry]
 name = "ai-wizard"
 version = "0.1.0"
-description = "AI Wizard - Rapid Application Assistant"
-authors = ["Dominikus Nold <dominikus@nold-family.de>"]
+description = "AI Wizard - AI Assistant API"
+authors = ["Dominikus Nold <nold@noldmedia.com>"]
 packages = [
     { include = "app" },
 ]
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.9"
-fastapi = "^0.68.0"
-uvicorn = "^0.15.0"
-sqlalchemy = "^1.4.23"
-pydantic = "^1.8.2"
+python = "^3.12"
+fastapi = "^0.115.2"
+uvicorn = "^0.32.0"
+sqlalchemy = "^2.0.36"
+pydantic = "^2.9.2"
 python-jose = "^3.3.0"
 passlib = "^1.7.4"
-python-multipart = "^0.0.5"
-openai = "^0.27.0"
-psycopg2-binary = "^2.9.1"
-python-dotenv = "^0.19.0"
-alembic = "^1.7.5"
+python-multipart = "^0.0.12"
+openai = "^1.52.0"
+psycopg2-binary = "^2.9.10"
+python-dotenv = "^1.0.1"
+alembic = "^1.13.3"
 email-validator = "^2.2.0"
 bcrypt = "^4.2.0"
 firebase-admin = "^6.5.0"
+zappa = "^0.59.0"
 
-[tool.poetry.dev-dependencies]
-pytest = "^6.2.5"
-black = "^21.7b0"
-isort = "^5.9.3"
-flake8 = "^3.9.2"
-mypy = "^0.910"
-pytest-cov = "^2.12.1"
-python-dotenv = "^0.19.0"
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+black = "^24.10.0"
+isort = "^5.13.2"
+flake8 = "^7.1.1"
+mypy = "^1.12.0"
+pytest-cov = "^5.0.0"
+pytest-dotenv = "^0.5.2"
+python-dotenv = "^1.0.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

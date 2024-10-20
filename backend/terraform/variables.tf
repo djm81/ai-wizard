@@ -8,18 +8,6 @@ variable "aws_region" {
   type        = string
 }
 
-variable "postgres_db_username" {
-  description = "Username for the RDS instance"
-  type        = string
-  sensitive   = true
-}
-
-variable "postgres_db_password" {
-  description = "Password for the RDS instance"
-  type        = string
-  sensitive   = true
-}
-
 variable "domain_name" {
   description = "The domain name for the application"
   type        = string
@@ -42,25 +30,32 @@ variable "environment" {
   default     = "prod"
 }
 
-variable "vpc_cidr" {
-  description = "The CIDR block for the VPC"
-  type        = string
-  default     = "10.0.0.0/16"
-}
-
-variable "ecs_task_cpu" {
-  description = "The amount of CPU to allocate for the ECS task"
-  type        = number
-  default     = 256
-}
-
-variable "ecs_task_memory" {
-  description = "The amount of memory to allocate for the ECS task"
-  type        = number
-  default     = 512
-}
-
 variable "ecr_image_tag" {
   description = "The tag of the image to deploy"
   type        = string
+}
+
+# New variables for Zappa and DynamoDB
+variable "zappa_deployment_bucket_name" {
+  description = "The name of the S3 bucket for Zappa deployments"
+  type        = string
+  default     = "ai-wizard-zappa-deployments"
+}
+
+variable "dynamodb_table_name" {
+  description = "The name of the DynamoDB table"
+  type        = string
+  default     = "ai-wizard-table"
+}
+
+variable "lambda_function_name" {
+  description = "The name of the Lambda function"
+  type        = string
+  default     = "ai-wizard-lambda"
+}
+
+variable "frontend_bucket_name" {
+  description = "The name of the S3 bucket for frontend hosting"
+  type        = string
+  default     = "ai-wizard-frontend"
 }

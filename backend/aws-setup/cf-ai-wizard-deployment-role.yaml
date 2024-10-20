@@ -5,446 +5,81 @@ Parameters:
   TrustedAccount:
     Type: String
     Description: The AWS account ID that is allowed to assume this role
+  Route53ZoneId:
+    Type: String
+    Description: The Route53 Hosted Zone ID for the domain
 
 Resources:
-  # Create the managed policy
-  AIWizardManagedPolicy:
-    Type: 'AWS::IAM::Policy'
+  # Create the new managed policy for Zappa and serverless resources
+  AIWizardServerlessManagedPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
     Properties:
-      PolicyName: AIWizardManagedPolicy
-      Roles:
-        - !Ref AIWizardDeploymentRole
+      ManagedPolicyName: AIWizardServerlessManagedPolicy
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          # S3 Global Permissions
-          - Effect: Allow
-            Action:
-              - 's3:Describe*'
-              - 's3:Get*'
-              - 's3:List*'
-              - 's3:PutBucketTagging'
-              - 's3:PutObjectTagging'
-            Resource: '*' 
-
-          # S3 Permissions
           - Effect: Allow
             Action:
               - 's3:CreateBucket'
               - 's3:DeleteBucket'
-              - 's3:DeleteObject'
-              - 's3:DeleteObjectVersion'
+              - 's3:ListBucket'
               - 's3:PutObject'
-              - 's3:PutObjectAcl'
-              - 's3:UploadPart'
-              - 's3:AbortMultipartUpload'
+              - 's3:GetObject'
+              - 's3:DeleteObject'
+              - 's3:PutBucketPolicy'
+              - 's3:PutBucketWebsite'
+              - 's3:PutBucketPublicAccessBlock'
             Resource: 
-              - "arn:aws:s3:::ai-wizard-terraform-state-*"
-              - "arn:aws:s3:::ai-wizard-terraform-state-*/*"
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-
-          # CloudWatch Logs Global Permissions
+              - 'arn:aws:s3:::ai-wizard-zappa-deployments'
+              - 'arn:aws:s3:::ai-wizard-zappa-deployments/*'
+              - 'arn:aws:s3:::ai-wizard-frontend'
+              - 'arn:aws:s3:::ai-wizard-frontend/*'
           - Effect: Allow
             Action:
-              - 'logs:Describe*'
-              - 'logs:Get*'
-              - 'logs:List*'
-              - 'logs:TagResource'
-              - 'logs:TagLogGroup'
-              - 'logs:TagLogStream'
-            Resource: '*'
-
-          # CloudWatch Logs Permissions
+              - 'dynamodb:CreateTable'
+              - 'dynamodb:DeleteTable'
+              - 'dynamodb:DescribeTable'
+              - 'dynamodb:PutItem'
+              - 'dynamodb:GetItem'
+              - 'dynamodb:UpdateItem'
+              - 'dynamodb:DeleteItem'
+              - 'dynamodb:Query'
+              - 'dynamodb:Scan'
+            Resource: 'arn:aws:dynamodb:*:*:table/ai-wizard-table'
           - Effect: Allow
             Action:
-              - 'logs:CreateLogGroup'
-              - 'logs:CreateLogStream'
-              - 'logs:DeleteLogGroup'
-              - 'logs:DeleteLogStream'
-              - 'logs:DeleteMetricFilter'
-              - 'logs:DeleteSubscriptionFilter'
-              - 'logs:FilterLogEvents'
-              - 'logs:PutLogEvents'
-              - 'logs:PutMetricFilter'
-              - 'logs:PutRetentionPolicy'
-              - 'logs:PutSubscriptionFilter'
-            Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-
-          # CloudWatch Global Permissions
+              - 'lambda:CreateFunction'
+              - 'lambda:DeleteFunction'
+              - 'lambda:GetFunction'
+              - 'lambda:InvokeFunction'
+              - 'lambda:UpdateFunctionCode'
+              - 'lambda:UpdateFunctionConfiguration'
+            Resource: 'arn:aws:lambda:*:*:function:ai-wizard-lambda'
           - Effect: Allow
             Action:
-              - 'cloudwatch:CreateAlarm'
-              - 'cloudwatch:Describe*'
-              - 'cloudwatch:Get*'
-              - 'cloudwatch:List*'
-              - 'cloudwatch:TagResource'
-              - 'cloudwatch:PutMetricAlarm'
+              - 'apigateway:*'
             Resource: '*'
-
-          # CloudWatch Permissions
           - Effect: Allow
             Action:
-              - 'cloudwatch:DeleteAlarms'
-              - 'cloudwatch:DeleteDashboards'
-              - 'cloudwatch:DeleteMetricAlarm'
-              - 'cloudwatch:DeleteMetricFilters'
-              - 'cloudwatch:DeleteMetricStream'
-              - 'cloudwatch:DisableAlarmActions'
-              - 'cloudwatch:EnableAlarmActions'
-              - 'cloudwatch:PutMetricData'
-              - 'cloudwatch:SetAlarmState'
-              - 'cloudwatch:UntagResource'
+              - 'cloudfront:CreateDistribution'
+              - 'cloudfront:GetDistribution'
+              - 'cloudfront:UpdateDistribution'
+              - 'cloudfront:DeleteDistribution'
+              - 'cloudfront:TagResource'
             Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-
-          # ECR Global Permissions
           - Effect: Allow
             Action:
-              - 'ecr:Describe*'
-              - 'ecr:Get*'
-              - 'ecr:List*'
-              - 'ecr:TagResource'
-            Resource: '*'
-
-          # ECR Permissions
+              - 'route53:ChangeResourceRecordSets'
+              - 'route53:ListResourceRecordSets'
+              - 'route53:GetHostedZone'
+            Resource: !Sub 'arn:aws:route53:::hostedzone/${Route53ZoneId}'
           - Effect: Allow
             Action:
-              - 'ecr:BatchCheckLayerAvailability'
-              - 'ecr:BatchGetImage'
-              - 'ecr:CompleteLayerUpload'
-              - 'ecr:CreateRepository'
-              - 'ecr:DeleteRepository'
-              - 'ecr:DeleteRepositoryPolicy'
-              - 'ecr:DeregisterImage'
-              - 'ecr:InitiateLayerUpload'
-              - 'ecr:PutImage'
-              - 'ecr:PutLifecyclePolicy'
-              - 'ecr:SetRepositoryPolicy'
-              - 'ecr:UntagResource'
-              - 'ecr:UploadLayerPart'
-            Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-
-          # ECS Global Permissions
-          - Effect: Allow
-            Action:
-              - 'ecs:Describe*'
-              - 'ecs:DeregisterTaskDefinition'
-              - 'ecs:Get*'
-              - 'ecs:List*'
-              - 'ecs:TagResource'
-            Resource: '*'
-
-          # ECS Permissions
-          - Effect: Allow
-            Action:
-              - 'ecs:CreateCluster'
-              - 'ecs:CreateService'
-              - 'ecs:DeleteCluster'
-              - 'ecs:DeleteService'
-              - 'ecs:DeregisterTaskDefinition'
-              - 'ecs:RegisterTaskDefinition'
-              - 'ecs:UntagResource'
-              - 'ecs:UpdateService'
-              - 'ecs:UpdateClusterSettings'
-              - 'ecs:UpdateServicePrimaryTaskSet'
-              - 'ecs:UpdateServiceTaskSet'
-            Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-
-          # ELB Global Permissions
-          - Effect: Allow
-            Action:
-              - 'elasticloadbalancing:CreateLoadBalancer'
-              - 'elasticloadbalancing:Describe*'
-              - 'elasticloadbalancing:Get*'
-              - 'elasticloadbalancing:List*'
-              - 'elasticloadbalancing:TagResource'
-              - 'elasticloadbalancing:AddTags'
-            Resource: '*'
-
-          # ELB Permissions
-          - Effect: Allow
-            Action:
-              - 'elasticloadbalancing:CreateListener'
-              - 'elasticloadbalancing:CreateTargetGroup'
-              - 'elasticloadbalancing:DeleteLoadBalancer'
-              - 'elasticloadbalancing:DeleteListener'
-              - 'elasticloadbalancing:DeleteTargetGroup'
-              - 'elasticloadbalancing:DeregisterTargets'
-              - 'elasticloadbalancing:ModifyListener'
-              - 'elasticloadbalancing:ModifyLoadBalancerAttributes'
-              - 'elasticloadbalancing:ModifyTargetGroup'
-              - 'elasticloadbalancing:ModifyTargetGroupAttributes'
-              - 'elasticloadbalancing:RegisterTargets'
-              - 'elasticloadbalancing:RemoveTags'
-              - 'elasticloadbalancing:SetSecurityGroups'
-              - 'elasticloadbalancing:SetSubnets'
-            Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-
-          # RDS Global Permissions
-          - Effect: Allow
-            Action:
-              - 'rds:Describe*'
-              - 'rds:Get*'
-              - 'rds:List*'
-              - 'rds:AddTagsToResource'
-            Resource: '*'
-
-          # RDS Permissions
-          - Effect: Allow
-            Action:
-              - 'rds:CreateDBInstance'
-              - 'rds:CreateDBSubnetGroup'
-              - 'rds:DeleteDBSubnetGroup'
-              - 'rds:DeleteDBInstance'
-              - 'rds:ModifyDBInstance'
-              - 'rds:RemoveTagsFromResource'
-            Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-
-          # VPC Global Permissions
-          - Effect: Allow
-            Action:
-              - 'ec2:AllocateAddress'
-              - 'ec2:CreateCustomerGateway'
-              - 'ec2:CreateInternetGateway'
-              - 'ec2:CreateKeyPair'
-              - 'ec2:CreateNatGateway'
-              - 'ec2:CreateRouteTable'
-              - 'ec2:CreateSecurityGroup'
-              - 'ec2:CreateSubnet'
-              - 'ec2:CreateTags'
-              - 'ec2:CreateVpc'
-              - 'ec2:Describe*'
-              - 'ec2:Get*'
-              - 'ec2:List*'
-              - 'ec2:TagResource'
-            Resource: '*'
-
-          # VPC Permissions
-          - Effect: Allow
-            Action:
-              - 'ec2:AssociateRouteTable'
-              - 'ec2:AssociateSubnetCidrBlock'
-              - 'ec2:AuthorizeSecurityGroupIngress'
-              - 'ec2:AuthorizeSecurityGroupEgress'
-              - 'ec2:AttachInternetGateway'
-              - 'ec2:AttachCustomerGateway'
-              - 'ec2:AttachNatGateway'
-              - 'ec2:AttachNetworkInterface'
-              - 'ec2:AttachVolume'
-              - 'ec2:AttachVpnGateway'
-              - 'ec2:CreateNetworkInterface'
-              - 'ec2:CreateRoute'
-              - 'ec2:DeleteCustomerGateway'
-              - 'ec2:DeleteInternetGateway'
-              - 'ec2:DeleteKeyPair'
-              - 'ec2:DeleteNatGateway'
-              - 'ec2:DeleteNetworkInterface'
-              - 'ec2:DeleteRoute'
-              - 'ec2:DeleteRouteTable'
-              - 'ec2:DeleteSecurityGroup'
-              - 'ec2:DeleteSubnet'
-              - 'ec2:DeleteTags'
-              - 'ec2:DeleteVpc'
-              - 'ec2:DeregisterImage'
-              - 'ec2:DeleteVolume'
-              - 'ec2:DeleteVpnGateway'
-              - 'ec2:DetachInternetGateway'
-              - 'ec2:DetachCustomerGateway'
-              - 'ec2:DetachNatGateway'
-              - 'ec2:DetachNetworkInterface'
-              - 'ec2:DetachVolume'
-              - 'ec2:DetachVpnGateway'
-              - 'ec2:DisassociateRouteTable'
-              - 'ec2:DisassociateSubnetCidrBlock'
-              - 'ec2:ModifyVpcAttribute'
-              - 'ec2:ModifySubnetAttribute'
-              - 'ec2:ModifyVpnConnection'
-              - 'ec2:MonitorInstances'   
-              - 'ec2:RegisterImage'           
-              - 'ec2:ReplaceRoute'
-              - 'ec2:ReplaceRouteTableAssociation'
-              - 'ec2:ReplaceVpcAttribute'
-              - 'ec2:ReleaseAddress'
-              - 'ec2:RevokeSecurityGroupIngress'
-              - 'ec2:RevokeSecurityGroupEgress'
-              - 'ec2:UnassignPrivateIpAddresses'
-              - 'ec2:UnmonitorInstances'
-              - 'ec2:UpdateSecurityGroupRuleDescriptionsIngress'
-              - 'ec2:UpdateSecurityGroupRuleDescriptionsEgress'
-              - 'ec2:UpdateSecurityGroupRules'
-              - 'ec2:UpdateSecurityGroupRulesEgress'
-              - 'ec2:UpdateSecurityGroupRulesIngress'
-            Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-               
-          # Secrets Manager Global Permissions
-          - Effect: Allow
-            Action:
-              - 'secretsmanager:Describe*'
-              - 'secretsmanager:Get*'
-              - 'secretsmanager:List*'
-              - 'secretsmanager:TagResource'
-            Resource: '*'
-
-          # Secrets Manager Permissions
-          - Effect: Allow
-            Action:
-              - 'secretsmanager:CreateSecret'
-              - 'secretsmanager:DeleteSecret'
-              - 'secretsmanager:PutSecretValue'
-              - 'secretsmanager:UpdateSecret'
-            Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-
-          # SNS Global Permissions
-          - Effect: Allow
-            Action:
-              - 'sns:Describe*'
-              - 'sns:Get*'
-              - 'sns:List*'
-              - 'sns:TagResource'
-            Resource: '*'
-
-          # SNS Permissions
-          - Effect: Allow
-            Action:
-              - 'sns:CreateTopic'
-              - 'sns:DeleteTopic'
-              - 'sns:Publish'
-              - 'sns:RemovePermission'
-              - 'sns:SetSubscriptionAttributes'
-              - 'sns:SetTopicAttributes'
-              - 'sns:Subscribe'
-              - 'sns:Unsubscribe'
-            Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-
-          # SSM Global Permissions
-          - Effect: Allow
-            Action:
-              - 'ssm:Describe*'
-              - 'ssm:Get*'
-              - 'ssm:List*'
-              - 'ssm:AddTagsToResource'
-            Resource: '*'
-
-          # SSM Permissions
-          - Effect: Allow
-            Action:
-              - 'ssm:DeleteParameter'
-              - 'ssm:DeleteParameters'
-              - 'ssm:PutParameter'
-            Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-
-          # STS Global Permissions
-          - Effect: Allow
-            Action: 
-              - 'sts:GetCallerIdentity'
-              - 'sts:GetSessionToken'
-              - 'sts:TagSession'
-            Resource: '*'
-
-          # STS Permissions
-          - Effect: Allow
-            Action: 
-              - 'sts:AssumeRole'
-            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
-
-
-          # IAM Global Permissions
-          - Effect: Allow
-            Action: 
-              - 'iam:PassRole'
-            Resource: '*'
-
-          # IAM Permissions
-          - Effect: Allow
-            Action:
-              - 'iam:AttachRolePolicy'
-              - 'iam:CreateRole'
-              - 'iam:DeleteRole'
-              - 'iam:DeleteRolePolicy'
-              - 'iam:DetachRolePolicy'
-              - 'iam:GetRole'
-              - 'iam:GetRolePolicy'
-              - 'iam:ListAttachedRolePolicies'
-              - 'iam:ListRolePolicies'
-              - 'iam:PutRolePolicy'
-              - 'iam:TagRole'
-            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-ecs-task-execution-role'
-
-          # AWS Certificate Manager Global Permissions
-          - Effect: Allow
-            Action:
-              - 'acm:Describe*'
-              - 'acm:Get*'
-              - 'acm:List*'
-              - 'acm:TagResource'
-            Resource: '*'
-
-          # AWS Certificate Manager Permissions
-          - Effect: Allow
-            Action:
-              - 'acm:AddTagsToCertificate'
-              - 'acm:DeleteCertificate'
               - 'acm:RequestCertificate'
-              - 'acm:RemoveTagsFromCertificate'
-              - 'acm:UpdateCertificateOptions'
+              - 'acm:DescribeCertificate'
+              - 'acm:DeleteCertificate'
+              - 'acm:ListCertificates'
             Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
-
-          # Route53 Global Permissions
-          - Effect: Allow
-            Action:
-              - 'route53:Describe*'
-              - 'route53:Get*'
-              - 'route53:List*'
-              - 'route53:TagResource'
-              - 'route53:ChangeTagsForResource'
-              - 'route53:ChangeResourceRecordSets'
-              - 'route53:UpdateTagsForDomain'
-            Resource: '*'
-
-          # Route53 Permissions
-          - Effect: Allow
-            Action:
-              - 'route53:ChangeResourceRecordSets'
-              - 'route53:DeleteTagsForDomain'
-              - 'route53:UntagResource'
-            Resource: '*'
-            Condition:
-              StringEquals:
-                "aws:ResourceTag/Project": "ai-wizard"
 
   # Create the IAM role
   AIWizardDeploymentRole:
@@ -462,7 +97,8 @@ Resources:
             Action: 
               - 'sts:AssumeRole'
               - 'sts:TagSession'
-      Policies: []  # No inline policies, managed policy will be attached
+      ManagedPolicyArns:
+        - !Ref AIWizardServerlessManagedPolicy
 
 Outputs:
   RoleARN:
