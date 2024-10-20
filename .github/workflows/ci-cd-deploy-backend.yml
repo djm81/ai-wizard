@@ -2,7 +2,7 @@ name: Deploy Backend
 
 on:
   workflow_run:
-    workflows: ["Build & Push Backend Image"]
+    workflows: ["Test and Build Backend"]
     types:
       - completed
   push:
@@ -12,12 +12,11 @@ on:
       - '.github/workflows/ci-cd-deploy-backend.yml'
 
 env:
-  ECR_REPOSITORY: ai-wizard
   TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_aws_region }}
   WORKING_DIRECTORY: backend
 
 jobs:
-  deploy:
+  plan_and_estimate:
     runs-on: ubuntu-latest
     if: |
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
@@ -28,11 +27,9 @@ jobs:
       ))
     steps:
     - name: Checkout code
-      id: checkout_code
       uses: actions/checkout@v4
 
     - name: Configure AWS credentials
-      id: configure_aws_credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -41,77 +38,12 @@ jobs:
         role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
           
-    - name: Get Caller Identity
-      id: get_caller_identity
-      run: aws sts get-caller-identity
-
-    - name: Get current image tag from ECR
-      id: get_current_image_tag
-      run: |
-        LATEST_TAG=$(aws ecr describe-images --repository-name ${{ env.ECR_REPOSITORY }} --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)
-        echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-
-    - name: Create S3 bucket for Terraform state
-      id: create_s3_bucket
-      run: |
-        if ! aws s3 ls "s3://${TF_STATE_BUCKET}" 2>&1 | grep -q 'NoSuchBucket'; then
-          echo "Terraform state bucket already exists"
-        else
-          echo "Creating Terraform state bucket"
-          aws s3api create-bucket \
-            --bucket ${TF_STATE_BUCKET} \
-            --region ${{ vars.TF_VAR_aws_region }} \
-            --create-bucket-configuration LocationConstraint=${{ vars.TF_VAR_aws_region }}
-          
-          # Enable versioning
-          aws s3api put-bucket-versioning \
-            --bucket ${TF_STATE_BUCKET} \
-            --versioning-configuration Status=Enabled
-
-          # Enable server-side encryption
-          aws s3api put-bucket-encryption \
-            --bucket ${TF_STATE_BUCKET} \
-            --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
-
-          # Block public access
-          aws s3api put-public-access-block \
-            --bucket ${TF_STATE_BUCKET} \
-            --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
-        
-          # Set bucket policy
-          aws s3api put-bucket-policy --bucket ${TF_STATE_BUCKET} --policy '{
-            "Version": "2012-10-17",
-            "Statement": [
-              {
-                "Effect": "Allow",
-                "Principal": {
-                  "AWS": "arn:aws:sts::${{ vars.TF_VAR_aws_account_id }}:assumed-role/AIWizardDeploymentRole/GitHubActions"
-                },
-                "Action": [
-                  "s3:PutObject",
-                  "s3:GetObject",
-                  "s3:DeleteObject",
-                  "s3:ListBucket"
-                ],
-                "Resource": [
-                  "arn:aws:s3:::ai-wizard-terraform-state-${{ vars.TF_VAR_aws_region }}",
-                  "arn:aws:s3:::ai-wizard-terraform-state-${{ vars.TF_VAR_aws_region }}/*"
-                ]
-              }
-            ]
-          }'
-        fi
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-
     - name: Setup Terraform
-      id: setup_terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.0.0
 
     - name: Terraform Init
-      id: terraform_init
       run: |
         terraform init \
           -backend-config="bucket=${TF_STATE_BUCKET}" \
@@ -120,111 +52,119 @@ jobs:
           -reconfigure
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Check if ECR Repository is managed by Terraform
-      id: check_ecr_managed
-      run: |
-        if terraform state list | grep -q 'aws_ecr_repository.ai_wizard'; then
-          echo "ECR repository is already managed by Terraform"
-          echo "is_managed=true" >> $GITHUB_OUTPUT
-        else
-          echo "ECR repository is not managed by Terraform"
-          echo "is_managed=false" >> $GITHUB_OUTPUT
-        fi
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
-
-    - name: Terraform Import ECR Repository
-      id: terraform_import_ecr_repository
-      if: steps.check_ecr_managed.outputs.is_managed == 'false'
-      run: |
-        terraform import \
-          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
-          -var="postgres_db_username=${{ secrets.POSTGRES_DB_USERNAME }}" \
-          -var="postgres_db_password=${{ secrets.POSTGRES_DB_PASSWORD }}" \
-          -var="domain_name=${{ secrets.DOMAIN_NAME }}" \
-          -var="route53_zone_id=${{ secrets.ROUTE53_HOSTED_ZONE_ID }}" \
-          -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
-          -var="ecr_image_tag=${LATEST_TAG}" \
-          -var="environment=production" \
-          aws_ecr_repository.ai_wizard ${{ env.ECR_REPOSITORY }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
-
-    - name: Terraform Plan (Targeted)
-      id: terraform_plan_targeted
+    - name: Terraform Plan
       run: |
         terraform plan \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
-          -var="postgres_db_username=${{ secrets.POSTGRES_DB_USERNAME }}" \
-          -var="postgres_db_password=${{ secrets.POSTGRES_DB_PASSWORD }}" \
           -var="domain_name=${{ secrets.DOMAIN_NAME }}" \
           -var="route53_zone_id=${{ secrets.ROUTE53_HOSTED_ZONE_ID }}" \
           -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
-          -var="ecr_image_tag=${LATEST_TAG}" \
           -var="environment=production" \
-          -target=aws_acm_certificate.ai_wizard \
-          -out=tfplan_targeted
+          -out=tfplan
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Terraform Apply (Targeted)
-      id: terraform_apply_targeted
-      run: terraform apply -auto-approve tfplan_targeted
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+    - name: Setup Infracost
+      uses: infracost/actions/setup@v3
+      with:
+        api-key: ${{ secrets.INFRACOST_API_KEY }}
 
-    - name: Terraform Plan (Validation)
-      id: terraform_plan_validation
+    - name: Generate Infracost cost estimate
       run: |
-        terraform plan \
-          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
-          -var="postgres_db_username=${{ secrets.POSTGRES_DB_USERNAME }}" \
-          -var="postgres_db_password=${{ secrets.POSTGRES_DB_PASSWORD }}" \
-          -var="domain_name=${{ secrets.DOMAIN_NAME }}" \
-          -var="route53_zone_id=${{ secrets.ROUTE53_HOSTED_ZONE_ID }}" \
-          -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
-          -var="ecr_image_tag=${LATEST_TAG}" \
-          -var="environment=production" \
-          -target=aws_route53_record.acm_validation \
-          -target=aws_acm_certificate_validation.ai_wizard \
-          -out=tfplan_validation
+        infracost breakdown --path . \
+                            --format json \
+                            --out-file infracost-report.json
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Terraform Apply (Validation)
-      id: terraform_apply_validation
-      run: terraform apply -auto-approve tfplan_validation
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
-
-    - name: Terraform Plan (Full)
-      id: terraform_plan
+    - name: Post Infracost comment
       run: |
-        terraform plan \
-          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
-          -var="postgres_db_username=${{ secrets.POSTGRES_DB_USERNAME }}" \
-          -var="postgres_db_password=${{ secrets.POSTGRES_DB_PASSWORD }}" \
-          -var="domain_name=${{ secrets.DOMAIN_NAME }}" \
-          -var="route53_zone_id=${{ secrets.ROUTE53_HOSTED_ZONE_ID }}" \
-          -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
-          -var="ecr_image_tag=${LATEST_TAG}" \
-          -var="environment=production" \
-          -out=tfplan_full
+        infracost comment github --path=infracost-report.json \
+                                 --repo=$GITHUB_REPOSITORY \
+                                 --github-token=${{ github.token }} \
+                                 --behavior=update
+        path: ${{ env.WORKING_DIRECTORY }}/terraform/infracost-report.json
+
+    - name: Upload Terraform plan
+      uses: actions/upload-artifact@v3
+      with:
+        name: tfplan
+        path: ${{ env.WORKING_DIRECTORY }}/terraform/tfplan
+
+  approve:
+    needs: plan_and_estimate
+    runs-on: ubuntu-latest
+    steps:
+    - name: Manual approval
+      uses: trstringer/manual-approval@v1
+      with:
+        secret: ${{ github.TOKEN }}
+        approvers: your-github-username
+        minimum-approvals: 1
+        issue-title: "Approve Terraform changes"
+        issue-body: "Please review the Infracost estimate and approve the Terraform changes."
+        exclude-workflow-initiator-as-approver: false
+
+  deploy:
+    needs: approve
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.TF_VAR_aws_region }}
+        role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
+        mask-aws-account-id: 'false'
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.0.0
+
+    - name: Download Terraform plan
+      uses: actions/download-artifact@v3
+      with:
+        name: tfplan
+        path: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Terraform Apply
+      run: terraform apply -auto-approve tfplan
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Terraform Apply (Full)
-      id: terraform_apply
-      run: terraform apply -auto-approve tfplan_full
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Install dependencies
+      run: |
+        poetry install
+        poetry add zappa
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    - name: Deploy with Zappa
+      run: |
+        poetry run zappa update production
+      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Terraform Output Application URL
       id: output_application_url
       run: |
-        DOMAIN_NAME=$(terraform output -json domain_name || echo "not_found")
-        if [ "$DOMAIN_NAME" == "not_found" ]; then
-          echo "Output 'domain_name' not found. Please check your Terraform configuration."
-          exit 1
-        fi
-        echo "Your application is accessible at: https://$DOMAIN_NAME"
+        echo "Your application is accessible at: $(terraform output -raw website_url)"
+        echo "application_url=$(terraform output -raw website_url)" >> $GITHUB_OUTPUT
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    outputs:
+      application_url: ${{ steps.output_application_url.outputs.application_url }}
 
   notify:
     needs: deploy
@@ -246,7 +186,7 @@ jobs:
         status: ${{ steps.check_job_status.outputs.status }}
         text: |
           ${{ steps.check_job_status.outputs.status == 'success' && 'Deployment succeeded! :rocket:' || 'Deployment failed! :x:' }}
-          ${{ steps.check_job_status.outputs.status == 'success' && format('Application is accessible at: https://{0}', secrets.DOMAIN_NAME) || '' }}
+          ${{ steps.check_job_status.outputs.status == 'success' && format('Application is accessible at: {0}', needs.deploy.outputs.application_url) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
