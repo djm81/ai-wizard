@@ -145,6 +145,14 @@ jobs:
         poetry run zappa package production -o lambda_package.zip
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
+    - name: Create S3 bucket if needed
+      id: create_s3_bucket
+      run: |
+        if ! aws s3 ls s3://ai-wizard-zappa-deployments &> /dev/null; then
+          aws s3 mb s3://ai-wizard-zappa-deployments --block-public-access
+        fi
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
     - name: Upload package to S3
       id: upload_package
       run: |
