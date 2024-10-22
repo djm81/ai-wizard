@@ -54,6 +54,16 @@ jobs:
         if [ -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' ]; then
           echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
         fi
+
+        # Create Zappa settings file if needed
+        if [ ! -e zappa_settings.json ]; then
+          cp zappa_settings.json.example zappa_settings.json
+          sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
+          sed -i 's/##s3_bucket##/ai-wizard-zappa-deployments/g' zappa_settings.json
+          sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
+          sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
+          sed -i 's/##database_url##/${{ vars.PROD_DATABASE_URL }}/g' zappa_settings.json
+        fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Run tests
@@ -96,6 +106,7 @@ jobs:
       run: |
         poetry install
         poetry add zappa
+        poetry add setuptools
         poetry export -f requirements.txt --output requirements.txt --without-hashes
       working-directory: ${{ env.WORKING_DIRECTORY }}
 

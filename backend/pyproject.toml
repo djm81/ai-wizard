@@ -26,6 +26,7 @@ bcrypt = "^4.2.0"
 firebase-admin = "^6.5.0"
 zappa = "^0.59.0"
 pydantic-settings = "^2.6.0"
+setuptools = "^75.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
