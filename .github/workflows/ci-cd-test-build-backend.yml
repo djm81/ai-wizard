@@ -68,6 +68,10 @@ jobs:
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
+    - name: List files
+      id: list_files
+      run: ls -la ${{ env.WORKING_DIRECTORY }}      
+
     - name: Run tests
       id: run_tests
       run: |
