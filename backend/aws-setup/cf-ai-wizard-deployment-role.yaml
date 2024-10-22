@@ -48,6 +48,8 @@ Resources:
               - 'dynamodb:DeleteItem'
               - 'dynamodb:Query'
               - 'dynamodb:Scan'
+              - 'dynamodb:TagResource'
+              - 'dynamodb:UntagResource'
             Resource: 'arn:aws:dynamodb:*:*:table/ai-wizard-table'
           - Effect: Allow
             Action:
@@ -57,6 +59,8 @@ Resources:
               - 'lambda:InvokeFunction'
               - 'lambda:UpdateFunctionCode'
               - 'lambda:UpdateFunctionConfiguration'
+              - 'lambda:TagResource'
+              - 'lambda:UntagResource'
             Resource: 'arn:aws:lambda:*:*:function:ai-wizard-lambda'
           - Effect: Allow
             Action:
@@ -69,6 +73,7 @@ Resources:
               - 'cloudfront:UpdateDistribution'
               - 'cloudfront:DeleteDistribution'
               - 'cloudfront:TagResource'
+              - 'cloudfront:UntagResource'
             Resource: '*'
           - Effect: Allow
             Action:

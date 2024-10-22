@@ -31,10 +31,10 @@ locals {
 # S3 bucket for Zappa deployments
 resource "aws_s3_bucket" "zappa_deployments" {
   provider = aws.assume_role
-  bucket   = "ai-wizard-zappa-deployments"
+  bucket   = "ai-wizard-zappa-deployments-${var.aws_region}"
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-zappa-deployments"
+    Name = "ai-wizard-zappa-deployments-${var.aws_region}"
   })
 }
 
