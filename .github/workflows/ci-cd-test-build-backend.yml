@@ -64,7 +64,7 @@ jobs:
           sed -i 's/##s3_bucket##/ai-wizard-zappa-deployments/g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
           sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
-          sed -i 's/##database_url##/${{ vars.TEST_DATABASE_URL }}/g' zappa_settings.json
+          sed -i 's;##database_url##;${{ vars.TEST_DATABASE_URL }};g' zappa_settings.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
@@ -125,7 +125,7 @@ jobs:
           sed -i 's/##s3_bucket##/ai-wizard-zappa-deployments/g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
           sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
-          sed -i 's/##database_url##/${{ vars.PROD_DATABASE_URL }}/g' zappa_settings.json
+          sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
