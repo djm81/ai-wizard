@@ -8,6 +8,9 @@ Parameters:
   Route53ZoneId:
     Type: String
     Description: The Route53 Hosted Zone ID for the domain
+  S3BucketRegion:
+    Type: String
+    Description: The region of the S3 bucket
 
 Resources:
   # Create the new managed policy for Zappa and serverless resources
@@ -30,10 +33,10 @@ Resources:
               - 's3:PutBucketWebsite'
               - 's3:PutBucketPublicAccessBlock'
             Resource: 
-              - 'arn:aws:s3:::ai-wizard-zappa-deployments'
-              - 'arn:aws:s3:::ai-wizard-zappa-deployments/*'
-              - 'arn:aws:s3:::ai-wizard-frontend'
-              - 'arn:aws:s3:::ai-wizard-frontend/*'
+              - 'arn:aws:s3:::ai-wizard-zappa-deployments-${S3BucketRegion}'
+              - 'arn:aws:s3:::ai-wizard-zappa-deployments-${S3BucketRegion}/*'
+              - 'arn:aws:s3:::ai-wizard-frontend-${S3BucketRegion}'
+              - 'arn:aws:s3:::ai-wizard-frontend-${S3BucketRegion}/*'
           - Effect: Allow
             Action:
               - 'dynamodb:CreateTable'

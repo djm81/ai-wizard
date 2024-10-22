@@ -58,11 +58,11 @@ if aws cloudformation describe-stacks --stack-name "$ai_wizard_role_stack" >/dev
     # Compare deployed with local template for changes
     if ! diff <(echo "$deployed_ai_wizard_role_template") "$ai_wizard_role_template" > /dev/null; then
         echo "Updating stack: $ai_wizard_role_stack"
-        aws cloudformation update-stack --stack-name "$ai_wizard_role_stack" --template-body file://$ai_wizard_role_template --parameters ParameterKey=TrustedAccount,ParameterValue="$aws_account_id" ParameterKey=Route53ZoneId,ParameterValue="$route53_zone_id" --capabilities CAPABILITY_NAMED_IAM --region $aws_region
+        aws cloudformation update-stack --stack-name "$ai_wizard_role_stack" --template-body file://$ai_wizard_role_template --parameters ParameterKey=TrustedAccount,ParameterValue="$aws_account_id" ParameterKey=Route53ZoneId,ParameterValue="$route53_zone_id" ParameterKey=S3BucketRegion,ParameterValue="$aws_region" --capabilities CAPABILITY_NAMED_IAM --region $aws_region
     else
         echo "The AI Wizard Deployment Role stack is up to date."
     fi
 else
     echo "Creating stack: $ai_wizard_role_stack"
-    aws cloudformation create-stack --stack-name "$ai_wizard_role_stack" --template-body file://$ai_wizard_role_template --parameters ParameterKey=TrustedAccount,ParameterValue="$aws_account_id" ParameterKey=Route53ZoneId,ParameterValue="$route53_zone_id" --capabilities CAPABILITY_NAMED_IAM --region $aws_region
+    aws cloudformation create-stack --stack-name "$ai_wizard_role_stack" --template-body file://$ai_wizard_role_template --parameters ParameterKey=TrustedAccount,ParameterValue="$aws_account_id" ParameterKey=Route53ZoneId,ParameterValue="$route53_zone_id" ParameterKey=S3BucketRegion,ParameterValue="$aws_region" --capabilities CAPABILITY_NAMED_IAM --region $aws_region
 fi
