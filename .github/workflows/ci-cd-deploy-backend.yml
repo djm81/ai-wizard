@@ -95,7 +95,7 @@ jobs:
 
     - name: Upload Terraform plan
       id: upload_terraform_plan
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: tfplan
         path: ${{ env.WORKING_DIRECTORY }}/terraform/tfplan
@@ -147,7 +147,7 @@ jobs:
 
     - name: Download Terraform plan
       id: download_terraform_plan
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: tfplan
         path: ${{ env.WORKING_DIRECTORY }}/terraform
