@@ -7,14 +7,14 @@ on:
       - 'backend/**'
       - '!backend/terraform/**'
       - '!backend/aws-setup/**'
-      - '.github/workflows/ci-cd-test-build-push-backend.yml'
+      - '.github/workflows/ci-cd-test-build-backend.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'backend/**'
       - '!backend/terraform/**'
       - '!backend/aws-setup/**'
-      - '.github/workflows/ci-cd-test-build-push-backend.yml'
+      - '.github/workflows/ci-cd-test-build-backend.yml'
 
 env:
   WORKING_DIRECTORY: backend
@@ -51,8 +51,8 @@ jobs:
         echo "DYNAMODB_TABLE_NAME=ai-wizard-table-test" >> .env.test
         
         # Create Firebase config file if needed
-        if [ -n "${{ secrets.FIREBASE_ADMINSDK_JSON }}" ]; then
-          echo "${{ secrets.FIREBASE_ADMINSDK_JSON }}" > app/config/firebase-adminsdk.json
+        if [ -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' ]; then
+          echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
