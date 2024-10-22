@@ -41,6 +41,7 @@ Resources:
             Action:
               - 'dynamodb:CreateTable'
               - 'dynamodb:DeleteTable'
+              - 'dynamodb:DescribeContinuousBackups'
               - 'dynamodb:DescribeTable'
               - 'dynamodb:PutItem'
               - 'dynamodb:GetItem'
@@ -87,7 +88,16 @@ Resources:
               - 'acm:DescribeCertificate'
               - 'acm:DeleteCertificate'
               - 'acm:ListCertificates'
+              - 'acm:AddTagsToCertificate'
+              - 'acm:RemoveTagsFromCertificate'
             Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'iam:CreateRole'
+              - 'iam:DeleteRole'
+              - 'iam:AttachRolePolicy'
+              - 'iam:DetachRolePolicy'
+            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role'
           - Effect: Allow
             Action: 
               - 'sts:AssumeRole'

@@ -95,10 +95,10 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_exec" {
 # S3 bucket for frontend hosting
 resource "aws_s3_bucket" "frontend" {
   provider = aws.assume_role
-  bucket   = "ai-wizard-frontend"
+  bucket   = "ai-wizard-frontend-${var.aws_region}"
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-frontend"
+    Name = "ai-wizard-frontend-${var.aws_region}"
   })
 }
 
