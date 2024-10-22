@@ -7,5 +7,8 @@
 environment                   = "production"
 dynamodb_table_name           = "ai-wizard-table"
 lambda_function_name          = "ai-wizard-lambda"
-frontend_bucket_name          = "ai-wizard-frontend-${aws_region}"
-zappa_deployments_bucket_name = "ai-wizard-zappa-deployments-${aws_region}"
+
+# These variables are set in the backend/terraform/variables.tf file with defaults
+# Uncomment if you want to override the defaults
+# frontend_bucket_name          = "ai-wizard-frontend-${aws_region}"
+# zappa_deployments_bucket_name = "ai-wizard-zappa-deployments-${aws_region}"
