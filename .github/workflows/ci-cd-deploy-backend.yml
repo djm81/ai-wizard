@@ -154,7 +154,7 @@ jobs:
 
     - name: Import zappa deployment bucket
       run: |
-        terraform import aws_s3_bucket.zappa_deployments ai-wizard-zappa-deployments-${{ vars.TF_VAR_aws_region }}
+        terraform import aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Apply

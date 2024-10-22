@@ -13,15 +13,9 @@ variable "domain_name" {
   type        = string
 }
 
-variable "route53_zone_id" {
+variable "route53_hosted_zone_id" {
   description = "The Route53 Hosted Zone ID"
   type        = string
-}
-
-variable "openai_api_key" {
-  description = "OpenAI API Key"
-  type        = string
-  sensitive   = true
 }
 
 variable "environment" {
@@ -30,16 +24,11 @@ variable "environment" {
   default     = "prod"
 }
 
-variable "ecr_image_tag" {
-  description = "The tag of the image to deploy"
-  type        = string
-}
-
 # New variables for Zappa and DynamoDB
-variable "zappa_deployment_bucket_name" {
+variable "zappa_deployments_bucket_name" {
   description = "The name of the S3 bucket for Zappa deployments"
   type        = string
-  default     = "ai-wizard-zappa-deployments"
+  default     = "ai-wizard-zappa-deployments-${aws_region}"
 }
 
 variable "dynamodb_table_name" {
@@ -57,5 +46,5 @@ variable "lambda_function_name" {
 variable "frontend_bucket_name" {
   description = "The name of the S3 bucket for frontend hosting"
   type        = string
-  default     = "ai-wizard-frontend"
+  default     = "ai-wizard-frontend-${aws_region}"
 }

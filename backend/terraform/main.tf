@@ -31,17 +31,17 @@ locals {
 # S3 bucket for Zappa deployments
 resource "aws_s3_bucket" "zappa_deployments" {
   provider = aws.assume_role
-  bucket   = "ai-wizard-zappa-deployments-${var.aws_region}"
+  bucket   = "${var.zappa_deployments_bucket_name}"
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-zappa-deployments-${var.aws_region}"
+    Name = "${var.zappa_deployments_bucket_name}"
   })
 }
 
 # DynamoDB table
 resource "aws_dynamodb_table" "ai_wizard" {
   provider         = aws.assume_role
-  name             = "ai-wizard-table"
+  name             = "${var.dynamodb_table_name}"
   billing_mode     = "PAY_PER_REQUEST"
   hash_key         = "id"
   stream_enabled   = true
@@ -53,7 +53,7 @@ resource "aws_dynamodb_table" "ai_wizard" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-dynamodb-table"
+    Name = "${var.dynamodb_table_name}"
   })
 }
 
@@ -95,10 +95,10 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_exec" {
 # S3 bucket for frontend hosting
 resource "aws_s3_bucket" "frontend" {
   provider = aws.assume_role
-  bucket   = "ai-wizard-frontend-${var.aws_region}"
+  bucket   = "${var.frontend_bucket_name}"
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-frontend-${var.aws_region}"
+    Name = "${var.frontend_bucket_name}"
   })
 }
 
@@ -173,7 +173,7 @@ resource "aws_route53_record" "acm_validation" {
   records         = [each.value.record]
   ttl             = 60
   type            = each.value.type
-  zone_id         = var.route53_zone_id
+  zone_id         = var.route53_hosted_zone_id
 }
 
 # Certificate validation
@@ -243,7 +243,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 # Route 53 record for frontend
 resource "aws_route53_record" "frontend" {
   provider = aws.assume_role
-  zone_id  = var.route53_zone_id
+  zone_id  = var.route53_hosted_zone_id
   name     = var.domain_name
   type     = "A"
 
