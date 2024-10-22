@@ -51,13 +51,13 @@ jobs:
         echo "DYNAMODB_TABLE_NAME=ai-wizard-table-test" >> .env.test
         
         # Create Firebase config file if needed
-        if [ ! -f "app/config/firebase-adminsdk.json" ]; then
+        if [ ! -e "app/config/firebase-adminsdk.json" ]; then
           echo "Creating Firebase config file 'app/config/firebase-adminsdk.json' ..."
           echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
         fi
 
         # Create Zappa settings file if needed
-        if [ ! -f "zappa_settings.json" ]; then
+        if [ ! -e "zappa_settings.json" ]; then
           echo "Creating Zappa settings file 'zappa_settings.json' ..."
           cp zappa_settings.json.example zappa_settings.json
           sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
@@ -112,13 +112,13 @@ jobs:
         poetry export -f requirements.txt --output requirements.txt --without-hashes
 
         # Create Firebase config file if needed
-        if [ ! -f "app/config/firebase-adminsdk.json" ]; then
+        if [ ! -e "app/config/firebase-adminsdk.json" ]; then
           echo "Creating Firebase config file 'app/config/firebase-adminsdk.json' ..."
           echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
         fi
 
         # Create Zappa settings file if needed
-        if [ ! -f "zappa_settings.json" ]; then
+        if [ ! -e "zappa_settings.json" ]; then
           echo "Creating Zappa settings file 'zappa_settings.json' ..."
           cp zappa_settings.json.example zappa_settings.json
           sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
