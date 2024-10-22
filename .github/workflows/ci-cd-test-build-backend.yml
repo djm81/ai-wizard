@@ -148,8 +148,9 @@ jobs:
     - name: Create S3 bucket if needed
       id: create_s3_bucket
       run: |
-        if ! aws s3 ls s3://${{ vars.TF_VAR_zappa_deployments_bucket }} &> /dev/null; then
-          aws s3 mb s3://${{ vars.TF_VAR_zappa_deployments_bucket }} --block-public-access
+        if ! aws s3api head-bucket --bucket ${{ vars.TF_VAR_zappa_deployments_bucket }} 2>/dev/null; then
+          aws s3api create-bucket --bucket ${{ vars.TF_VAR_zappa_deployments_bucket }} --region ${{ vars.TF_VAR_aws_region }} --create-bucket-configuration LocationConstraint=${{ vars.TF_VAR_aws_region }}
+          aws s3api put-public-access-block --bucket ${{ vars.TF_VAR_zappa_deployments_bucket }} --block-public-acls --ignore-public-acls --block-public-access
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
