@@ -60,4 +60,4 @@ terraform.tfstate.backup
 */terraform/tfplan*
 
 # Zappa
-zappa_settings.json
+*/zappa_settings.json

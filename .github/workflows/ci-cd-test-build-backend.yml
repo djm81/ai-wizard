@@ -65,7 +65,6 @@ jobs:
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
           sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
           sed -i 's/##database_url##/${{ vars.PROD_DATABASE_URL }}/g' zappa_settings.json
-          cat zappa_settings.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
