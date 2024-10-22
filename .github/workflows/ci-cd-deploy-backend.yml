@@ -98,7 +98,7 @@ jobs:
       uses: trstringer/manual-approval@v1
       with:
         secret: ${{ github.TOKEN }}
-        approvers: your-github-username
+        approvers: ${{ github.actor }}
         minimum-approvals: 1
         issue-title: "Approve Terraform changes"
         issue-body: "Please review the Infracost estimate and approve the Terraform changes."

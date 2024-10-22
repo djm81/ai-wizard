@@ -24,7 +24,7 @@ class UserProfile(UserProfileCreate):
     user_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class User(BaseModel):
     id: int
@@ -34,10 +34,10 @@ class User(BaseModel):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserWithProfile(User):
     profile: UserProfile | None
 
     class Config:
-        orm_mode = True
+        from_attributes = True

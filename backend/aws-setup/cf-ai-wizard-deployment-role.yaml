@@ -80,6 +80,15 @@ Resources:
               - 'acm:DeleteCertificate'
               - 'acm:ListCertificates'
             Resource: '*'
+          - Effect: Allow
+            Principal:
+              AWS: 
+                - !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
+            Action: 
+              - 'sts:AssumeRole'
+              - 'sts:TagSession'
+            Resource: 
+              - !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
 
   # Create the IAM role
   AIWizardDeploymentRole:

@@ -8,7 +8,7 @@
     "@mui/icons-material": "^5.14.3",
     "@mui/material": "^5.14.5",
     "axios": "^1.4.0",
-    "cookie": "^0.5.0",
+    "cookie": "^0.7.2",
     "firebase": "^10.1.0",
     "nth-check": "^2.1.1",
     "postcss": "^8.4.27",
@@ -18,8 +18,8 @@
     "typescript": "^4.9.5"
   },
   "devDependencies": {
-    "@rsbuild/core": "^0.4.11",
-    "@rsbuild/plugin-react": "^0.4.11",
+    "@rsbuild/core": "^1.0.17",
+    "@rsbuild/plugin-react": "^1.0.5",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^14.0.0",
     "@types/jest": "^29.5.3",
