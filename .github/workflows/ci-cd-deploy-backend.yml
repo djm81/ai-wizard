@@ -17,6 +17,7 @@ env:
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 jobs:
@@ -106,7 +107,7 @@ jobs:
     - name: Manual approval
       uses: trstringer/manual-approval@v1
       with:
-        secret: ${{ github.TOKEN }}
+        secret: ${{ secrets.GITHUB_TOKEN }}
         approvers: ${{ github.actor }}
         minimum-approvals: 1
         issue-title: "Approve Terraform changes"
