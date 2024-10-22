@@ -150,7 +150,14 @@ jobs:
       run: |
         if ! aws s3api head-bucket --bucket ${{ vars.TF_VAR_zappa_deployments_bucket }} 2>/dev/null; then
           aws s3api create-bucket --bucket ${{ vars.TF_VAR_zappa_deployments_bucket }} --region ${{ vars.TF_VAR_aws_region }} --create-bucket-configuration LocationConstraint=${{ vars.TF_VAR_aws_region }}
-          aws s3api put-public-access-block --bucket ${{ vars.TF_VAR_zappa_deployments_bucket }} --block-public-acls --ignore-public-acls --block-public-access
+          
+          # Set public access block configuration
+          aws s3api put-public-access-block --bucket ${{ vars.TF_VAR_zappa_deployments_bucket }} --public-access-block-configuration '{
+            "BlockPublicAcls": true,
+            "IgnorePublicAcls": true,
+            "BlockPublicPolicy": true,
+            "RestrictPublicBuckets": true
+          }'
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
