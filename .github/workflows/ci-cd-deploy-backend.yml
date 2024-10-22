@@ -86,14 +86,10 @@ jobs:
                             --terraform-var "aws_region=${{ vars.TF_VAR_AWS_REGION }}"
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Post Infracost comment
-      id: post_infracost_comment
+    - name: Upload Infracost cost estimate
+      id: upload_infracost_estimate
       run: |
-        infracost comment github --path=infracost-report.json \
-                                 --repo=$GITHUB_REPOSITORY \
-                                 --github-token=${{ github.token }} \
-                                 --behavior=hide-and-new \
-                                 --commit=${{ github.sha }}
+        infracost upload --path=infracost-report.json || echo "Always pass main branch runs even if there are policy failures"
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Upload Terraform plan
