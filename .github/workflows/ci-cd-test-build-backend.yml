@@ -64,13 +64,9 @@ jobs:
           sed -i 's/##s3_bucket##/ai-wizard-zappa-deployments/g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
           sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
-          sed -i 's/##database_url##/${{ vars.PROD_DATABASE_URL }}/g' zappa_settings.json
+          sed -i 's/##database_url##/${{ vars.TEST_DATABASE_URL }}/g' zappa_settings.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
-
-    - name: List files
-      id: list_files
-      run: ls -la ${{ env.WORKING_DIRECTORY }}      
 
     - name: Run tests
       id: run_tests
@@ -114,6 +110,23 @@ jobs:
         poetry add zappa
         poetry add setuptools
         poetry export -f requirements.txt --output requirements.txt --without-hashes
+
+        # Create Firebase config file if needed
+        if [ ! -f "app/config/firebase-adminsdk.json" ]; then
+          echo "Creating Firebase config file 'app/config/firebase-adminsdk.json' ..."
+          echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
+        fi
+
+        # Create Zappa settings file if needed
+        if [ ! -f "zappa_settings.json" ]; then
+          echo "Creating Zappa settings file 'zappa_settings.json' ..."
+          cp zappa_settings.json.example zappa_settings.json
+          sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
+          sed -i 's/##s3_bucket##/ai-wizard-zappa-deployments/g' zappa_settings.json
+          sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
+          sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
+          sed -i 's/##database_url##/${{ vars.PROD_DATABASE_URL }}/g' zappa_settings.json
+        fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Configure AWS credentials
