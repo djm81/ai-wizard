@@ -90,7 +90,7 @@ jobs:
                                  --github-token=${{ github.token }} \
                                  --behavior=hide-and-new \
                                  --commit=${{ github.sha }}
-        path: ${{ env.WORKING_DIRECTORY }}/terraform/infracost-report.json
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Upload Terraform plan
       id: upload_terraform_plan
