@@ -15,6 +15,10 @@ env:
   TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_aws_region }}
   WORKING_DIRECTORY: backend
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   plan_and_estimate:
     runs-on: ubuntu-latest
