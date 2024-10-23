@@ -118,6 +118,7 @@ resource "aws_s3_bucket" "frontend" {
 
   tags = merge(local.common_tags, {
     Name = var.frontend_bucket_name
+    Service = "ai-wizard-frontend"
   })
 }
 
@@ -269,6 +270,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   tags = merge(local.common_tags, {
     Name = "ai-wizard-frontend-cdn"
+    Service = "ai-wizard-frontend"
   })
 }
 
