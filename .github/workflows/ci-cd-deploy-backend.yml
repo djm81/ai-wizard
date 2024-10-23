@@ -73,6 +73,8 @@ jobs:
           -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
           -var="lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
           -var="dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
+          -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
+          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
           -var="environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
           -out=tfplan
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
@@ -97,7 +99,9 @@ jobs:
                             --terraform-var "zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
                             --terraform-var "lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
                             --terraform-var "dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
-                            --terraform-var "environment=${{ vars.TF_VAR_ENVIRONMENT }}"
+                            --terraform-var "environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
+                            --terraform-var "openai_api_key=dummy_openai_api_key" \
+                            --terraform-var "database_url=${{ vars.PROD_DATABASE_URL }}"
 
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
@@ -200,6 +204,8 @@ jobs:
             -var="lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
             -var="dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
             -var="environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
+            -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
+            -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
             aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
         fi
 

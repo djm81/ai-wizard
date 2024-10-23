@@ -10,3 +10,5 @@
 # zappa_deployments_bucket_name = "your-zappa-deployments-bucket-name"
 # dynamodb_table_name           = "your-dynamodb-table-name"
 # lambda_function_name          = "your-lambda-function-name"
+# openai_api_key                 = "your-openai-api-key"
+# database_url                   = "your-database-url"
