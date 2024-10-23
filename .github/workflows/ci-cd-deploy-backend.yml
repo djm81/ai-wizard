@@ -231,13 +231,33 @@ jobs:
           sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
           sed -i 's/##s3_bucket##/${{ vars.TF_VAR_zappa_deployments_bucket_name }}/g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
+          sed -i 's/##role_arn##/arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role/g' zappa_settings.json
           sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
-    - name: Deploy with Zappa
+    - name: Assume IAM Role
+      id: assume_role
       run: |
+        CREDS=$(aws sts assume-role --role-arn arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole --role-session-name GithubActions)
+        echo "::add-mask::$(echo $CREDS | jq -r .Credentials.AccessKeyId)"
+        echo "::add-mask::$(echo $CREDS | jq -r .Credentials.SecretAccessKey)"
+        echo "::add-mask::$(echo $CREDS | jq -r .Credentials.SessionToken)"
+        echo "aws_access_key_id=$(echo $CREDS | jq -r .Credentials.AccessKeyId)" >> $GITHUB_OUTPUT
+        echo "aws_secret_access_key=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_OUTPUT
+        echo "aws_session_token=$(echo $CREDS | jq -r .Credentials.SessionToken)" >> $GITHUB_OUTPUT
+        echo "role_arn=arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole" >> $GITHUB_OUTPUT
+
+    - name: Deploy with Zappa
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_SESSION_TOKEN: ${{ steps.assume_role.outputs.aws_session_token }}
+        AWS_REGION: ${{ vars.TF_VAR_AWS_REGION }}
+      run: |
+        # Update zappa_settings.json with the assumed role ARN
+        jq '.production.role_arn = "${{ steps.assume_role.outputs.role_arn }}"' zappa_settings.json > temp.json && mv temp.json zappa_settings.json
         poetry run zappa update production
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
