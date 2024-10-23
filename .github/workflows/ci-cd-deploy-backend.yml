@@ -109,10 +109,13 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
     - name: Create pull request
       run: |
-        gh_pr_up() { gh pr create --from ${{ github.ref_name }} --to main $* || gh pr edit $* }
-        gh_pr_up --title "Pull request from ${{ github.ref_name }} to main" --body "Pull request from ${{ github.ref_name }} to main"
+        gh pr create \
+          --base main \
+          --title "Pull request from ${{ github.ref_name }} to main" \
+          --body "Pull request from ${{ github.ref_name }} to main"
 
   deploy:
     if: github.ref == 'refs/heads/main'
