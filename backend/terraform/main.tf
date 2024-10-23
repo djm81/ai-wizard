@@ -20,6 +20,14 @@ provider "aws" {
   }
 }
 
+provider "aws" {
+  region = "us-east-1"
+  alias  = "assume_role_us_east_1"
+  assume_role {
+    role_arn = "arn:aws:iam::${var.aws_account_id}:role/AIWizardDeploymentRole"
+  }
+}
+
 locals {
   common_tags = {
     Project     = "ai-wizard"
@@ -160,7 +168,7 @@ resource "aws_s3_bucket_policy" "frontend" {
 
 # ACM Certificate
 resource "aws_acm_certificate" "frontend" {
-  provider          = aws.assume_role
+  provider          = aws.assume_role_us_east_1
   domain_name       = var.domain_name
   validation_method = "DNS"
 
