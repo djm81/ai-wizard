@@ -73,7 +73,7 @@ jobs:
           -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
           -var="lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
           -var="dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
-          -var="environment=${{ vars.TF_VAR_environment }}" \
+          -var="environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
           -out=tfplan
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
@@ -97,7 +97,8 @@ jobs:
                             --terraform-var "zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
                             --terraform-var "lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
                             --terraform-var "dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
-                            --terraform-var "environment=${{ vars.TF_VAR_environment }}"
+                            --terraform-var "environment=${{ vars.TF_VAR_ENVIRONMENT }}"
+
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Upload Infracost cost estimate
@@ -198,7 +199,7 @@ jobs:
             -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
             -var="lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
             -var="dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
-            -var="environment=${{ vars.TF_VAR_environment }}" \
+            -var="environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
             aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
         fi
 
@@ -231,6 +232,7 @@ jobs:
           sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
           sed -i 's;##s3_bucket##;${{ vars.TF_VAR_zappa_deployments_bucket_name }};g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
+          sed -i 's/##lambda_function##/${{ vars.TF_VAR_lambda_function_name }}/g' zappa_settings.json
           sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role;g' zappa_settings.json
           sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
@@ -256,12 +258,6 @@ jobs:
         AWS_SESSION_TOKEN: ${{ steps.assume_role.outputs.aws_session_token }}
         AWS_REGION: ${{ vars.TF_VAR_AWS_REGION }}
       run: |
-        # Get the Lambda execution role ARN from Terraform output
-        # LAMBDA_ROLE_ARN=$(terraform output -raw lambda_role_arn)        
-        # Update zappa_settings.json with the Lambda execution role ARN
-        # jq '.production.role_arn = "'$LAMBDA_ROLE_ARN'"' zappa_settings.json > temp.json && mv temp.json zappa_settings.json        
-        # Steps above are not needed because role arn is already configured in Install dependencies step
-
         poetry run zappa update production
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
@@ -300,4 +296,5 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
 

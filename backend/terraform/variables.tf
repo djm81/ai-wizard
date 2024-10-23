@@ -47,3 +47,15 @@ variable "frontend_bucket_name" {
   type        = string
   default     = "ai-wizard-frontend"
 }
+
+variable "openai_api_key" {
+  description = "OpenAI API Key"
+  type        = string
+  sensitive   = true
+}
+
+variable "database_url" {
+  description = "Database URL"
+  type        = string
+  default     = "memory:///"
+}
