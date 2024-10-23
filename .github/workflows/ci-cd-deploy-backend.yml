@@ -6,7 +6,9 @@ on:
     types:
       - completed
   push:
-    branches: [ dev main ]
+    branches:
+      - dev
+      - main
     paths:
       - 'backend/terraform/**'
       - '.github/workflows/ci-cd-deploy-backend.yml'
