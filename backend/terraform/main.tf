@@ -5,7 +5,7 @@ terraform {
       version = "~> 5.72"
     }
   }
-  required_version = ">= 1.0.0"
+  required_version = ">= 1.2.0"
 
   backend "s3" {
     /* Will be filled in dynamically by CI/CD pipeline */
