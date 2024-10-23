@@ -33,10 +33,10 @@ Resources:
               - 's3:PutBucketWebsite'
               - 's3:PutBucketPublicAccessBlock'
             Resource: 
-              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${S3BucketRegion}'
-              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${S3BucketRegion}/*'
-              - !Sub 'arn:aws:s3:::ai-wizard-frontend-${S3BucketRegion}'
-              - !Sub 'arn:aws:s3:::ai-wizard-frontend-${S3BucketRegion}/*'
+              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}'
+              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}/*'
+              - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}'
+              - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}/*'
           - Effect: Allow
             Action:
               - 'dynamodb:CreateTable'

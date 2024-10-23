@@ -6,6 +6,7 @@ variable "aws_account_id" {
 variable "aws_region" {
   description = "The AWS region to deploy to"
   type        = string
+  default     = "eu-west-1"
 }
 
 variable "domain_name" {
@@ -21,14 +22,14 @@ variable "route53_hosted_zone_id" {
 variable "environment" {
   description = "The deployment environment (e.g., dev, staging, prod)"
   type        = string
-  default     = "prod"
+  default     = "staging"
 }
 
 # New variables for Zappa and DynamoDB
 variable "zappa_deployments_bucket_name" {
   description = "The name of the S3 bucket for Zappa deployments"
   type        = string
-  default     = "ai-wizard-zappa-deployments-${aws_region}"
+  default     = "ai-wizard-zappa-deployments"
 }
 
 variable "dynamodb_table_name" {
@@ -46,5 +47,5 @@ variable "lambda_function_name" {
 variable "frontend_bucket_name" {
   description = "The name of the S3 bucket for frontend hosting"
   type        = string
-  default     = "ai-wizard-frontend-${aws_region}"
+  default     = "ai-wizard-frontend"
 }
