@@ -84,10 +84,13 @@ Resources:
           - Effect: Allow
             Action:
               - 'route53:ChangeResourceRecordSets'
+            Resource: !Sub 'arn:aws:route53:::hostedzone/${Route53ZoneId}'
+          - Effect: Allow
+            Action:
               - 'route53:Describe*' 
               - 'route53:Get*'
               - 'route53:List*'
-            Resource: !Sub 'arn:aws:route53:::hostedzone/${Route53ZoneId}'
+            Resource: '*'
           - Effect: Allow
             Action:
               - 'acm:RequestCertificate'
@@ -104,6 +107,9 @@ Resources:
               - 'iam:DeleteRole'
               - 'iam:AttachRolePolicy'
               - 'iam:DetachRolePolicy'
+              - 'iam:PassRole'
+              - 'iam:TagRole'
+              - 'iam:UntagRole'
             Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role'
           - Effect: Allow
             Action: 
