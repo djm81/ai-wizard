@@ -229,7 +229,7 @@ jobs:
           echo "Creating Zappa settings file 'zappa_settings.json' ..."
           cp zappa_settings.json.example zappa_settings.json
           sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
-          sed -i 's/##s3_bucket##/${{ vars.TF_VAR_zappa_deployments_bucket_name }}/g' zappa_settings.json
+          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_zappa_deployments_bucket_name }};g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
           sed -i 's/##role_arn##/arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role/g' zappa_settings.json
           sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
@@ -256,8 +256,12 @@ jobs:
         AWS_SESSION_TOKEN: ${{ steps.assume_role.outputs.aws_session_token }}
         AWS_REGION: ${{ vars.TF_VAR_AWS_REGION }}
       run: |
-        # Update zappa_settings.json with the assumed role ARN
-        jq '.production.role_arn = "${{ steps.assume_role.outputs.role_arn }}"' zappa_settings.json > temp.json && mv temp.json zappa_settings.json
+        # Get the Lambda execution role ARN from Terraform output
+        LAMBDA_ROLE_ARN=$(terraform output -raw lambda_role_arn)
+        
+        # Update zappa_settings.json with the Lambda execution role ARN
+        jq '.production.role_arn = "'$LAMBDA_ROLE_ARN'"' zappa_settings.json > temp.json && mv temp.json zappa_settings.json
+        
         poetry run zappa update production
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
@@ -296,3 +300,4 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
