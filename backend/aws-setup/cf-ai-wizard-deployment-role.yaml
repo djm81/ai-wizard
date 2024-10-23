@@ -75,6 +75,7 @@ Resources:
           - Effect: Allow
             Action:
               - 'cloudfront:CreateDistribution'
+              - 'cloudfront:CreateCloudFrontOriginAccessIdentity'
               - 'cloudfront:Describe*'
               - 'cloudfront:Get*'
               - 'cloudfront:List*'
