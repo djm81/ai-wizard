@@ -223,6 +223,17 @@ jobs:
       run: |
         poetry install
         poetry add zappa
+
+        # Create Zappa settings file if needed
+        if [ ! -e "zappa_settings.json" ]; then
+          echo "Creating Zappa settings file 'zappa_settings.json' ..."
+          cp zappa_settings.json.example zappa_settings.json
+          sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
+          sed -i 's/##s3_bucket##/${{ vars.TF_VAR_zappa_deployments_bucket_name }}/g' zappa_settings.json
+          sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
+          sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
+          sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
+        fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Deploy with Zappa
