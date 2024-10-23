@@ -6,7 +6,7 @@ on:
     types:
       - completed
   push:
-    branches: [ main ]
+    branches: [ dev main ]
     paths:
       - 'backend/terraform/**'
       - '.github/workflows/ci-cd-deploy-backend.yml'
@@ -151,15 +151,17 @@ jobs:
         name: tfplan
         path: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Import zappa deployment bucket
+    - name: Check and Import zappa deployment bucket
       run: |
-        terraform import \
-          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-          -var="aws_region=${{ vars.TF_VAR_aws_region }}" \
-          -var="domain_name=${{ vars.TF_VAR_domain_name }}" \
-          -var="route53_hosted_zone_id=${{ vars.TF_VAR_route53_hosted_zone_id }}" \
-          -var="environment=${{ vars.TF_VAR_environment }}" \
-          aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
+        if ! terraform state list aws_s3_bucket.zappa_deployments | grep -q ${{ vars.TF_VAR_zappa_deployments_bucket_name }}; then
+          terraform import \
+            -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+            -var="aws_region=${{ vars.TF_VAR_aws_region }}" \
+            -var="domain_name=${{ vars.TF_VAR_domain_name }}" \
+            -var="route53_hosted_zone_id=${{ vars.TF_VAR_route53_hosted_zone_id }}" \
+            -var="environment=${{ vars.TF_VAR_environment }}" \
+            aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
+        fi
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Apply

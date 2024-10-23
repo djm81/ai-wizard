@@ -2,14 +2,14 @@ name: Test and Build Backend
 
 on:
   push:
-    branches: [ main ]
+    branches: [ dev main ]
     paths:
       - 'backend/**'
       - '!backend/terraform/**'
       - '!backend/aws-setup/**'
       - '.github/workflows/ci-cd-test-build-backend.yml'
   pull_request:
-    branches: [ main ]
+    branches: [ dev main ]
     paths:
       - 'backend/**'
       - '!backend/terraform/**'
