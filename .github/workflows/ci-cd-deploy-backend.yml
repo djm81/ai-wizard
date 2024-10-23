@@ -160,10 +160,23 @@ jobs:
 
     - name: Check and Import Zappa Deployment Bucket
       run: |
-        echo "Checking for bucket: ${{ vars.TF_VAR_zappa_deployments_bucket_name }}"
+        echo "Checking for bucket aws_s3_bucket.zappa_deployments: ${{ vars.TF_VAR_zappa_deployments_bucket_name }}"
         echo "Current Terraform state resources:"
         terraform state list
-        if ! terraform state list aws_s3_bucket.zappa_deployments | grep -q ${{ vars.TF_VAR_zappa_deployments_bucket_name }}; then
+        
+        bucket_exists=false
+        if terraform state list aws_s3_bucket.zappa_deployments; then
+          if ! terraform state show aws_s3_bucket.zappa_deployments | grep -q ${{ vars.TF_VAR_zappa_deployments_bucket_name }}; then
+            echo "Bucket not found in state."
+          else
+            echo "Bucket already found in state."
+            bucket_exists=true
+          fi
+        else
+          echo "Bucket not found in state."
+        fi
+
+        if [ "$bucket_exists" = false ]; then
           echo "Bucket not found, importing..."
           terraform import \
             -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
@@ -172,9 +185,8 @@ jobs:
             -var="route53_hosted_zone_id=${{ vars.TF_VAR_route53_hosted_zone_id }}" \
             -var="environment=${{ vars.TF_VAR_environment }}" \
             aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
-        else
-          echo "Bucket found in state."
         fi
+
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Apply
