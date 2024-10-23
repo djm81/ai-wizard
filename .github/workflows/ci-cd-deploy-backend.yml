@@ -116,6 +116,8 @@ jobs:
           --base main \
           --title "Pull request from ${{ github.ref_name }} to main" \
           --body "Pull request from ${{ github.ref_name }} to main"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
     if: github.ref == 'refs/heads/main'
