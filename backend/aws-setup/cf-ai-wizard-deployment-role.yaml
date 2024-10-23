@@ -106,6 +106,26 @@ Resources:
             Resource: '*'
           - Effect: Allow
             Action:
+              - 'lambda:CreateFunction'
+              - 'lambda:DeleteFunction'
+              - 'lambda:Describe*'
+              - 'lambda:Get*'
+              - 'lambda:List*'
+              - 'lambda:InvokeFunction'
+              - 'lambda:UpdateFunctionCode'
+            Resource: !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-lambda'
+          - Effect: Allow
+            Action:
+              - 'apigateway:PUT'
+              - 'apigateway:DELETE'
+              - 'apigateway:CreateRestApi'
+              - 'apigateway:DeleteRestApi'
+              - 'apigateway:Describe*'
+              - 'apigateway:Get*'
+              - 'apigateway:List*'
+            Resource: !Sub 'arn:aws:apigateway:${S3BucketRegion}:${TrustedAccount}/restapis/*'
+          - Effect: Allow
+            Action:
               - 'iam:CreateRole'
               - 'iam:DeleteRole'
               - 'iam:AttachRolePolicy'
