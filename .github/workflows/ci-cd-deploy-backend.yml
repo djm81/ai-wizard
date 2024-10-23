@@ -257,11 +257,11 @@ jobs:
         AWS_REGION: ${{ vars.TF_VAR_AWS_REGION }}
       run: |
         # Get the Lambda execution role ARN from Terraform output
-        LAMBDA_ROLE_ARN=$(terraform output -raw lambda_role_arn)
-        
+        # LAMBDA_ROLE_ARN=$(terraform output -raw lambda_role_arn)        
         # Update zappa_settings.json with the Lambda execution role ARN
-        jq '.production.role_arn = "'$LAMBDA_ROLE_ARN'"' zappa_settings.json > temp.json && mv temp.json zappa_settings.json
-        
+        # jq '.production.role_arn = "'$LAMBDA_ROLE_ARN'"' zappa_settings.json > temp.json && mv temp.json zappa_settings.json        
+        # Steps above are not needed because role arn is already configured in Install dependencies step
+
         poetry run zappa update production
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
