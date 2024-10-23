@@ -69,6 +69,10 @@ jobs:
           -var="aws_region=${{ vars.TF_VAR_aws_region }}" \
           -var="domain_name=${{ vars.TF_VAR_domain_name }}" \
           -var="route53_hosted_zone_id=${{ vars.TF_VAR_route53_hosted_zone_id }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_frontend_bucket_name }}" \
+          -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
+          -var="lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
+          -var="dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
           -var="environment=${{ vars.TF_VAR_environment }}" \
           -out=tfplan
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
@@ -86,7 +90,14 @@ jobs:
                             --format json \
                             --out-file infracost-report.json \
                             --terraform-var "aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-                            --terraform-var "aws_region=${{ vars.TF_VAR_AWS_REGION }}"
+                            --terraform-var "aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+                            --terraform-var "domain_name=${{ vars.TF_VAR_domain_name }}" \
+                            --terraform-var "route53_hosted_zone_id=${{ vars.TF_VAR_route53_hosted_zone_id }}" \
+                            --terraform-var "frontend_bucket_name=${{ vars.TF_VAR_frontend_bucket_name }}" \
+                            --terraform-var "zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
+                            --terraform-var "lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
+                            --terraform-var "dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
+                            --terraform-var "environment=${{ vars.TF_VAR_environment }}"
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Upload Infracost cost estimate
@@ -183,6 +194,10 @@ jobs:
             -var="aws_region=${{ vars.TF_VAR_aws_region }}" \
             -var="domain_name=${{ vars.TF_VAR_domain_name }}" \
             -var="route53_hosted_zone_id=${{ vars.TF_VAR_route53_hosted_zone_id }}" \
+            -var="frontend_bucket_name=${{ vars.TF_VAR_frontend_bucket_name }}" \
+            -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
+            -var="lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
+            -var="dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
             -var="environment=${{ vars.TF_VAR_environment }}" \
             aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
         fi

@@ -36,6 +36,10 @@ resource "aws_s3_bucket" "zappa_deployments" {
   tags = merge(local.common_tags, {
     Name = "${var.zappa_deployments_bucket_name}"
   })
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # DynamoDB table
@@ -55,6 +59,10 @@ resource "aws_dynamodb_table" "ai_wizard" {
   tags = merge(local.common_tags, {
     Name = "${var.dynamodb_table_name}"
   })
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # IAM role for Lambda (to be used by Zappa)
@@ -100,6 +108,10 @@ resource "aws_s3_bucket" "frontend" {
   tags = merge(local.common_tags, {
     Name = "${var.frontend_bucket_name}"
   })
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_website_configuration" "frontend" {
