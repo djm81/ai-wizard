@@ -32,7 +32,7 @@ locals {
   common_tags = {
     Project     = "ai-wizard"
     ManagedBy   = "Terraform"
-    Environment = var.environment
+    Environment = "${var.environment}"
   }
 }
 
@@ -114,18 +114,50 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_exec" {
 # S3 bucket for frontend hosting
 resource "aws_s3_bucket" "frontend" {
   provider = aws.assume_role
-  bucket   = "${var.frontend_bucket_name}"
+  bucket   = var.frontend_bucket_name
 
   tags = merge(local.common_tags, {
-    Name = "${var.frontend_bucket_name}"
-    Service = "ai-wizard-frontend"
+    Name = var.frontend_bucket_name
   })
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
+# S3 bucket private access configuration
+resource "aws_s3_bucket_public_access_block" "frontend" {
+  provider                = aws.assume_role
+  bucket                  = aws_s3_bucket.frontend.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# S3 bucket policy to allow access only from CloudFront
+resource "aws_s3_bucket_policy" "frontend" {
+  provider = aws.assume_role
+  bucket   = aws_s3_bucket.frontend.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowCloudFrontServicePrincipal"
+        Effect    = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.frontend.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.frontend.arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+# S3 bucket website configuration
 resource "aws_s3_bucket_website_configuration" "frontend" {
   provider = aws.assume_role
   bucket   = aws_s3_bucket.frontend.id
@@ -139,34 +171,6 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "frontend" {
-  provider                = aws.assume_role
-  bucket                  = aws_s3_bucket.frontend.id
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-}
-
-resource "aws_s3_bucket_policy" "frontend" {
-  provider = aws.assume_role
-  bucket   = aws_s3_bucket.frontend.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "PublicReadGetObject"
-        Effect    = "Allow"
-        Principal = "*"
-        Action    = "s3:GetObject"
-        Resource  = "${aws_s3_bucket.frontend.arn}/*"
-      },
-    ]
-  })
-}
-
-# ACM Certificate
 resource "aws_acm_certificate" "frontend" {
   provider          = aws.assume_role_us_east_1
   domain_name       = var.domain_name
@@ -203,23 +207,26 @@ resource "aws_route53_record" "acm_validation" {
 
 # Certificate validation
 resource "aws_acm_certificate_validation" "frontend" {
-  provider                = aws.assume_role
+  provider                = aws.assume_role_us_east_1
   certificate_arn         = aws_acm_certificate.frontend.arn
   validation_record_fqdns = [for record in aws_route53_record.acm_validation : record.fqdn]
+}
+
+# CloudFront Origin Access Identity
+resource "aws_cloudfront_origin_access_identity" "frontend" {
+  provider = aws.assume_role
+  comment  = "OAI for ${var.domain_name}"
 }
 
 # CloudFront distribution
 resource "aws_cloudfront_distribution" "frontend" {
   provider = aws.assume_role
   origin {
-    domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
+    domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id   = "S3-${aws_s3_bucket.frontend.id}"
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+    s3_origin_config {
+      origin_access_identity = aws_cloudfront_origin_access_identity.frontend.cloudfront_access_identity_path
     }
   }
 
@@ -262,7 +269,6 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   tags = merge(local.common_tags, {
     Name = "ai-wizard-frontend-cdn"
-    Service = "ai-wizard-frontend"
   })
 }
 
