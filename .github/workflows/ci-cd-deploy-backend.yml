@@ -101,22 +101,19 @@ jobs:
         name: tfplan
         path: ${{ env.WORKING_DIRECTORY }}/terraform/tfplan
 
-  approve:
+  create_pull_request:
+    if: github.ref != 'refs/heads/main'
     needs: plan_and_estimate
     runs-on: ubuntu-latest
     steps:
-    - name: Manual approval
-      uses: trstringer/manual-approval@v1
+    - name: Create pull request
+      uses: actions/checkout@v4
       with:
-        secret: ${{ secrets.GITHUB_TOKEN }}
-        approvers: ${{ github.actor }}
-        minimum-approvals: 1
-        issue-title: "Approve Terraform changes"
-        issue-body: "Please review the Infracost estimate and approve the Terraform changes."
-        exclude-workflow-initiator-as-approver: false
+        ref: main
 
   deploy:
-    needs: approve
+    if: github.ref == 'refs/heads/main'
+    needs: plan_and_estimate
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
