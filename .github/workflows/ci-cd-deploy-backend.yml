@@ -107,10 +107,12 @@ jobs:
     needs: plan_and_estimate
     runs-on: ubuntu-latest
     steps:
-    - name: Create pull request
+    - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        ref: main
+    - name: Create pull request
+      run: |
+        gh_pr_up() { gh pr create --from ${{ github.ref_name }} --to main $* || gh pr edit $* }
+        gh_pr_up --title "Pull request from ${{ github.ref_name }} to main" --body "Pull request from ${{ github.ref_name }} to main"
 
   deploy:
     if: github.ref == 'refs/heads/main'
