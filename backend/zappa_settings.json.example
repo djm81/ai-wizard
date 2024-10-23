@@ -2,9 +2,9 @@
     "production": {
         "aws_region": "##aws_region##",
         "s3_bucket": "##s3_bucket##",
-        "profile_name": "default",
         "project_name": "##project_name##",
         "runtime": "python3.12",
+        "role_arn": "##role_arn##",
         "environment_variables": {
             "OPENAI_API_KEY": "##openai_api_key##",
             "DATABASE_URL": "##database_url##"
