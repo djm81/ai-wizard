@@ -6,7 +6,6 @@ variable "aws_account_id" {
 variable "aws_region" {
   description = "The AWS region to deploy to"
   type        = string
-  default     = "eu-west-1"
 }
 
 variable "domain_name" {

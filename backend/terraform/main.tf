@@ -35,6 +35,7 @@ resource "aws_s3_bucket" "zappa_deployments" {
 
   tags = merge(local.common_tags, {
     Name = "${var.zappa_deployments_bucket_name}"
+    Service = "ai-wizard-backend"
   })
 
   lifecycle {
@@ -58,6 +59,7 @@ resource "aws_dynamodb_table" "ai_wizard" {
 
   tags = merge(local.common_tags, {
     Name = "${var.dynamodb_table_name}"
+    Service = "ai-wizard-backend"
   })
 
   lifecycle {
@@ -83,6 +85,7 @@ resource "aws_iam_role" "lambda_exec" {
 
   tags = merge(local.common_tags, {
     Name = "ai-wizard-lambda-exec-role"
+    Service = "ai-wizard-backend"
   })
 }
 
@@ -107,6 +110,7 @@ resource "aws_s3_bucket" "frontend" {
 
   tags = merge(local.common_tags, {
     Name = "${var.frontend_bucket_name}"
+    Service = "ai-wizard-frontend"
   })
 
   lifecycle {
@@ -162,6 +166,7 @@ resource "aws_acm_certificate" "frontend" {
 
   tags = merge(local.common_tags, {
     Name = "ai-wizard-frontend-cert"
+    Service = "ai-wizard-frontend"  
   })
 
   lifecycle {
@@ -249,6 +254,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   tags = merge(local.common_tags, {
     Name = "ai-wizard-frontend-cdn"
+    Service = "ai-wizard-frontend"
   })
 }
 
