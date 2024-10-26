@@ -328,12 +328,12 @@ resource "aws_api_gateway_rest_api" "ai_wizard" {
 # Lambda Function
 resource "aws_lambda_function" "ai_wizard" {
   provider         = aws.assume_role
-  filename         = data.archive_file.lambda_zip.output_path
+  filename         = "${path.module}/../lambda_function.zip"
   function_name    = "ai-wizard-lambda"
   role             = aws_iam_role.lambda_exec.arn
   handler          = "lambda_handler.handler"
   runtime          = "python3.12"
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  source_code_hash = filebase64sha256("${path.module}/../lambda_function.zip")
 
   environment {
     variables = {
@@ -400,10 +400,4 @@ resource "aws_api_gateway_deployment" "ai_wizard" {
 # Output the API Gateway URL
 output "api_gateway_url" {
   value = aws_api_gateway_deployment.ai_wizard.invoke_url
-}
-
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_file = "${path.module}/../lambda_handler.py"
-  output_path = "${path.module}/lambda_function.zip"
 }
