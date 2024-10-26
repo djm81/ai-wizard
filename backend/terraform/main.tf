@@ -344,6 +344,7 @@ resource "aws_lambda_function" "ai_wizard" {
 
   tags = merge(local.common_tags, {
     Name = "ai-wizard-lambda"
+    Service = "ai-wizard-backend"
   })
 }
 
