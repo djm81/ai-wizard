@@ -61,6 +61,12 @@ jobs:
           -reconfigure
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
+    - name: Create Lambda package
+      run: |
+        chmod +x create_lambda_package.sh
+        ./create_lambda_package.sh
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
+
     - name: Terraform Plan
       id: terraform_plan
       run: |
@@ -157,12 +163,6 @@ jobs:
         aws-region: ${{ vars.TF_VAR_aws_region }}
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_aws_account_id }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
-
-    - name: Create Lambda package
-      run: |
-        chmod +x create_lambda_package.sh
-        ./create_lambda_package.sh
-      working-directory: ${{ env.WORKING_DIRECTORY }}
   
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
@@ -222,6 +222,12 @@ jobs:
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
+    - name: Create Lambda package
+      run: |
+        chmod +x create_lambda_package.sh
+        ./create_lambda_package.sh
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
+ 
     - name: Terraform Apply
       id: terraform_apply
       run: terraform apply -auto-approve tfplan
