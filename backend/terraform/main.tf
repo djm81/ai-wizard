@@ -346,6 +346,10 @@ resource "aws_lambda_function" "ai_wizard" {
     Name = var.lambda_function_name
     Service = "ai-wizard-backend"
   })
+
+  lifecycle {
+    ignore_changes = [source_code_hash]
+  }
 }
 
 # API Gateway Integration
