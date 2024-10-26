@@ -35,6 +35,7 @@ Resources:
               - 's3:PutBucketTagging'
               - 's3:PutBucketWebsite'
               - 's3:PutBucketPublicAccessBlock'
+              - 's3:HeadBucket'
             Resource: 
               - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}'
               - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}/*'
