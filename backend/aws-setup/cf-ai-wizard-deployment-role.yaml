@@ -67,6 +67,7 @@ Resources:
               - 'lambda:UpdateFunctionConfiguration'
               - 'lambda:TagResource'
               - 'lambda:UntagResource'
+              - 'lambda:AddPermission'
             Resource: !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-lambda'
           - Effect: Allow
             Action:
@@ -110,6 +111,13 @@ Resources:
               - 'apigateway:Update*'
               - 'apigateway:TagResource'
               - 'apigateway:UntagResource'
+              - 'apigateway:PUT'
+              - 'apigateway:POST'
+              - 'apigateway:GET'
+              - 'apigateway:DELETE'
+              - 'apigateway:PATCH'
+              - 'apigateway:OPTIONS'
+              - 'apigateway:HEAD'
             Resource: !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis/*'
           - Effect: Allow
             Action:
