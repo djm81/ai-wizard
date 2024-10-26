@@ -305,12 +305,12 @@ jobs:
         AWS_REGION: ${{ vars.TF_VAR_AWS_REGION }}
       run: |
         echo "Checking if Zappa deployment exists..."
-        if poetry run zappa status production 2>&1 | grep -q "have not yet been deployed"; then
-          echo "Zappa deployment does not exist. Performing initial deployment..."
-          poetry run zappa deploy production
-        else
+        if poetry run zappa status production; then
           echo "Zappa deployment exists. Updating..."
           poetry run zappa update production
+        else
+          echo "Zappa deployment does not exist. Performing initial deployment..."
+          poetry run zappa deploy production
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
