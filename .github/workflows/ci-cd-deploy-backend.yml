@@ -304,7 +304,14 @@ jobs:
         AWS_SESSION_TOKEN: ${{ steps.assume_role.outputs.aws_session_token }}
         AWS_REGION: ${{ vars.TF_VAR_AWS_REGION }}
       run: |
-        poetry run zappa update production
+        echo "Checking if Zappa deployment exists..."
+        if poetry run zappa status production 2>&1 | grep -q "have not yet been deployed"; then
+          echo "Zappa deployment does not exist. Performing initial deployment..."
+          poetry run zappa deploy production
+        else
+          echo "Zappa deployment exists. Updating..."
+          poetry run zappa update production
+        fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Terraform Output Application URL
