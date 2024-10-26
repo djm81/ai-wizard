@@ -61,3 +61,6 @@ terraform.tfstate.backup
 
 # Zappa
 */zappa_settings.json
+
+# Lambda
+lambda_function.zip

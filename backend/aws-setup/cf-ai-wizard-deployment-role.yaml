@@ -86,15 +86,16 @@ Resources:
             Resource: !Sub 'arn:aws:route53:::hostedzone/${Route53ZoneId}'
           - Effect: Allow
             Action:
-              - 'route53:GetHostedZone'
-              - 'route53:ListResourceRecordSets'
+              - 'route53:Describe*'
+              - 'route53:Get*'
+              - 'route53:List*'
             Resource: '*'
           - Effect: Allow
             Action:
               - 'acm:RequestCertificate'
-              - 'acm:DescribeCertificate'
-              - 'acm:GetCertificate'
-              - 'acm:ListCertificates'
+              - 'acm:Describe*'
+              - 'acm:Get*'
+              - 'acm:List*'
               - 'acm:DeleteCertificate'
               - 'acm:AddTagsToCertificate'
               - 'acm:RemoveTagsFromCertificate'
@@ -116,7 +117,9 @@ Resources:
               - 'iam:DeleteRole'
               - 'iam:AttachRolePolicy'
               - 'iam:DetachRolePolicy'
-              - 'iam:GetRole'
+              - 'iam:Describe*'
+              - 'iam:Get*'
+              - 'iam:List*'
               - 'iam:PassRole'
               - 'iam:TagRole'
               - 'iam:UntagRole'

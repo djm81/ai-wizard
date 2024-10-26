@@ -152,6 +152,12 @@ jobs:
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_aws_account_id }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
 
+    - name: Create Lambda package
+      run: |
+        chmod +x create_lambda_package.sh
+        ./create_lambda_package.sh
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+  
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
@@ -208,7 +214,6 @@ jobs:
             -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
             aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
         fi
-
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Apply
@@ -302,5 +307,3 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-
