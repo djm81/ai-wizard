@@ -27,25 +27,26 @@ variable "environment" {
 variable "zappa_deployments_bucket_name" {
   description = "The name of the S3 bucket for Zappa deployments"
   type        = string
-  default     = "ai-wizard-zappa-deployments"
 }
 
 variable "dynamodb_table_name" {
   description = "The name of the DynamoDB table"
   type        = string
-  default     = "ai-wizard-table"
 }
 
 variable "lambda_function_name" {
   description = "The name of the Lambda function"
   type        = string
-  default     = "ai-wizard-lambda"
+}
+
+variable "lambda_source_code_hash" {
+  description = "Base64-encoded SHA256 hash of the Lambda function source code"
+  type        = string
 }
 
 variable "frontend_bucket_name" {
   description = "The name of the S3 bucket for frontend hosting"
   type        = string
-  default     = "ai-wizard-frontend"
 }
 
 variable "openai_api_key" {
@@ -57,5 +58,7 @@ variable "openai_api_key" {
 variable "database_url" {
   description = "Database URL"
   type        = string
-  default     = "memory:///"
+  sensitive   = true
 }
+
+# Add any other variables you might need
