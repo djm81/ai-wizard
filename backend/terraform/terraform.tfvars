@@ -12,3 +12,4 @@
 # lambda_function_name          = "your-lambda-function-name"
 # openai_api_key                 = "your-openai-api-key"
 # database_url                   = "your-database-url"
+# lambda_source_code_hash        = "your-lambda-source-code-hash"

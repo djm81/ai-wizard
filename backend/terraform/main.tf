@@ -329,11 +329,11 @@ resource "aws_api_gateway_rest_api" "ai_wizard" {
 resource "aws_lambda_function" "ai_wizard" {
   provider         = aws.assume_role
   filename         = "${path.module}/lambda/lambda_function.zip"
-  function_name    = "ai-wizard-lambda"
+  function_name    = var.lambda_function_name
   role             = aws_iam_role.lambda_exec.arn
   handler          = "lambda_handler.handler"
   runtime          = "python3.12"
-  source_code_hash = filebase64sha256("${path.module}/lambda/lambda_function.zip")
+  source_code_hash = var.lambda_source_code_hash
 
   environment {
     variables = {
@@ -343,7 +343,7 @@ resource "aws_lambda_function" "ai_wizard" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-lambda"
+    Name = var.lambda_function_name
     Service = "ai-wizard-backend"
   })
 }

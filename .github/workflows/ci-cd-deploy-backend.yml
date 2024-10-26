@@ -67,6 +67,13 @@ jobs:
         ./create_lambda_package.sh
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
 
+    - name: Calculate Lambda package hash
+      id: lambda_hash
+      run: |
+        HASH=$(openssl dgst -sha256 -binary lambda_function.zip | openssl base64)
+        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
+
     - name: Terraform Plan
       id: terraform_plan
       run: |
@@ -82,6 +89,7 @@ jobs:
           -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
           -var="environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
+          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
           -out=tfplan
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
@@ -107,8 +115,8 @@ jobs:
                             --terraform-var "dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
                             --terraform-var "environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
                             --terraform-var "openai_api_key=dummy_openai_api_key" \
-                            --terraform-var "database_url=${{ vars.PROD_DATABASE_URL }}"
-
+                            --terraform-var "database_url=${{ vars.PROD_DATABASE_URL }}" \
+                            --terraform-var "lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}"                            
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Upload Infracost cost estimate
@@ -186,6 +194,19 @@ jobs:
         name: tfplan
         path: ${{ env.WORKING_DIRECTORY }}/terraform
 
+    - name: Download Lambda package
+      uses: actions/download-artifact@v4
+      with:
+        name: lambda_function
+        path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
+
+    - name: Calculate Lambda package hash
+      id: lambda_hash
+      run: |
+        HASH=$(openssl dgst -sha256 -binary lambda_function.zip | openssl base64)
+        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
+  
     - name: Check and Import Zappa Deployment Bucket
       run: |
         echo "Checking for bucket aws_s3_bucket.zappa_deployments: ${{ vars.TF_VAR_zappa_deployments_bucket_name }}"
@@ -218,19 +239,17 @@ jobs:
             -var="environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
             -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
             -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
+            -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
             aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Create Lambda package
-      run: |
-        chmod +x create_lambda_package.sh
-        ./create_lambda_package.sh
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
- 
     - name: Terraform Apply
       id: terraform_apply
-      run: terraform apply -auto-approve tfplan
+      run: |
+        terraform apply -auto-approve \
+          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
+          tfplan
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Set up Python
