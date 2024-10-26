@@ -2,6 +2,7 @@
     "production": {
         "aws_region": "##aws_region##",
         "s3_bucket": "##s3_bucket##",
+        "lambda_name": "##lambda_name##",
         "lambda_function": "##lambda_function##",
         "project_name": "##project_name##",
         "runtime": "python3.12",
