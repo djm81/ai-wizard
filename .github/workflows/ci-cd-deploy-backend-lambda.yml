@@ -7,12 +7,14 @@ on:
       - completed
   push:
     branches: 
+      - dev
       - main
     paths:
       - 'backend/app/**'
       - '.github/workflows/ci-cd-deploy-backend-lambda.yml'
   pull_request:
     branches:
+      - dev
       - main
     paths:
       - 'backend/app/**'
@@ -42,20 +44,7 @@ jobs:
         aws-region: ${{ vars.TF_VAR_aws_region }}
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_aws_account_id }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
-  
-    - name: Download Lambda package
-      uses: actions/download-artifact@v4
-      with:
-        name: lambda_function
-        path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
-
-    - name: Calculate Lambda package hash
-      id: lambda_hash
-      run: |
-        HASH=$(openssl dgst -sha256 -binary lambda_function.zip | openssl base64)
-        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
-  
+   
     - name: Set up Python
       uses: actions/setup-python@v4
       with:

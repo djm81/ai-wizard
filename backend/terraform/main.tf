@@ -348,7 +348,11 @@ resource "aws_lambda_function" "ai_wizard" {
   })
 
   lifecycle {
-    ignore_changes = [source_code_hash]
+    ignore_changes = [
+      source_code_hash,
+      filename,
+      function_name
+    ]
   }
 }
 
