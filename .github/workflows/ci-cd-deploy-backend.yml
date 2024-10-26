@@ -253,9 +253,7 @@ jobs:
     - name: Terraform Apply
       id: terraform_apply
       run: |
-        terraform apply -auto-approve \
-          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
-          tfplan
+        terraform apply -auto-approve tfplan
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Set up Python
