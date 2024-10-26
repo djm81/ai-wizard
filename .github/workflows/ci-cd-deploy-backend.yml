@@ -155,10 +155,10 @@ jobs:
 
         if [ "$existing_pr" == "OPEN" ]; then
           echo "Updating existing pull request..."
-          gh pr edit --base main --title "Pull request from ${{ github.ref_name }} to main" --body "Pull request from ${{ github.ref_name }} to main"
+          gh pr edit --base main --title "Deploy Backend: Pull request from ${{ github.ref_name }} to main" --body "Deploy Backend: Pull request from ${{ github.ref_name }} to main"
         else
           echo "Creating new pull request..."
-          gh pr create --base main --title "Pull request from ${{ github.ref_name }} to main" --body "Pull request from ${{ github.ref_name }} to main"
+          gh pr create --base main --title "Deploy Backend: Pull request from ${{ github.ref_name }} to main" --body "Deploy Backend: Pull request from ${{ github.ref_name }} to main"
         fi
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

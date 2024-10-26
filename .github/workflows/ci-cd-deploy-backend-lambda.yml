@@ -29,6 +29,28 @@ permissions:
   pull-requests: write
 
 jobs:
+  create_pull_request:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create or update pull request
+      run: |
+        # Check for existing pull requests
+        existing_pr=$(gh pr list --base main --head ${{ github.ref_name }} --json state --jq '.[0].state')
+
+        if [ "$existing_pr" == "OPEN" ]; then
+          echo "Updating existing pull request..."
+          gh pr edit --base main --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to main" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to main"
+        else
+          echo "Creating new pull request..."
+          gh pr create --base main --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to main" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to main"
+        fi
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   deploy_lambda:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
