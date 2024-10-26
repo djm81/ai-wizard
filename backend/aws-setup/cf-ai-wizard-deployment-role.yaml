@@ -54,7 +54,7 @@ Resources:
               - 'dynamodb:Scan'
               - 'dynamodb:TagResource'
               - 'dynamodb:UntagResource'
-            Resource: 'arn:aws:dynamodb:*:*:table/ai-wizard-table'
+            Resource: !Sub 'arn:aws:dynamodb:${S3BucketRegion}:${TrustedAccount}:table/ai-wizard-table'
           - Effect: Allow
             Action:
               - 'lambda:CreateFunction'
@@ -67,11 +67,7 @@ Resources:
               - 'lambda:UpdateFunctionConfiguration'
               - 'lambda:TagResource'
               - 'lambda:UntagResource'
-            Resource: 'arn:aws:lambda:*:*:function:ai-wizard-lambda'
-          - Effect: Allow
-            Action:
-              - 'apigateway:*'
-            Resource: '*'
+            Resource: !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-lambda'
           - Effect: Allow
             Action:
               - 'cloudfront:CreateDistribution'
@@ -90,7 +86,7 @@ Resources:
             Resource: !Sub 'arn:aws:route53:::hostedzone/${Route53ZoneId}'
           - Effect: Allow
             Action:
-              - 'route53:Describe*' 
+              - 'route53:Describe*'
               - 'route53:Get*'
               - 'route53:List*'
             Resource: '*'
@@ -104,6 +100,17 @@ Resources:
               - 'acm:AddTagsToCertificate'
               - 'acm:RemoveTagsFromCertificate'
             Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'apigateway:Create*'
+              - 'apigateway:Delete*'
+              - 'apigateway:Get*'
+              - 'apigateway:Put*'
+              - 'apigateway:Test*'
+              - 'apigateway:Update*'
+              - 'apigateway:TagResource'
+              - 'apigateway:UntagResource'
+            Resource: !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis/*'
           - Effect: Allow
             Action:
               - 'iam:CreateRole'
@@ -121,8 +128,7 @@ Resources:
             Action: 
               - 'sts:AssumeRole'
               - 'sts:TagSession'
-            Resource: 
-              - !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
+            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
 
   # Create the IAM role
   AIWizardDeploymentRole:

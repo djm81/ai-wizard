@@ -126,12 +126,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Create pull request
+    - name: Create or update pull request
       run: |
-        gh pr create \
-          --base main \
-          --title "Pull request from ${{ github.ref_name }} to main" \
-          --body "Pull request from ${{ github.ref_name }} to main"
+        # Check for existing pull requests
+        existing_pr=$(gh pr list --base main --head ${{ github.ref_name }} --json state --jq '.[0].state')
+
+        if [ "$existing_pr" == "OPEN" ]; then
+          echo "Updating existing pull request..."
+          gh pr edit --base main --title "Pull request from ${{ github.ref_name }} to main" --body "Pull request from ${{ github.ref_name }} to main"
+        else
+          echo "Creating new pull request..."
+          gh pr create --base main --title "Pull request from ${{ github.ref_name }} to main" --body "Pull request from ${{ github.ref_name }} to main"
+        fi
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -152,6 +158,12 @@ jobs:
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_aws_account_id }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
 
+    - name: Create Lambda package
+      run: |
+        chmod +x create_lambda_package.sh
+        ./create_lambda_package.sh
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+  
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
@@ -208,7 +220,6 @@ jobs:
             -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
             aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
         fi
-
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Apply
@@ -302,5 +313,3 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-
