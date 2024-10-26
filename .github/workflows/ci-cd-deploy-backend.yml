@@ -67,6 +67,12 @@ jobs:
         ./create_lambda_package.sh
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
 
+    - name: Upload Lambda package
+      uses: actions/upload-artifact@v4
+      with:
+        name: lambda_function
+        path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
+
     - name: Calculate Lambda package hash
       id: lambda_hash
       run: |
