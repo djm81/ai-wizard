@@ -7,12 +7,14 @@ on:
       - completed
   push:
     branches: 
+      - dev
       - main
     paths:
       - 'backend/app/**'
       - '.github/workflows/ci-cd-deploy-backend-lambda.yml'
   pull_request:
     branches:
+      - dev
       - main
     paths:
       - 'backend/app/**'
@@ -27,6 +29,28 @@ permissions:
   pull-requests: write
 
 jobs:
+  create_pull_request:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create or update pull request
+      run: |
+        # Check for existing pull requests
+        existing_pr=$(gh pr list --base main --head ${{ github.ref_name }} --json state --jq '.[0].state')
+
+        if [ "$existing_pr" == "OPEN" ]; then
+          echo "Updating existing pull request..."
+          gh pr edit --base main --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to main" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to main"
+        else
+          echo "Creating new pull request..."
+          gh pr create --base main --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to main" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to main"
+        fi
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   deploy_lambda:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -42,20 +66,7 @@ jobs:
         aws-region: ${{ vars.TF_VAR_aws_region }}
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_aws_account_id }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
-  
-    - name: Download Lambda package
-      uses: actions/download-artifact@v4
-      with:
-        name: lambda_function
-        path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
-
-    - name: Calculate Lambda package hash
-      id: lambda_hash
-      run: |
-        HASH=$(openssl dgst -sha256 -binary lambda_function.zip | openssl base64)
-        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
-  
+   
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
