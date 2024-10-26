@@ -1,0 +1,141 @@
+name: Deploy Backend Lambda
+
+on:
+  workflow_run:
+    workflows: ["Test and Build Backend API"]
+    types:
+      - completed
+  push:
+    branches: 
+      - main
+    paths:
+      - 'backend/app/**'
+      - '.github/workflows/ci-cd-deploy-backend-lambda.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/app/**'
+      - '.github/workflows/ci-cd-deploy-backend-lambda.yml'
+
+env:
+  WORKING_DIRECTORY: backend
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  deploy_lambda:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.TF_VAR_aws_region }}
+        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_aws_account_id }}:role/AIWizardDeploymentRole
+        mask-aws-account-id: 'false'
+  
+    - name: Download Lambda package
+      uses: actions/download-artifact@v4
+      with:
+        name: lambda_function
+        path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
+
+    - name: Calculate Lambda package hash
+      id: lambda_hash
+      run: |
+        HASH=$(openssl dgst -sha256 -binary lambda_function.zip | openssl base64)
+        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
+  
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Install dependencies
+      run: |
+        poetry install
+        poetry add zappa
+
+        # Create Zappa settings file if needed
+        if [ ! -e "zappa_settings.json" ]; then
+          echo "Creating Zappa settings file 'zappa_settings.json' ..."
+          cp zappa_settings.json.example zappa_settings.json
+          sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
+          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_zappa_deployments_bucket_name }};g' zappa_settings.json
+          sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
+          sed -i 's/##lambda_function##/${{ vars.TF_VAR_lambda_function_name }}/g' zappa_settings.json
+          sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role;g' zappa_settings.json
+          sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
+          sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
+        fi
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    - name: Assume IAM Role
+      id: assume_role
+      run: |
+        CREDS=$(aws sts assume-role --role-arn arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole --role-session-name GithubActions)
+        echo "::add-mask::$(echo $CREDS | jq -r .Credentials.AccessKeyId)"
+        echo "::add-mask::$(echo $CREDS | jq -r .Credentials.SecretAccessKey)"
+        echo "::add-mask::$(echo $CREDS | jq -r .Credentials.SessionToken)"
+        echo "aws_access_key_id=$(echo $CREDS | jq -r .Credentials.AccessKeyId)" >> $GITHUB_OUTPUT
+        echo "aws_secret_access_key=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)" >> $GITHUB_OUTPUT
+        echo "aws_session_token=$(echo $CREDS | jq -r .Credentials.SessionToken)" >> $GITHUB_OUTPUT
+        echo "role_arn=arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole" >> $GITHUB_OUTPUT
+
+    - name: Deploy with Zappa
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_SESSION_TOKEN: ${{ steps.assume_role.outputs.aws_session_token }}
+        AWS_REGION: ${{ vars.TF_VAR_AWS_REGION }}
+      run: |
+        echo "Checking if Zappa deployment exists..."
+        if poetry run zappa status production; then
+          echo "Zappa deployment exists. Updating..."
+          poetry run zappa update production
+        else
+          echo "Zappa deployment does not exist. Performing initial deployment..."
+          poetry run zappa deploy production
+        fi
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
+  notify:
+    needs: deploy_lambda
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Check job status
+      id: check_job_status
+      run: |
+        if [[ ${{ needs.deploy_lambda.result }} == 'success' ]]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "status=failure" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ steps.check_job_status.outputs.status }}
+        text: |
+          ${{ steps.check_job_status.outputs.status == 'success' && 'Lambda deployment succeeded! :rocket:' || 'Lambda deployment failed! :x:' }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
