@@ -2,25 +2,11 @@ name: Deploy Backend Lambda
 
 on:
   workflow_run:
-    workflows: ["Test and Build Backend API"]
+    workflows: 
+      - "Test and Build Backend API"
+      - "Deploy Backend"
     types:
       - completed
-  push:
-    branches: 
-      - dev
-      - main
-      - test
-    paths:
-      - 'backend/app/**'
-      - '.github/workflows/ci-cd-deploy-backend-lambda.yml'
-  pull_request:
-    branches:
-      - dev
-      - main
-      - test
-    paths:
-      - 'backend/app/**'
-      - '.github/workflows/ci-cd-deploy-backend-lambda.yml'
 
 env:
   WORKING_DIRECTORY: backend
