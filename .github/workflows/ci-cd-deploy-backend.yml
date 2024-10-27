@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - dev
-      - main
-      - test
     paths:
       - 'backend/terraform/**'
       - '.github/workflows/ci-cd-deploy-backend.yml'
