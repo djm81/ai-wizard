@@ -69,7 +69,10 @@ Resources:
               - 'lambda:TagResource'
               - 'lambda:UntagResource'
               - 'lambda:AddPermission'
-            Resource: !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-lambda'
+            Resource: 
+              - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-dev'
+              - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-test'
+              - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-prod'
           - Effect: Allow
             Action:
               - 'cloudfront:CreateDistribution'
@@ -119,7 +122,10 @@ Resources:
               - 'apigateway:PATCH'
               - 'apigateway:OPTIONS'
               - 'apigateway:HEAD'
-            Resource: !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis/*'
+            Resource: 
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apis/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages/*'
           - Effect: Allow
             Action:
               - 'iam:CreateRole'

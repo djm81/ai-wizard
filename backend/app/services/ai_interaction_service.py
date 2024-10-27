@@ -9,7 +9,7 @@ class AIInteractionService:
         self.db = db
 
     def create_ai_interaction(self, user_id: int, project_id: int, interaction: AIInteractionCreate) -> AIInteraction:
-        db_interaction = AIInteraction(**interaction.dict(), user_id=user_id, project_id=project_id)
+        db_interaction = AIInteraction(**interaction.model_dump(), user_id=user_id, project_id=project_id)
         self.db.add(db_interaction)
         self.db.commit()
         self.db.refresh(db_interaction)

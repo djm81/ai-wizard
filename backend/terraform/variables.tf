@@ -49,12 +49,6 @@ variable "frontend_bucket_name" {
   type        = string
 }
 
-variable "openai_api_key" {
-  description = "OpenAI API Key"
-  type        = string
-  sensitive   = true
-}
-
 variable "database_url" {
   description = "Database URL"
   type        = string
@@ -62,3 +56,15 @@ variable "database_url" {
 }
 
 # Add any other variables you might need
+
+variable "stages" {
+  description = "List of stages to deploy"
+  type        = list(string)
+  default     = ["dev", "test", "prod"]
+}
+
+variable "lambda_function_name_prefix" {
+  description = "Prefix for Lambda function names"
+  type        = string
+  default     = "ai-wizard-backend"
+}

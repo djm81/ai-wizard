@@ -87,11 +87,10 @@ jobs:
           cp zappa_settings.json.example zappa_settings.json
           sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
           sed -i 's;##s3_bucket##;${{ vars.TF_VAR_zappa_deployments_bucket_name }};g' zappa_settings.json
-          sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
+          sed -i 's/##project_name##/ai-wizard-backend-lambda/g' zappa_settings.json
           sed -i 's/##lambda_name##/${{ vars.TF_VAR_lambda_function_name }}/g' zappa_settings.json
           sed -i 's/##lambda_function##/${{ vars.TF_VAR_lambda_function_name }}/g' zappa_settings.json
           sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role;g' zappa_settings.json
-          sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
@@ -115,13 +114,24 @@ jobs:
         AWS_SESSION_TOKEN: ${{ steps.assume_role.outputs.aws_session_token }}
         AWS_REGION: ${{ steps.assume_role.outputs.aws_region }}
       run: |
-        echo "Checking if Zappa deployment exists..."
-        if poetry run zappa status production; then
+        # Deploy to appropriate stage based on branch
+        STAGE=""
+        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          STAGE="prod"
+        elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+          STAGE="dev"
+        else
+          STAGE="test"
+        fi
+
+        echo "Deploying to stage: $STAGE"
+        
+        if poetry run zappa status $STAGE; then
           echo "Zappa deployment exists. Updating..."
-          poetry run zappa update production
+          poetry run zappa update $STAGE
         else
           echo "Zappa deployment does not exist. Performing initial deployment..."
-          poetry run zappa deploy production
+          poetry run zappa deploy $STAGE
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
@@ -149,4 +159,3 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-

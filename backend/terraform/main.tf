@@ -337,13 +337,12 @@ resource "aws_lambda_function" "ai_wizard" {
 
   environment {
     variables = {
-      OPENAI_API_KEY = var.openai_api_key
-      DATABASE_URL   = var.database_url
+      DATABASE_URL = var.database_url
     }
   }
 
   tags = merge(local.common_tags, {
-    Name = var.lambda_function_name
+    Name    = var.lambda_function_name
     Service = "ai-wizard-backend"
   })
 
@@ -409,3 +408,4 @@ resource "aws_api_gateway_deployment" "ai_wizard" {
 output "api_gateway_url" {
   value = aws_api_gateway_deployment.ai_wizard.invoke_url
 }
+

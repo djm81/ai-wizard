@@ -94,7 +94,6 @@ jobs:
           -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
           -var="lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
           -var="dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
-          -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
           -var="environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
@@ -122,9 +121,8 @@ jobs:
                             --terraform-var "lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
                             --terraform-var "dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
                             --terraform-var "environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
-                            --terraform-var "openai_api_key=dummy_openai_api_key" \
                             --terraform-var "database_url=${{ vars.PROD_DATABASE_URL }}" \
-                            --terraform-var "lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}"                            
+                            --terraform-var "lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}"
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Upload Infracost cost estimate
@@ -245,7 +243,6 @@ jobs:
             -var="lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
             -var="dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
             -var="environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
-            -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
             -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
             -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
             aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
@@ -282,7 +279,6 @@ jobs:
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
           sed -i 's/##lambda_function##/${{ vars.TF_VAR_lambda_function_name }}/g' zappa_settings.json
           sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role;g' zappa_settings.json
-          sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
