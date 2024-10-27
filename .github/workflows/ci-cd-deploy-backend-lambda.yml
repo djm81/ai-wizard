@@ -88,6 +88,9 @@ jobs:
           sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role-${{ env.ENVIRONMENT }};g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
         fi
+
+        echo "Zappa settings file 'zappa_settings.json' created or updated."
+        cat zappa_settings.json
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Assume IAM Role
