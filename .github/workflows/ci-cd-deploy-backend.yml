@@ -230,7 +230,7 @@ jobs:
       run: |
         echo "Checking for bucket aws_s3_bucket.zappa_deployments: ${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }}"
         echo "Current Terraform state resources:"
-        terraform state list
+        terraform state list || echo "No resources found in Terraform state."
         
         bucket_exists=false
         if terraform state list aws_s3_bucket.zappa_deployments; then
