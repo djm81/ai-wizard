@@ -146,7 +146,21 @@ jobs:
     - name: Package application
       id: package_app
       run: |
-        poetry run zappa package production -o lambda_package.zip
+        # Deploy to appropriate stage based on branch
+        STAGE=""
+        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          STAGE="prod"
+        elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+          STAGE="dev"
+        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
+          STAGE="test"
+        else
+          echo "Invalid branch: ${{ github.ref }}"
+          exit 1
+        fi
+
+        echo "Packaging for stage: $STAGE"
+        poetry run zappa package $STAGE -o lambda_package.zip
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Create S3 bucket if needed

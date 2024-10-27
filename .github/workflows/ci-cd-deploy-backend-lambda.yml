@@ -120,8 +120,11 @@ jobs:
           STAGE="prod"
         elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
           STAGE="dev"
-        else
+        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
           STAGE="test"
+        else
+          echo "Invalid branch: ${{ github.ref }}"
+          exit 1
         fi
 
         echo "Deploying to stage: $STAGE"
