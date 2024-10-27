@@ -9,6 +9,7 @@ on:
     branches: 
       - dev
       - main
+      - test
     paths:
       - 'backend/app/**'
       - '.github/workflows/ci-cd-deploy-backend-lambda.yml'
@@ -16,6 +17,7 @@ on:
     branches:
       - dev
       - main
+      - test
     paths:
       - 'backend/app/**'
       - '.github/workflows/ci-cd-deploy-backend-lambda.yml'
@@ -30,7 +32,7 @@ permissions:
 
 jobs:
   create_pull_request:
-    if: github.ref != 'refs/heads/main'
+    if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/test'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -39,14 +41,20 @@ jobs:
     - name: Create or update pull request
       run: |
         # Check for existing pull requests
-        existing_pr=$(gh pr list --base main --head ${{ github.ref_name }} --json state --jq '.[0].state')
+        TARGET_BRANCH=""
+        if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+          TARGET_BRANCH="test"
+        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
+          TARGET_BRANCH="main"
+        fi
+        existing_pr=$(gh pr list --base $TARGET_BRANCH --head ${{ github.ref_name }} --json state --jq '.[0].state')
 
         if [ "$existing_pr" == "OPEN" ]; then
           echo "Updating existing pull request..."
-          gh pr edit --base main --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to main" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to main"
+          gh pr edit --base $TARGET_BRANCH --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
         else
           echo "Creating new pull request..."
-          gh pr create --base main --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to main" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to main"
+          gh pr create --base $TARGET_BRANCH --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
         fi
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
