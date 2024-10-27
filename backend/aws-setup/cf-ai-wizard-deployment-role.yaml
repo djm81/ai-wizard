@@ -31,6 +31,7 @@ Resources:
               - 's3:List*'
               - 's3:DeleteObject'
               - 's3:DeleteBucketPolicy'
+              - 's3:DeleteBucketWebsite'
               - 's3:PutBucketPolicy'
               - 's3:PutBucketTagging'
               - 's3:PutBucketWebsite'
@@ -39,8 +40,12 @@ Resources:
             Resource: 
               - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}'
               - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}/*'
+              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}-*'
+              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}-*/*'
               - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}'
               - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}/*'
+              - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}-*'
+              - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}-*/*'
           - Effect: Allow
             Action:
               - 'dynamodb:CreateTable'
@@ -55,7 +60,9 @@ Resources:
               - 'dynamodb:Scan'
               - 'dynamodb:TagResource'
               - 'dynamodb:UntagResource'
-            Resource: !Sub 'arn:aws:dynamodb:${S3BucketRegion}:${TrustedAccount}:table/ai-wizard-table'
+            Resource: 
+              - !Sub 'arn:aws:dynamodb:${S3BucketRegion}:${TrustedAccount}:table/ai-wizard-table'
+              - !Sub 'arn:aws:dynamodb:${S3BucketRegion}:${TrustedAccount}:table/ai-wizard-backend-table-*'
           - Effect: Allow
             Action:
               - 'lambda:CreateFunction'
@@ -70,13 +77,12 @@ Resources:
               - 'lambda:UntagResource'
               - 'lambda:AddPermission'
             Resource: 
-              - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-dev'
-              - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-test'
-              - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-prod'
+              - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-*'
           - Effect: Allow
             Action:
               - 'cloudfront:CreateDistribution'
               - 'cloudfront:CreateCloudFrontOriginAccessIdentity'
+              - 'cloudfront:DeleteCloudFrontOriginAccessIdentity'
               - 'cloudfront:Describe*'
               - 'cloudfront:Get*'
               - 'cloudfront:List*'
@@ -138,7 +144,9 @@ Resources:
               - 'iam:PassRole'
               - 'iam:TagRole'
               - 'iam:UntagRole'
-            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role'
+            Resource: 
+              - !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role'
+              - !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role-*'
           - Effect: Allow
             Action: 
               - 'sts:AssumeRole'

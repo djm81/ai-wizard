@@ -10,6 +10,7 @@ on:
 
 env:
   WORKING_DIRECTORY: backend
+  ENVIRONMENT: ${{ github.ref_name }}
 
 permissions:
   contents: read
@@ -56,8 +57,8 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ vars.TF_VAR_aws_region }}
-        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_aws_account_id }}:role/AIWizardDeploymentRole
+        aws-region: ${{ vars.TF_VAR_AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
    
     - name: Set up Python
@@ -79,12 +80,12 @@ jobs:
         if [ ! -e "zappa_settings.json" ]; then
           echo "Creating Zappa settings file 'zappa_settings.json' ..."
           cp zappa_settings.json.example zappa_settings.json
-          sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
-          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_zappa_deployments_bucket_name }};g' zappa_settings.json
+          sed -i 's/##aws_region##/${{ vars.TF_VAR_AWS_REGION }}/g' zappa_settings.json
+          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }};g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard-backend-lambda/g' zappa_settings.json
-          sed -i 's/##lambda_name##/${{ vars.TF_VAR_lambda_function_name }}/g' zappa_settings.json
-          sed -i 's/##lambda_function##/${{ vars.TF_VAR_lambda_function_name }}/g' zappa_settings.json
-          sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role;g' zappa_settings.json
+          sed -i 's/##lambda_name##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
+          sed -i 's/##lambda_function##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
+          sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role-${{ env.ENVIRONMENT }};g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
@@ -151,7 +152,7 @@ jobs:
       with:
         status: ${{ steps.check_job_status.outputs.status }}
         text: |
-          ${{ steps.check_job_status.outputs.status == 'success' && 'Lambda deployment succeeded! :rocket:' || 'Lambda deployment failed! :x:' }}
+          ${{ steps.check_job_status.outputs.status == 'success' && '${{ env.ENVIRONMENT }} Lambda deployment succeeded! :rocket:' || '${{ env.ENVIRONMENT }} Lambda deployment failed! :x:' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
