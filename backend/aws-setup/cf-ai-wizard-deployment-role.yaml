@@ -132,6 +132,7 @@ Resources:
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis/*'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apis/*'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags/*'
           - Effect: Allow
             Action:
               - 'iam:CreateRole'
