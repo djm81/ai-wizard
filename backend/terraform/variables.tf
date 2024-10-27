@@ -34,11 +34,6 @@ variable "dynamodb_table_name" {
   type        = string
 }
 
-variable "lambda_function_name" {
-  description = "The name of the Lambda function"
-  type        = string
-}
-
 variable "lambda_source_code_hash" {
   description = "Base64-encoded SHA256 hash of the Lambda function source code"
   type        = string

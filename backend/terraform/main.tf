@@ -39,10 +39,10 @@ locals {
 # S3 bucket for Zappa deployments
 resource "aws_s3_bucket" "zappa_deployments" {
   provider = aws.assume_role
-  bucket   = "${var.zappa_deployments_bucket_name}"
+  bucket   = "${var.zappa_deployments_bucket_name}-${var.environment}"
 
   tags = merge(local.common_tags, {
-    Name = "${var.zappa_deployments_bucket_name}"
+    Name = "${var.zappa_deployments_bucket_name}-${var.environment}"
     Service = "ai-wizard-backend"
   })
 
@@ -54,7 +54,7 @@ resource "aws_s3_bucket" "zappa_deployments" {
 # DynamoDB table
 resource "aws_dynamodb_table" "ai_wizard" {
   provider         = aws.assume_role
-  name             = "${var.dynamodb_table_name}"
+  name             = "${var.dynamodb_table_name}-${var.environment}"
   billing_mode     = "PAY_PER_REQUEST"
   hash_key         = "id"
   stream_enabled   = true
@@ -66,7 +66,7 @@ resource "aws_dynamodb_table" "ai_wizard" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${var.dynamodb_table_name}"
+    Name = "${var.dynamodb_table_name}-${var.environment}"
     Service = "ai-wizard-backend"
   })
 
@@ -78,7 +78,7 @@ resource "aws_dynamodb_table" "ai_wizard" {
 # IAM role for Lambda (to be used by Zappa)
 resource "aws_iam_role" "lambda_exec" {
   provider = aws.assume_role
-  name     = "ai-wizard-lambda-exec-role"
+  name     = "ai-wizard-lambda-exec-role-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -92,7 +92,7 @@ resource "aws_iam_role" "lambda_exec" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-lambda-exec-role"
+    Name = "ai-wizard-lambda-exec-role-${var.environment}"
     Service = "ai-wizard-backend"
   })
 }
@@ -114,10 +114,10 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_exec" {
 # S3 bucket for frontend hosting
 resource "aws_s3_bucket" "frontend" {
   provider = aws.assume_role
-  bucket   = var.frontend_bucket_name
+  bucket   = "${var.frontend_bucket_name}-${var.environment}"
 
   tags = merge(local.common_tags, {
-    Name = var.frontend_bucket_name
+    Name = "${var.frontend_bucket_name}-${var.environment}"
     Service = "ai-wizard-frontend"
   })
 }
@@ -269,7 +269,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-frontend-cdn"
+    Name = "ai-wizard-frontend-cdn-${var.environment}"
     Service = "ai-wizard-frontend"
   })
 }
@@ -316,11 +316,11 @@ output "website_url" {
 # API Gateway
 resource "aws_api_gateway_rest_api" "ai_wizard" {
   provider    = aws.assume_role
-  name        = "ai-wizard-backend-api"
-  description = "AI Wizard Backend API"
+  name        = "ai-wizard-backend-api-${var.environment}"
+  description = "AI Wizard Backend API (${var.environment})"
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-backend-api"
+    Name = "ai-wizard-backend-api-${var.environment}"
     Service = "ai-wizard-backend"
   })
 }
@@ -329,7 +329,7 @@ resource "aws_api_gateway_rest_api" "ai_wizard" {
 resource "aws_lambda_function" "ai_wizard" {
   provider         = aws.assume_role
   filename         = "${path.module}/lambda/lambda_function.zip"
-  function_name    = "${var.lambda_function_name}-${var.environment}"
+  function_name    = "${var.lambda_function_name_prefix}-${var.environment}"
   role             = aws_iam_role.lambda_exec.arn
   handler          = "lambda_handler.handler"
   runtime          = "python3.12"
@@ -342,7 +342,7 @@ resource "aws_lambda_function" "ai_wizard" {
   }
 
   tags = merge(local.common_tags, {
-    Name    = "${var.lambda_function_name}-${var.environment}"
+    Name    = "${var.lambda_function_name_prefix}-${var.environment}"
     Service = "ai-wizard-backend"
   })
 
