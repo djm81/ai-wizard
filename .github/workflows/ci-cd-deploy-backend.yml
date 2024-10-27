@@ -142,7 +142,7 @@ jobs:
         path: ${{ env.WORKING_DIRECTORY }}/terraform/tfplan
 
   create_pull_request:
-    if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/test'
+    if: github.ref != 'refs/heads/main'
     needs: plan_and_estimate
     runs-on: ubuntu-latest
     steps:
@@ -173,7 +173,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test' || github.ref == 'refs/heads/dev'
     needs: plan_and_estimate
     runs-on: ubuntu-latest
     steps:
