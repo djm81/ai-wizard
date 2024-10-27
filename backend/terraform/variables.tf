@@ -19,7 +19,7 @@ variable "route53_hosted_zone_id" {
 }
 
 variable "environment" {
-  description = "The deployment environment (e.g., dev, test, qual, prod)"
+  description = "The deployment environment (e.g., dev, test, prod)"
   type        = string
 }
 
