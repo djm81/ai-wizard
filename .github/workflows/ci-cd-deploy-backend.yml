@@ -20,7 +20,7 @@ env:
   TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_AWS_REGION }}
   WORKING_DIRECTORY: backend
   ENVIRONMENT: ${{ github.ref_name }}
-  DOMAIN_NAME: ${{ github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}-{1}', vars.TF_VAR_DOMAIN_NAME, github.ref_name) }}
+  DOMAIN_NAME: ${{ github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.ref_name, vars.TF_VAR_DOMAIN_NAME) }}
 
 permissions:
   contents: read
