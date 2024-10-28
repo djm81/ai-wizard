@@ -247,8 +247,8 @@ jobs:
       with:
         status: ${{ steps.check.outputs.status }}
         text: |
-          ${{ steps.check.outputs.status == 'success' && '${{ env.ENVIRONMENT }} Test and Build succeeded! :rocket:' || '${{ env.ENVIRONMENT }} Test or Build failed! :x:' }}
-          ${{ steps.check.outputs.status == 'success' && format('Package for ${{ env.ENVIRONMENT }} stage uploaded to: {0}', needs.build.outputs.package_s3_uri) || '' }}
+          ${{ steps.check.outputs.status == 'success' && format('{0} Test and Build succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Test or Build failed! :x:', env.ENVIRONMENT) }}
+          ${{ steps.check.outputs.status == 'success' && format('Package for {0} stage uploaded to: {1}', env.ENVIRONMENT, needs.build.outputs.package_s3_uri) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

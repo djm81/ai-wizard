@@ -194,7 +194,7 @@ jobs:
       with:
         status: ${{ steps.check_job_status.outputs.status }}
         text: |
-          ${{ steps.check_job_status.outputs.status == 'success' && '${{ env.ENVIRONMENT }} Lambda deployment succeeded! :rocket:' || '${{ env.ENVIRONMENT }} Lambda deployment failed! :x:' }}
+          ${{ steps.check_job_status.outputs.status == 'success' && format('{0} Lambda deployment succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Lambda deployment failed! :x:', env.ENVIRONMENT) }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
