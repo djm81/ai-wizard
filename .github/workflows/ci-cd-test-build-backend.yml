@@ -260,7 +260,7 @@ jobs:
       run: |
         # Apply only the S3 bucket resource from previous plan
         terraform apply -auto-approve tfplan-${{ env.ENVIRONMENT }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Upload package to S3
       id: upload_package
