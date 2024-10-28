@@ -245,7 +245,7 @@ jobs:
       id: create_s3_bucket
       run: |
         # Apply only the S3 bucket resource
-        terraform apply -auto-approve \
+        terraform apply -auto-approve tfplan-${{ env.ENVIRONMENT }} \
           -target=aws_s3_bucket.zappa_deployments \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
