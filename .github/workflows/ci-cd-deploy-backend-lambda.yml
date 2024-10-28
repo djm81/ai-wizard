@@ -2,16 +2,18 @@ name: Deploy Backend Lambda
 
 on:
   workflow_run:
-    workflows: 
-      - "Test and Build Backend API"
-      - "Deploy Backend"
+    workflows: ["Test and Build Backend API"]
     types:
       - completed
-  push:
     branches:
       - dev
-    paths:
-      - '.github/workflows/ci-cd-deploy-backend-lambda.yml'
+      - test
+      - main
+  pull_request:
+    branches:
+      - test  # PR from dev to test
+      - main  # PR from test to main
+  workflow_dispatch:  # Manual trigger
 
 env:
   WORKING_DIRECTORY: backend
@@ -23,8 +25,32 @@ permissions:
   pull-requests: write
 
 jobs:
+  should_run:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'pull_request'
+    outputs:
+      run_deployment: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+          fi
+
   create_pull_request:
-    if: github.ref != 'refs/heads/main'
+    needs: should_run
+    if: |
+      needs.should_run.outputs.run_deployment == 'true' &&
+      github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -52,6 +78,8 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy_lambda:
+    needs: should_run
+    if: needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -94,8 +122,10 @@ jobs:
           sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
         fi
 
-        echo "Zappa settings file 'zappa_settings.json' created or updated."
-        cat zappa_settings.json
+        if [ -e "zappa_settings.json" ]; then
+          echo "Zappa settings file 'zappa_settings.json' created or updated."
+          cat zappa_settings.json
+        fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Assume IAM Role

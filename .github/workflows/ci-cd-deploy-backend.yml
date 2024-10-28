@@ -4,17 +4,19 @@ on:
   push:
     branches:
       - dev
+      - test
+      - main
     paths:
       - 'backend/terraform/**'
       - '.github/workflows/ci-cd-deploy-backend.yml'
   pull_request:
     branches:
-      - dev
-      - main
-      - test
+      - test  # PR from dev to test
+      - main  # PR from test to main
     paths:
       - 'backend/terraform/**'
       - '.github/workflows/ci-cd-deploy-backend.yml'
+  workflow_dispatch:  # Manual trigger
 
 env:
   TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_AWS_REGION }}
@@ -28,16 +30,34 @@ permissions:
   pull-requests: write
 
 jobs:
-  plan_and_estimate:
+  should_run:
     runs-on: ubuntu-latest
     if: |
+      github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && (
         contains(github.event.head_commit.modified, 'backend/terraform/') || 
-        contains(github.event.head_commit.modified, '.github/workflows/ci-cd-deploy-backend.yml') ||
-        github.ref == 'refs/heads/main' ||
-        github.ref == 'refs/heads/dev' ||
-        github.ref == 'refs/heads/test'
-      ))
+        contains(github.event.head_commit.modified, '.github/workflows/ci-cd-deploy-backend.yml')
+      )) ||
+      github.event_name == 'pull_request'
+    outputs:
+      run_deployment: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+          fi
+
+  plan_and_estimate:
+    needs: should_run
+    if: needs.should_run.outputs.run_deployment == 'true'
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -142,8 +162,10 @@ jobs:
         path: ${{ env.WORKING_DIRECTORY }}/terraform/tfplan-${{ env.ENVIRONMENT }}
 
   create_pull_request:
-    if: github.ref != 'refs/heads/main'
-    needs: plan_and_estimate
+    needs: [should_run, plan_and_estimate]
+    if: |
+      needs.should_run.outputs.run_deployment == 'true' &&
+      github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -173,8 +195,10 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test' || github.ref == 'refs/heads/dev'
-    needs: plan_and_estimate
+    needs: [should_run, plan_and_estimate]
+    if: |
+      needs.should_run.outputs.run_deployment == 'true' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test' || github.ref == 'refs/heads/dev')
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -305,9 +329,9 @@ jobs:
       application_url: ${{ steps.output_application_url.outputs.application_url }}
 
   notify:
-    needs: deploy
+    needs: [should_run, deploy]
+    if: always() && needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
-    if: always()
     steps:
     - name: Check job status
       id: check_job_status
