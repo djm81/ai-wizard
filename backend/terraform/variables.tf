@@ -19,7 +19,7 @@ variable "route53_hosted_zone_id" {
 }
 
 variable "environment" {
-  description = "The deployment environment (e.g., dev, test, qual, prod)"
+  description = "The deployment environment (e.g., dev, test, prod)"
   type        = string
 }
 
@@ -34,11 +34,6 @@ variable "dynamodb_table_name" {
   type        = string
 }
 
-variable "lambda_function_name" {
-  description = "The name of the Lambda function"
-  type        = string
-}
-
 variable "lambda_source_code_hash" {
   description = "Base64-encoded SHA256 hash of the Lambda function source code"
   type        = string
@@ -49,12 +44,6 @@ variable "frontend_bucket_name" {
   type        = string
 }
 
-variable "openai_api_key" {
-  description = "OpenAI API Key"
-  type        = string
-  sensitive   = true
-}
-
 variable "database_url" {
   description = "Database URL"
   type        = string
@@ -62,3 +51,15 @@ variable "database_url" {
 }
 
 # Add any other variables you might need
+
+variable "stages" {
+  description = "List of stages to deploy"
+  type        = list(string)
+  default     = ["dev", "test", "prod"]
+}
+
+variable "lambda_function_name_prefix" {
+  description = "Prefix for Lambda function names"
+  type        = string
+  default     = "ai-wizard-backend"
+}

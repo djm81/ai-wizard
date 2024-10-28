@@ -2,26 +2,20 @@ name: Deploy Backend Lambda
 
 on:
   workflow_run:
-    workflows: ["Test and Build Backend API"]
+    workflows: 
+      - "Test and Build Backend API"
+      - "Deploy Backend"
     types:
       - completed
   push:
-    branches: 
-      - dev
-      - main
-    paths:
-      - 'backend/app/**'
-      - '.github/workflows/ci-cd-deploy-backend-lambda.yml'
-  pull_request:
     branches:
       - dev
-      - main
     paths:
-      - 'backend/app/**'
       - '.github/workflows/ci-cd-deploy-backend-lambda.yml'
 
 env:
   WORKING_DIRECTORY: backend
+  ENVIRONMENT: ${{ github.ref_name }}
 
 permissions:
   contents: read
@@ -39,14 +33,20 @@ jobs:
     - name: Create or update pull request
       run: |
         # Check for existing pull requests
-        existing_pr=$(gh pr list --base main --head ${{ github.ref_name }} --json state --jq '.[0].state')
+        TARGET_BRANCH=""
+        if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+          TARGET_BRANCH="test"
+        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
+          TARGET_BRANCH="main"
+        fi
+        existing_pr=$(gh pr list --base $TARGET_BRANCH --head ${{ github.ref_name }} --json state --jq '.[0].state')
 
         if [ "$existing_pr" == "OPEN" ]; then
           echo "Updating existing pull request..."
-          gh pr edit --base main --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to main" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to main"
+          gh pr edit --base $TARGET_BRANCH --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
         else
           echo "Creating new pull request..."
-          gh pr create --base main --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to main" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to main"
+          gh pr create --base $TARGET_BRANCH --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
         fi
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,8 +62,8 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ vars.TF_VAR_aws_region }}
-        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_aws_account_id }}:role/AIWizardDeploymentRole
+        aws-region: ${{ vars.TF_VAR_AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
    
     - name: Set up Python
@@ -85,14 +85,17 @@ jobs:
         if [ ! -e "zappa_settings.json" ]; then
           echo "Creating Zappa settings file 'zappa_settings.json' ..."
           cp zappa_settings.json.example zappa_settings.json
-          sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
-          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_zappa_deployments_bucket_name }};g' zappa_settings.json
-          sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
-          sed -i 's/##lambda_function##/${{ vars.TF_VAR_lambda_function_name }}/g' zappa_settings.json
-          sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role;g' zappa_settings.json
-          sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
+          sed -i 's/##aws_region##/${{ vars.TF_VAR_AWS_REGION }}/g' zappa_settings.json
+          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }};g' zappa_settings.json
+          sed -i 's/##project_name##/ai-wizard-backend-lambda/g' zappa_settings.json
+          sed -i 's/##lambda_name##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
+          sed -i 's/##lambda_function##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
+          sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role-${{ env.ENVIRONMENT }};g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
         fi
+
+        echo "Zappa settings file 'zappa_settings.json' created or updated."
+        cat zappa_settings.json
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Assume IAM Role
@@ -114,13 +117,27 @@ jobs:
         AWS_SESSION_TOKEN: ${{ steps.assume_role.outputs.aws_session_token }}
         AWS_REGION: ${{ steps.assume_role.outputs.aws_region }}
       run: |
-        echo "Checking if Zappa deployment exists..."
-        if poetry run zappa status production; then
+        # Deploy to appropriate stage based on branch
+        STAGE=""
+        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          STAGE="prod"
+        elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+          STAGE="dev"
+        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
+          STAGE="test"
+        else
+          echo "Invalid branch: ${{ github.ref }}"
+          exit 1
+        fi
+
+        echo "Deploying to stage: $STAGE"
+        
+        if poetry run zappa status $STAGE; then
           echo "Zappa deployment exists. Updating..."
-          poetry run zappa update production
+          poetry run zappa update $STAGE
         else
           echo "Zappa deployment does not exist. Performing initial deployment..."
-          poetry run zappa deploy production
+          poetry run zappa deploy $STAGE
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
@@ -143,9 +160,8 @@ jobs:
       with:
         status: ${{ steps.check_job_status.outputs.status }}
         text: |
-          ${{ steps.check_job_status.outputs.status == 'success' && 'Lambda deployment succeeded! :rocket:' || 'Lambda deployment failed! :x:' }}
+          ${{ steps.check_job_status.outputs.status == 'success' && '${{ env.ENVIRONMENT }} Lambda deployment succeeded! :rocket:' || '${{ env.ENVIRONMENT }} Lambda deployment failed! :x:' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-

@@ -4,7 +4,6 @@ on:
   push:
     branches: 
       - dev
-      - main
     paths:
       - 'backend/**'
       - '!backend/terraform/**'
@@ -13,15 +12,16 @@ on:
   pull_request:
     branches:
       - dev
+      - test
       - main
     paths:
       - 'backend/**'
       - '!backend/terraform/**'
       - '!backend/aws-setup/**'
       - '.github/workflows/ci-cd-test-build-backend.yml'
-
 env:
   WORKING_DIRECTORY: backend
+  ENVIRONMENT: ${{ github.ref_name }}
 
 jobs:
   test:
@@ -50,7 +50,6 @@ jobs:
     - name: Set up environment
       id: setup_environment
       run: |
-        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env.test
         echo "SECRET_KEY=dummy_secret_key_for_testing" >> .env.test
         echo "DYNAMODB_TABLE_NAME=ai-wizard-table-test" >> .env.test
         
@@ -64,12 +63,11 @@ jobs:
         if [ ! -e "zappa_settings.json" ]; then
           echo "Creating Zappa settings file 'zappa_settings.json' ..."
           cp zappa_settings.json.example zappa_settings.json
-          sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
-          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_zappa_deployments_bucket_name }};g' zappa_settings.json
+          sed -i 's/##aws_region##/${{ vars.TF_VAR_AWS_REGION }}/g' zappa_settings.json
+          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }};g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
-          sed -i 's/##lambda_function##/${{ vars.TF_VAR_lambda_function_name }}/g' zappa_settings.json
-          sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role;g' zappa_settings.json
-          sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
+          sed -i 's/##lambda_function##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
+          sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role-${{ env.ENVIRONMENT }};g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.TEST_DATABASE_URL }};g' zappa_settings.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
@@ -92,7 +90,7 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/test')
     steps:
     - name: Checkout repo
       id: checkout_repo
@@ -130,9 +128,8 @@ jobs:
           sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
           sed -i 's;##s3_bucket##;${{ vars.TF_VAR_zappa_deployments_bucket_name }};g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
-          sed -i 's/##lambda_function##/${{ vars.TF_VAR_lambda_function_name }}/g' zappa_settings.json
+          sed -i 's/##lambda_function##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
           sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role;g' zappa_settings.json
-          sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
@@ -150,17 +147,31 @@ jobs:
     - name: Package application
       id: package_app
       run: |
-        poetry run zappa package production -o lambda_package.zip
+        # Deploy to appropriate stage based on branch
+        STAGE=""
+        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          STAGE="prod"
+        elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+          STAGE="dev"
+        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
+          STAGE="test"
+        else
+          echo "Invalid branch: ${{ github.ref }}"
+          exit 1
+        fi
+
+        echo "Packaging for stage: $STAGE"
+        poetry run zappa package $STAGE -o lambda_package.zip
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Create S3 bucket if needed
       id: create_s3_bucket
       run: |
-        if ! aws s3api head-bucket --bucket ${{ vars.TF_VAR_zappa_deployments_bucket_name }} 2>/dev/null; then
-          aws s3api create-bucket --bucket ${{ vars.TF_VAR_zappa_deployments_bucket_name }} --region ${{ vars.TF_VAR_aws_region }} --create-bucket-configuration LocationConstraint=${{ vars.TF_VAR_aws_region }}
+        if ! aws s3api head-bucket --bucket ${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }} 2>/dev/null; then
+          aws s3api create-bucket --bucket ${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }} --region ${{ vars.TF_VAR_AWS_REGION }} --create-bucket-configuration LocationConstraint=${{ vars.TF_VAR_AWS_REGION }}
           
           # Set public access block configuration
-          aws s3api put-public-access-block --bucket ${{ vars.TF_VAR_zappa_deployments_bucket_name }} --public-access-block-configuration '{
+          aws s3api put-public-access-block --bucket ${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }} --public-access-block-configuration '{
             "BlockPublicAcls": true,
             "IgnorePublicAcls": true,
             "BlockPublicPolicy": true,
@@ -172,13 +183,13 @@ jobs:
     - name: Upload package to S3
       id: upload_package
       run: |
-        aws s3 cp lambda_package.zip s3://${{ vars.TF_VAR_zappa_deployments_bucket_name }}/lambda_package_${{ github.sha }}.zip
+        aws s3 cp lambda_package.zip s3://${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }}/lambda_package_${{ github.sha }}.zip
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Set output
       id: set_output
       run: |
-        echo "package_s3_uri=s3://${{ vars.TF_VAR_zappa_deployments_bucket_name }}/lambda_package_${{ github.sha }}.zip" >> $GITHUB_OUTPUT
+        echo "package_s3_uri=s3://${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }}/lambda_package_${{ github.sha }}.zip" >> $GITHUB_OUTPUT
 
     outputs:
       package_s3_uri: ${{ steps.set_output.outputs.package_s3_uri }}
@@ -202,9 +213,10 @@ jobs:
       with:
         status: ${{ steps.check.outputs.status }}
         text: |
-          ${{ steps.check.outputs.status == 'success' && 'Test and Build succeeded! :rocket:' || 'Test or Build failed! :x:' }}
-          ${{ steps.check.outputs.status == 'success' && format('Package uploaded to: {0}', needs.build.outputs.package_s3_uri) || '' }}
+          ${{ steps.check.outputs.status == 'success' && '${{ env.ENVIRONMENT }} Test and Build succeeded! :rocket:' || '${{ env.ENVIRONMENT }} Test or Build failed! :x:' }}
+          ${{ steps.check.outputs.status == 'success' && format('Package for ${{ env.ENVIRONMENT }} stage uploaded to: {0}', needs.build.outputs.package_s3_uri) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
