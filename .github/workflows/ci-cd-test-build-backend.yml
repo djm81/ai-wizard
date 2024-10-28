@@ -4,14 +4,6 @@ on:
   push:
     branches: 
       - dev
-    paths:
-      - 'backend/**'
-      - '!backend/terraform/**'
-      - '!backend/aws-setup/**'
-      - '.github/workflows/ci-cd-test-build-backend.yml'
-  pull_request:
-    branches:
-      - dev
       - test
       - main
     paths:
@@ -19,12 +11,49 @@ on:
       - '!backend/terraform/**'
       - '!backend/aws-setup/**'
       - '.github/workflows/ci-cd-test-build-backend.yml'
+  pull_request:
+    branches:
+      - test  # PR from dev to test
+      - main  # PR from test to main
+    paths:
+      - 'backend/**'
+      - '!backend/terraform/**'
+      - '!backend/aws-setup/**'
+      - '.github/workflows/ci-cd-test-build-backend.yml'
+  workflow_dispatch:  # Manual trigger
 env:
   WORKING_DIRECTORY: backend
   ENVIRONMENT: ${{ github.ref_name }}
 
 jobs:
+  should_run:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && (
+        contains(github.event.head_commit.modified, 'backend/') &&
+        !contains(github.event.head_commit.modified, 'backend/terraform/') &&
+        !contains(github.event.head_commit.modified, 'backend/aws-setup/')
+      )) ||
+      github.event_name == 'pull_request'
+    outputs:
+      run_deployment: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+          fi
+
   test:
+    needs: should_run
+    if: needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -88,9 +117,12 @@ jobs:
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
   build:
-    needs: test
+    needs: [should_run, test]
+    if: |
+      needs.should_run.outputs.run_deployment == 'true' &&
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/test')
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/test')
     steps:
     - name: Checkout repo
       id: checkout_repo
@@ -193,11 +225,11 @@ jobs:
 
     outputs:
       package_s3_uri: ${{ steps.set_output.outputs.package_s3_uri }}
-  
+
   notify:
-    needs: [test, build]
+    needs: [should_run, test, build]
+    if: always() && needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
-    if: always()
     steps:
     - name: Check job status
       id: check
@@ -219,4 +251,3 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
