@@ -22,33 +22,44 @@ on:
       - '.github/workflows/ci-cd-test-build-backend.yml'
   workflow_dispatch:  # Manual trigger
 env:
+  TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_AWS_REGION }}
   WORKING_DIRECTORY: backend
-  ENVIRONMENT: ${{ github.ref_name }}
+  ENVIRONMENT: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || github.base_ref) || (github.ref_name == 'main' && 'prod' || github.ref_name) }}
+  DOMAIN_NAME: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.base_ref, vars.TF_VAR_DOMAIN_NAME)) || (github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.ref_name, vars.TF_VAR_DOMAIN_NAME)) }}
 
 jobs:
   should_run:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
       (github.event_name == 'push' && (
-        contains(github.event.head_commit.modified, 'backend/') &&
-        !contains(github.event.head_commit.modified, 'backend/terraform/') &&
-        !contains(github.event.head_commit.modified, 'backend/aws-setup/')
-      )) ||
-      github.event_name == 'pull_request'
+        github.ref == 'refs/heads/dev' ||
+        github.ref == 'refs/heads/test' ||
+        github.ref == 'refs/heads/main'
+      ))
     outputs:
       run_deployment: ${{ steps.check.outputs.run }}
+      is_deployable: ${{ steps.check.outputs.deployable }}
     steps:
+      - uses: actions/checkout@v4
       - id: check
         run: |
+          # Always run for workflow_dispatch
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
+          # For PRs, run but don't deploy
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
+          # For pushes to main branches, run and deploy
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
           else
             echo "run=false" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
           fi
 
   test:
@@ -118,10 +129,7 @@ jobs:
 
   build:
     needs: [should_run, test]
-    if: |
-      needs.should_run.outputs.run_deployment == 'true' &&
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/test')
+    if: needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
@@ -179,16 +187,30 @@ jobs:
     - name: Package application
       id: package_app
       run: |
-        # Deploy to appropriate stage based on branch
+        # Get the correct stage based on branch or PR target
         STAGE=""
-        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-          STAGE="prod"
-        elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
-          STAGE="dev"
-        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
-          STAGE="test"
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          # For pull requests, use the target branch
+          if [[ "${{ github.base_ref }}" == "main" ]]; then
+            STAGE="prod"
+          elif [[ "${{ github.base_ref }}" == "test" ]]; then
+            STAGE="test"
+          elif [[ "${{ github.base_ref }}" == "dev" ]]; then
+            STAGE="dev"
+          fi
         else
-          echo "Invalid branch: ${{ github.ref }}"
+          # For direct pushes, use the branch name
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            STAGE="prod"
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            STAGE="dev"
+          elif [[ "${{ github.ref }}" == "refs/heads/test" ]]; then
+            STAGE="test"
+          fi
+        fi
+
+        if [[ -z "$STAGE" ]]; then
+          echo "No valid stage found for this event"
           exit 1
         fi
 
@@ -196,21 +218,84 @@ jobs:
         poetry run zappa package $STAGE -o lambda_package.zip
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
+    - name: Upload Lambda package
+      uses: actions/upload-artifact@v4
+      with:
+        name: lambda_package
+        path: ${{ env.WORKING_DIRECTORY }}/lambda_package.zip
+
+  deploy:
+    needs: [should_run, test, build]
+    if: |
+      needs.should_run.outputs.run_deployment == 'true' &&
+      needs.should_run.outputs.is_deployable == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.TF_VAR_AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
+        mask-aws-account-id: 'false'
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.0.0
+
+    - name: Terraform Init
+      id: terraform_init
+      run: |
+        terraform init \
+          -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+          -backend-config="key=terraform.tfstate-${{ env.ENVIRONMENT }}" \
+          -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -reconfigure
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Download Lambda package
+      uses: actions/download-artifact@v4
+      with:
+        name: lambda_package
+        path: ${{ env.WORKING_DIRECTORY }}
+
+    - name: Calculate Lambda package hash
+      id: lambda_hash
+      run: |
+        HASH=$(openssl dgst -sha256 -binary lambda_package.zip | openssl base64)
+        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    - name: Terraform Plan
+      id: terraform_plan
+      run: |
+        terraform plan \
+          -target=aws_s3_bucket.zappa_deployments \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="domain_name=${{ env.DOMAIN_NAME }}" \
+          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+          -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}" \
+          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
+          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
+          -var="environment=${{ env.ENVIRONMENT }}" \
+          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
+          -out=tfplan-${{ env.ENVIRONMENT }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
     - name: Create S3 bucket if needed
       id: create_s3_bucket
       run: |
-        if ! aws s3api head-bucket --bucket ${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }} 2>/dev/null; then
-          aws s3api create-bucket --bucket ${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }} --region ${{ vars.TF_VAR_AWS_REGION }} --create-bucket-configuration LocationConstraint=${{ vars.TF_VAR_AWS_REGION }}
-          
-          # Set public access block configuration
-          aws s3api put-public-access-block --bucket ${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }} --public-access-block-configuration '{
-            "BlockPublicAcls": true,
-            "IgnorePublicAcls": true,
-            "BlockPublicPolicy": true,
-            "RestrictPublicBuckets": true
-          }'
-        fi
-      working-directory: ${{ env.WORKING_DIRECTORY }}
+        # Apply only the S3 bucket resource from previous plan
+        terraform apply -auto-approve tfplan-${{ env.ENVIRONMENT }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Upload package to S3
       id: upload_package
@@ -227,14 +312,14 @@ jobs:
       package_s3_uri: ${{ steps.set_output.outputs.package_s3_uri }}
 
   notify:
-    needs: [should_run, test, build]
+    needs: [should_run, test, build, deploy]
     if: always() && needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Check job status
       id: check
       run: |
-        if [[ ${{ needs.test.result }} == 'success' && ${{ needs.build.result }} == 'success' ]]; then
+        if [[ ${{ needs.test.result }} == 'success' && ${{ needs.build.result }} == 'success' && ${{ needs.deploy.result }} == 'success' ]]; then
           echo "status=success" >> $GITHUB_OUTPUT
         else
           echo "status=failure" >> $GITHUB_OUTPUT
@@ -245,9 +330,10 @@ jobs:
       with:
         status: ${{ steps.check.outputs.status }}
         text: |
-          ${{ steps.check.outputs.status == 'success' && '${{ env.ENVIRONMENT }} Test and Build succeeded! :rocket:' || '${{ env.ENVIRONMENT }} Test or Build failed! :x:' }}
-          ${{ steps.check.outputs.status == 'success' && format('Package for ${{ env.ENVIRONMENT }} stage uploaded to: {0}', needs.build.outputs.package_s3_uri) || '' }}
+          ${{ steps.check.outputs.status == 'success' && format('{0} Test and Build succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Test or Build failed! :x:', env.ENVIRONMENT) }}
+          ${{ steps.check.outputs.status == 'success' && format('Package for {0} stage uploaded to: {1}', env.ENVIRONMENT, needs.deploy.outputs.package_s3_uri) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+

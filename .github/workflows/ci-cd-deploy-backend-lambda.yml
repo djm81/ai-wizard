@@ -17,7 +17,7 @@ on:
 
 env:
   WORKING_DIRECTORY: backend
-  ENVIRONMENT: ${{ github.ref_name }}
+  ENVIRONMENT: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || github.base_ref) || (github.ref_name == 'main' && 'prod' || github.ref_name) }}
 
 permissions:
   contents: read
@@ -29,57 +29,41 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      github.event_name == 'pull_request'
+      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
+      (github.event_name == 'workflow_run' && (
+        github.event.workflow_run.conclusion == 'success' &&
+        (github.ref == 'refs/heads/dev' ||
+         github.ref == 'refs/heads/test' ||
+         github.ref == 'refs/heads/main')
+      ))
     outputs:
       run_deployment: ${{ steps.check.outputs.run }}
+      is_deployable: ${{ steps.check.outputs.deployable }}
     steps:
       - id: check
         run: |
+          # Always run for workflow_dispatch
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
+          # For PRs, run but don't deploy
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
+          # For workflow_run from Test and Build, run and deploy if successful
+          elif [[ "${{ github.event_name }}" == "workflow_run" && "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
           else
             echo "run=false" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
           fi
-
-  create_pull_request:
-    needs: should_run
-    if: |
-      needs.should_run.outputs.run_deployment == 'true' &&
-      github.ref != 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Create or update pull request
-      run: |
-        # Check for existing pull requests
-        TARGET_BRANCH=""
-        if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
-          TARGET_BRANCH="test"
-        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
-          TARGET_BRANCH="main"
-        fi
-        existing_pr=$(gh pr list --base $TARGET_BRANCH --head ${{ github.ref_name }} --json state --jq '.[0].state')
-
-        if [ "$existing_pr" == "OPEN" ]; then
-          echo "Updating existing pull request..."
-          gh pr edit --base $TARGET_BRANCH --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
-        else
-          echo "Creating new pull request..."
-          gh pr create --base $TARGET_BRANCH --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
-        fi
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy_lambda:
     needs: should_run
-    if: needs.should_run.outputs.run_deployment == 'true'
+    if: |
+      needs.should_run.outputs.run_deployment == 'true' &&
+      needs.should_run.outputs.is_deployable == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -95,7 +79,7 @@ jobs:
         mask-aws-account-id: 'false'
    
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
 
@@ -147,16 +131,39 @@ jobs:
         AWS_SESSION_TOKEN: ${{ steps.assume_role.outputs.aws_session_token }}
         AWS_REGION: ${{ steps.assume_role.outputs.aws_region }}
       run: |
-        # Deploy to appropriate stage based on branch
+        # Get the correct stage based on branch or PR target
         STAGE=""
-        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-          STAGE="prod"
-        elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
-          STAGE="dev"
-        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
-          STAGE="test"
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          # For pull requests, use the target branch
+          if [[ "${{ github.base_ref }}" == "main" ]]; then
+            STAGE="prod"
+          elif [[ "${{ github.base_ref }}" == "test" ]]; then
+            STAGE="test"
+          elif [[ "${{ github.base_ref }}" == "dev" ]]; then
+            STAGE="dev"
+          fi
+        elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+          # For workflow_run events, use the triggering workflow's branch
+          if [[ "${{ github.event.workflow_run.head_branch }}" == "main" ]]; then
+            STAGE="prod"
+          elif [[ "${{ github.event.workflow_run.head_branch }}" == "dev" ]]; then
+            STAGE="dev"
+          elif [[ "${{ github.event.workflow_run.head_branch }}" == "test" ]]; then
+            STAGE="test"
+          fi
         else
-          echo "Invalid branch: ${{ github.ref }}"
+          # For direct pushes or workflow_dispatch, use the current branch
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            STAGE="prod"
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            STAGE="dev"
+          elif [[ "${{ github.ref }}" == "refs/heads/test" ]]; then
+            STAGE="test"
+          fi
+        fi
+
+        if [[ -z "$STAGE" ]]; then
+          echo "No valid stage found for this event"
           exit 1
         fi
 
@@ -169,12 +176,11 @@ jobs:
           echo "Zappa deployment does not exist. Performing initial deployment..."
           poetry run zappa deploy $STAGE
         fi
-      working-directory: ${{ env.WORKING_DIRECTORY }}
 
   notify:
-    needs: deploy_lambda
+    needs: [should_run, deploy_lambda]
+    if: always() && needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
-    if: always()
     steps:
     - name: Check job status
       id: check_job_status
@@ -190,7 +196,7 @@ jobs:
       with:
         status: ${{ steps.check_job_status.outputs.status }}
         text: |
-          ${{ steps.check_job_status.outputs.status == 'success' && '${{ env.ENVIRONMENT }} Lambda deployment succeeded! :rocket:' || '${{ env.ENVIRONMENT }} Lambda deployment failed! :x:' }}
+          ${{ steps.check_job_status.outputs.status == 'success' && format('{0} Lambda deployment succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Lambda deployment failed! :x:', env.ENVIRONMENT) }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
