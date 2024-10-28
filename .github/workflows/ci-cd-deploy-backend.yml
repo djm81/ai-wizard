@@ -21,8 +21,8 @@ on:
 env:
   TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_AWS_REGION }}
   WORKING_DIRECTORY: backend
-  ENVIRONMENT: ${{ github.ref_name }}
-  DOMAIN_NAME: ${{ github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.ref_name, vars.TF_VAR_DOMAIN_NAME) }}
+  ENVIRONMENT: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || github.base_ref) || (github.ref_name == 'main' && 'prod' || github.ref_name) }}
+  DOMAIN_NAME: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.base_ref, vars.TF_VAR_DOMAIN_NAME)) || (github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.ref_name, vars.TF_VAR_DOMAIN_NAME)) }}
 
 permissions:
   contents: read
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'pull_request' ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
       (github.event_name == 'push' && (
         github.ref == 'refs/heads/dev' ||
         github.ref == 'refs/heads/test' ||
@@ -42,20 +42,26 @@ jobs:
       ))
     outputs:
       run_deployment: ${{ steps.check.outputs.run }}
+      is_deployable: ${{ steps.check.outputs.deployable }}
     steps:
       - uses: actions/checkout@v4
       - id: check
         run: |
+          # Always run for workflow_dispatch
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
+          # For PRs, run but don't deploy
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
+          # For pushes to main branches, run and deploy
           elif [[ "${{ github.event_name }}" == "push" ]]; then
-            # Check if any terraform files were modified
-            # git diff --name-only HEAD~1 HEAD | grep -q '^backend/terraform/' && \
-            echo "run=true" >> $GITHUB_OUTPUT || echo "run=false" >> $GITHUB_OUTPUT
+            echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
           else
             echo "run=false" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
           fi
 
   plan_and_estimate:
@@ -84,7 +90,7 @@ jobs:
       id: terraform_init
       run: |
         terraform init \
-          -backend-config="bucket=${TF_STATE_BUCKET}" \
+          -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
           -backend-config="key=terraform.tfstate-${{ env.ENVIRONMENT }}" \
           -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
           -reconfigure
@@ -165,42 +171,11 @@ jobs:
         name: tfplan-${{ env.ENVIRONMENT }}
         path: ${{ env.WORKING_DIRECTORY }}/terraform/tfplan-${{ env.ENVIRONMENT }}
 
-  create_pull_request:
+  deploy:
     needs: [should_run, plan_and_estimate]
     if: |
       needs.should_run.outputs.run_deployment == 'true' &&
-      github.ref != 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Create or update pull request
-      run: |
-        # Detect target branch based on current branch
-        TARGET_BRANCH=""
-        if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
-          TARGET_BRANCH="test"
-        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
-          TARGET_BRANCH="main"
-        fi
-
-        # Check for existing pull requests
-        existing_pr=$(gh pr list --base $TARGET_BRANCH --head ${{ github.ref_name }} --json state --jq '.[0].state')
-
-        if [ "$existing_pr" == "OPEN" ]; then
-          echo "Updating existing pull request..."
-          gh pr edit --base $TARGET_BRANCH --title "Deploy Backend: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Backend: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
-        else
-          echo "Creating new pull request..."
-          gh pr create --base $TARGET_BRANCH --title "Deploy Backend: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Backend: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
-        fi
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  deploy:
-    needs: [should_run, plan_and_estimate]
-    if: needs.should_run.outputs.run_deployment == 'true'
+      needs.should_run.outputs.is_deployable == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -293,7 +268,7 @@ jobs:
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
 
