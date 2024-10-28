@@ -34,22 +34,26 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'pull_request' ||
       (github.event_name == 'push' && (
-        contains(github.event.head_commit.modified, 'backend/terraform/') || 
-        contains(github.event.head_commit.modified, '.github/workflows/ci-cd-deploy-backend.yml')
-      )) ||
-      github.event_name == 'pull_request'
+        github.ref == 'refs/heads/dev' ||
+        github.ref == 'refs/heads/test' ||
+        github.ref == 'refs/heads/main'
+      ))
     outputs:
       run_deployment: ${{ steps.check.outputs.run }}
     steps:
+      - uses: actions/checkout@v4
       - id: check
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            # Check if any terraform files were modified
+            git diff --name-only HEAD~1 HEAD | grep -q '^backend/terraform/' && \
+            echo "run=true" >> $GITHUB_OUTPUT || echo "run=false" >> $GITHUB_OUTPUT
           else
             echo "run=false" >> $GITHUB_OUTPUT
           fi
@@ -196,9 +200,7 @@ jobs:
 
   deploy:
     needs: [should_run, plan_and_estimate]
-    if: |
-      needs.should_run.outputs.run_deployment == 'true' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test' || github.ref == 'refs/heads/dev')
+    if: needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code

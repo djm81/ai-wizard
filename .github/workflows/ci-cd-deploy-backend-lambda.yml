@@ -14,7 +14,6 @@ on:
       - test  # PR from dev to test
       - main  # PR from test to main
   workflow_dispatch:  # Manual trigger
-
 env:
   WORKING_DIRECTORY: backend
   ENVIRONMENT: ${{ github.ref_name }}
@@ -29,8 +28,13 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      github.event_name == 'pull_request'
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_run' && (
+        github.event.workflow_run.conclusion == 'success' &&
+        (github.ref == 'refs/heads/dev' ||
+         github.ref == 'refs/heads/test' ||
+         github.ref == 'refs/heads/main')
+      ))
     outputs:
       run_deployment: ${{ steps.check.outputs.run }}
     steps:
@@ -38,9 +42,9 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "workflow_run" && "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
           else
             echo "run=false" >> $GITHUB_OUTPUT
