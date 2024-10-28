@@ -88,8 +88,10 @@ jobs:
         curl -sSL https://install.python-poetry.org | python3 -
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-    - name: Install dependencies
+    - name: Install dependencies and configure Zappa
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
+        # Install dependencies
         poetry install
         poetry add zappa
 
@@ -110,7 +112,6 @@ jobs:
           echo "Zappa settings file 'zappa_settings.json' created or updated."
           cat zappa_settings.json
         fi
-      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Assume IAM Role
       id: assume_role
@@ -125,6 +126,7 @@ jobs:
         echo "role_arn=arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole" >> $GITHUB_OUTPUT
 
     - name: Deploy with Zappa
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       env:
         AWS_ACCESS_KEY_ID: ${{ steps.assume_role.outputs.aws_access_key_id }}
         AWS_SECRET_ACCESS_KEY: ${{ steps.assume_role.outputs.aws_secret_access_key }}
