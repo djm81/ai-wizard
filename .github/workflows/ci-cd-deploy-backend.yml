@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - dev
-      - main
     paths:
       - 'backend/terraform/**'
       - '.github/workflows/ci-cd-deploy-backend.yml'
@@ -12,13 +11,16 @@ on:
     branches:
       - dev
       - main
+      - test
     paths:
       - 'backend/terraform/**'
       - '.github/workflows/ci-cd-deploy-backend.yml'
 
 env:
-  TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_aws_region }}
+  TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_AWS_REGION }}
   WORKING_DIRECTORY: backend
+  ENVIRONMENT: ${{ github.ref_name }}
+  DOMAIN_NAME: ${{ github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.ref_name, vars.TF_VAR_DOMAIN_NAME) }}
 
 permissions:
   contents: read
@@ -33,7 +35,8 @@ jobs:
         contains(github.event.head_commit.modified, 'backend/terraform/') || 
         contains(github.event.head_commit.modified, '.github/workflows/ci-cd-deploy-backend.yml') ||
         github.ref == 'refs/heads/main' ||
-        github.ref == 'refs/heads/dev'
+        github.ref == 'refs/heads/dev' ||
+        github.ref == 'refs/heads/test'
       ))
     steps:
     - name: Checkout code
@@ -44,8 +47,8 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ vars.TF_VAR_aws_region }}
-        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_aws_account_id }}:role/AIWizardDeploymentRole
+        aws-region: ${{ vars.TF_VAR_AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
           
     - name: Setup Terraform
@@ -58,8 +61,8 @@ jobs:
       run: |
         terraform init \
           -backend-config="bucket=${TF_STATE_BUCKET}" \
-          -backend-config="key=terraform.tfstate" \
-          -backend-config="region=${{ vars.TF_VAR_aws_region }}" \
+          -backend-config="key=terraform.tfstate-${{ env.ENVIRONMENT }}" \
+          -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
           -reconfigure
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
@@ -87,18 +90,17 @@ jobs:
       run: |
         terraform plan \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-          -var="aws_region=${{ vars.TF_VAR_aws_region }}" \
-          -var="domain_name=${{ vars.TF_VAR_domain_name }}" \
-          -var="route53_hosted_zone_id=${{ vars.TF_VAR_route53_hosted_zone_id }}" \
-          -var="frontend_bucket_name=${{ vars.TF_VAR_frontend_bucket_name }}" \
-          -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
-          -var="lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
-          -var="dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
-          -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="domain_name=${{ env.DOMAIN_NAME }}" \
+          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+          -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}" \
+          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
-          -var="environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
+          -var="environment=${{ env.ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
-          -out=tfplan
+          -out=tfplan-${{ env.ENVIRONMENT }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Setup Infracost
@@ -115,16 +117,15 @@ jobs:
                             --out-file infracost-report.json \
                             --terraform-var "aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
                             --terraform-var "aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
-                            --terraform-var "domain_name=${{ vars.TF_VAR_domain_name }}" \
-                            --terraform-var "route53_hosted_zone_id=${{ vars.TF_VAR_route53_hosted_zone_id }}" \
-                            --terraform-var "frontend_bucket_name=${{ vars.TF_VAR_frontend_bucket_name }}" \
-                            --terraform-var "zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
-                            --terraform-var "lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
-                            --terraform-var "dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
-                            --terraform-var "environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
-                            --terraform-var "openai_api_key=dummy_openai_api_key" \
+                            --terraform-var "domain_name=${{ env.DOMAIN_NAME }}" \
+                            --terraform-var "route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+                            --terraform-var "frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+                            --terraform-var "zappa_deployments_bucket_name=${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}" \
+                            --terraform-var "lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+                            --terraform-var "dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
+                            --terraform-var "environment=${{ env.ENVIRONMENT }}" \
                             --terraform-var "database_url=${{ vars.PROD_DATABASE_URL }}" \
-                            --terraform-var "lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}"                            
+                            --terraform-var "lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}"
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Upload Infracost cost estimate
@@ -137,8 +138,8 @@ jobs:
       id: upload_terraform_plan
       uses: actions/upload-artifact@v4
       with:
-        name: tfplan
-        path: ${{ env.WORKING_DIRECTORY }}/terraform/tfplan
+        name: tfplan-${{ env.ENVIRONMENT }}
+        path: ${{ env.WORKING_DIRECTORY }}/terraform/tfplan-${{ env.ENVIRONMENT }}
 
   create_pull_request:
     if: github.ref != 'refs/heads/main'
@@ -150,21 +151,29 @@ jobs:
 
     - name: Create or update pull request
       run: |
+        # Detect target branch based on current branch
+        TARGET_BRANCH=""
+        if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+          TARGET_BRANCH="test"
+        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
+          TARGET_BRANCH="main"
+        fi
+
         # Check for existing pull requests
-        existing_pr=$(gh pr list --base main --head ${{ github.ref_name }} --json state --jq '.[0].state')
+        existing_pr=$(gh pr list --base $TARGET_BRANCH --head ${{ github.ref_name }} --json state --jq '.[0].state')
 
         if [ "$existing_pr" == "OPEN" ]; then
           echo "Updating existing pull request..."
-          gh pr edit --base main --title "Deploy Backend: Pull request from ${{ github.ref_name }} to main" --body "Deploy Backend: Pull request from ${{ github.ref_name }} to main"
+          gh pr edit --base $TARGET_BRANCH --title "Deploy Backend: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Backend: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
         else
           echo "Creating new pull request..."
-          gh pr create --base main --title "Deploy Backend: Pull request from ${{ github.ref_name }} to main" --body "Deploy Backend: Pull request from ${{ github.ref_name }} to main"
+          gh pr create --base $TARGET_BRANCH --title "Deploy Backend: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Backend: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
         fi
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test' || github.ref == 'refs/heads/dev'
     needs: plan_and_estimate
     runs-on: ubuntu-latest
     steps:
@@ -176,8 +185,8 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ vars.TF_VAR_aws_region }}
-        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_aws_account_id }}:role/AIWizardDeploymentRole
+        aws-region: ${{ vars.TF_VAR_AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
   
     - name: Setup Terraform
@@ -190,8 +199,8 @@ jobs:
       run: |
         terraform init \
           -backend-config="bucket=${TF_STATE_BUCKET}" \
-          -backend-config="key=terraform.tfstate" \
-          -backend-config="region=${{ vars.TF_VAR_aws_region }}" \
+          -backend-config="key=terraform.tfstate-${{ env.ENVIRONMENT }}" \
+          -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
           -reconfigure
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
@@ -199,7 +208,7 @@ jobs:
       id: download_terraform_plan
       uses: actions/download-artifact@v4
       with:
-        name: tfplan
+        name: tfplan-${{ env.ENVIRONMENT }}
         path: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Download Lambda package
@@ -217,13 +226,13 @@ jobs:
   
     - name: Check and Import Zappa Deployment Bucket
       run: |
-        echo "Checking for bucket aws_s3_bucket.zappa_deployments: ${{ vars.TF_VAR_zappa_deployments_bucket_name }}"
+        echo "Checking for bucket aws_s3_bucket.zappa_deployments: ${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }}"
         echo "Current Terraform state resources:"
-        terraform state list
+        terraform state list || echo "No resources found in Terraform state."
         
         bucket_exists=false
         if terraform state list aws_s3_bucket.zappa_deployments; then
-          if ! terraform state show aws_s3_bucket.zappa_deployments | grep -q ${{ vars.TF_VAR_zappa_deployments_bucket_name }}; then
+          if ! terraform state show aws_s3_bucket.zappa_deployments | grep -q "${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }}"; then
             echo "Bucket not found in state."
           else
             echo "Bucket already found in state."
@@ -237,25 +246,24 @@ jobs:
           echo "Bucket not found, importing..."
           terraform import \
             -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-            -var="aws_region=${{ vars.TF_VAR_aws_region }}" \
-            -var="domain_name=${{ vars.TF_VAR_domain_name }}" \
-            -var="route53_hosted_zone_id=${{ vars.TF_VAR_route53_hosted_zone_id }}" \
-            -var="frontend_bucket_name=${{ vars.TF_VAR_frontend_bucket_name }}" \
-            -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_zappa_deployments_bucket_name }}" \
-            -var="lambda_function_name=${{ vars.TF_VAR_lambda_function_name }}" \
-            -var="dynamodb_table_name=${{ vars.TF_VAR_dynamodb_table_name }}" \
-            -var="environment=${{ vars.TF_VAR_ENVIRONMENT }}" \
-            -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
+            -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+            -var="domain_name=${{ env.DOMAIN_NAME }}" \
+            -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+            -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+            -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}" \
+            -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+            -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
+            -var="environment=${{ env.ENVIRONMENT }}" \
             -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
             -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
-            aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_zappa_deployments_bucket_name }}
+            aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }}
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Apply
       id: terraform_apply
       run: |
-        terraform apply -auto-approve tfplan
+        terraform apply -auto-approve tfplan-${{ env.ENVIRONMENT }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Set up Python
@@ -277,12 +285,11 @@ jobs:
         if [ ! -e "zappa_settings.json" ]; then
           echo "Creating Zappa settings file 'zappa_settings.json' ..."
           cp zappa_settings.json.example zappa_settings.json
-          sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
-          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_zappa_deployments_bucket_name }};g' zappa_settings.json
+          sed -i 's/##aws_region##/${{ vars.TF_VAR_AWS_REGION }}/g' zappa_settings.json
+          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }};g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
-          sed -i 's/##lambda_function##/${{ vars.TF_VAR_lambda_function_name }}/g' zappa_settings.json
-          sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role;g' zappa_settings.json
-          sed -i 's/##openai_api_key##/${{ secrets.OPENAI_API_KEY }}/g' zappa_settings.json
+          sed -i 's/##lambda_function##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
+          sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role-${{ env.ENVIRONMENT }};g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
@@ -290,7 +297,7 @@ jobs:
     - name: Terraform Output Application URL
       id: output_application_url
       run: |
-        echo "Your application is accessible at: $(terraform output -raw website_url)"
+        echo "Your application for ${{ env.ENVIRONMENT }} stage is accessible at: $(terraform output -raw website_url)"
         echo "application_url=$(terraform output -raw website_url)" >> $GITHUB_OUTPUT
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
@@ -316,8 +323,8 @@ jobs:
       with:
         status: ${{ steps.check_job_status.outputs.status }}
         text: |
-          ${{ steps.check_job_status.outputs.status == 'success' && 'Deployment succeeded! :rocket:' || 'Deployment failed! :x:' }}
-          ${{ steps.check_job_status.outputs.status == 'success' && format('Application is accessible at: {0}', needs.deploy.outputs.application_url) || '' }}
+          ${{ steps.check_job_status.outputs.status == 'success' && '${{ env.ENVIRONMENT }} Deployment succeeded! :rocket:' || '${{ env.ENVIRONMENT }} Deployment failed! :x:' }}
+          ${{ steps.check_job_status.outputs.status == 'success' && format('Application for ${{ env.ENVIRONMENT }} stage is accessible at: {0}', needs.deploy.outputs.application_url) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
