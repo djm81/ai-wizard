@@ -24,7 +24,7 @@ on:
 env:
   TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_AWS_REGION }}
   WORKING_DIRECTORY: backend
-  ENVIRONMENT: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+  ENVIRONMENT: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || github.base_ref) || (github.ref_name == 'main' && 'prod' || github.ref_name) }}
   DOMAIN_NAME: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.base_ref, vars.TF_VAR_DOMAIN_NAME)) || (github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.ref_name, vars.TF_VAR_DOMAIN_NAME)) }}
 
 jobs:
@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'pull_request' ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
       (github.event_name == 'push' && (
         github.ref == 'refs/heads/dev' ||
         github.ref == 'refs/heads/test' ||
@@ -40,22 +40,26 @@ jobs:
       ))
     outputs:
       run_deployment: ${{ steps.check.outputs.run }}
+      is_deployable: ${{ steps.check.outputs.deployable }}
     steps:
       - uses: actions/checkout@v4
       - id: check
         run: |
+          # Always run for workflow_dispatch
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
+          # For PRs, run but don't deploy
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
+          # For pushes to main branches, run and deploy
           elif [[ "${{ github.event_name }}" == "push" ]]; then
-            # Check if any backend files were modified (excluding terraform and aws-setup)
-            # git diff --name-only HEAD~1 HEAD | grep -q '^backend/' && \
-            # ! git diff --name-only HEAD~1 HEAD | grep -q '^backend/terraform/' && \
-            # ! git diff --name-only HEAD~1 HEAD | grep -q '^backend/aws-setup/' && \
-            echo "run=true" >> $GITHUB_OUTPUT || echo "run=false" >> $GITHUB_OUTPUT
+            echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
           else
             echo "run=false" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
           fi
 
   test:
@@ -214,12 +218,30 @@ jobs:
         poetry run zappa package $STAGE -o lambda_package.zip
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
-    - name: Calculate Lambda package hash
-      id: lambda_hash
-      run: |
-        HASH=$(openssl dgst -sha256 -binary lambda_function.zip | openssl base64)
-        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
+    - name: Upload Lambda package
+      uses: actions/upload-artifact@v4
+      with:
+        name: lambda_package
+        path: ${{ env.WORKING_DIRECTORY }}/lambda_package.zip
+
+  deploy:
+    needs: [should_run, test, build]
+    if: |
+      needs.should_run.outputs.run_deployment == 'true' &&
+      needs.should_run.outputs.is_deployable == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.TF_VAR_AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
+        mask-aws-account-id: 'false'
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
@@ -235,6 +257,19 @@ jobs:
           -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
           -reconfigure
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Download Lambda package
+      uses: actions/download-artifact@v4
+      with:
+        name: lambda_package
+        path: ${{ env.WORKING_DIRECTORY }}
+
+    - name: Calculate Lambda package hash
+      id: lambda_hash
+      run: |
+        HASH=$(openssl dgst -sha256 -binary lambda_package.zip | openssl base64)
+        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
+      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Terraform Plan
       id: terraform_plan
@@ -277,14 +312,14 @@ jobs:
       package_s3_uri: ${{ steps.set_output.outputs.package_s3_uri }}
 
   notify:
-    needs: [should_run, test, build]
+    needs: [should_run, test, build, deploy]
     if: always() && needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Check job status
       id: check
       run: |
-        if [[ ${{ needs.test.result }} == 'success' && ${{ needs.build.result }} == 'success' ]]; then
+        if [[ ${{ needs.test.result }} == 'success' && ${{ needs.build.result }} == 'success' && ${{ needs.deploy.result }} == 'success' ]]; then
           echo "status=success" >> $GITHUB_OUTPUT
         else
           echo "status=failure" >> $GITHUB_OUTPUT
@@ -296,7 +331,7 @@ jobs:
         status: ${{ steps.check.outputs.status }}
         text: |
           ${{ steps.check.outputs.status == 'success' && format('{0} Test and Build succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Test or Build failed! :x:', env.ENVIRONMENT) }}
-          ${{ steps.check.outputs.status == 'success' && format('Package for {0} stage uploaded to: {1}', env.ENVIRONMENT, needs.build.outputs.package_s3_uri) || '' }}
+          ${{ steps.check.outputs.status == 'success' && format('Package for {0} stage uploaded to: {1}', env.ENVIRONMENT, needs.deploy.outputs.package_s3_uri) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

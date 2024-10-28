@@ -14,9 +14,10 @@ on:
       - test  # PR from dev to test
       - main  # PR from test to main
   workflow_dispatch:  # Manual trigger
+
 env:
   WORKING_DIRECTORY: backend
-  ENVIRONMENT: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+  ENVIRONMENT: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || github.base_ref) || (github.ref_name == 'main' && 'prod' || github.ref_name) }}
 
 permissions:
   contents: read
@@ -28,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'pull_request' ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
       (github.event_name == 'workflow_run' && (
         github.event.workflow_run.conclusion == 'success' &&
         (github.ref == 'refs/heads/dev' ||
@@ -37,53 +38,32 @@ jobs:
       ))
     outputs:
       run_deployment: ${{ steps.check.outputs.run }}
+      is_deployable: ${{ steps.check.outputs.deployable }}
     steps:
       - id: check
         run: |
+          # Always run for workflow_dispatch
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
+          # For PRs, run but don't deploy
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
+          # For workflow_run from Test and Build, run and deploy if successful
           elif [[ "${{ github.event_name }}" == "workflow_run" && "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
             echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
           else
             echo "run=false" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
           fi
-
-  create_pull_request:
-    needs: should_run
-    if: |
-      needs.should_run.outputs.run_deployment == 'true' &&
-      github.ref != 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Create or update pull request
-      run: |
-        # Check for existing pull requests
-        TARGET_BRANCH=""
-        if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
-          TARGET_BRANCH="test"
-        elif [ "${{ github.ref }}" = "refs/heads/test" ]; then
-          TARGET_BRANCH="main"
-        fi
-        existing_pr=$(gh pr list --base $TARGET_BRANCH --head ${{ github.ref_name }} --json state --jq '.[0].state')
-
-        if [ "$existing_pr" == "OPEN" ]; then
-          echo "Updating existing pull request..."
-          gh pr edit --base $TARGET_BRANCH --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
-        else
-          echo "Creating new pull request..."
-          gh pr create --base $TARGET_BRANCH --title "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH" --body "Deploy Lambda: Pull request from ${{ github.ref_name }} to $TARGET_BRANCH"
-        fi
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy_lambda:
     needs: should_run
-    if: needs.should_run.outputs.run_deployment == 'true'
+    if: |
+      needs.should_run.outputs.run_deployment == 'true' &&
+      needs.should_run.outputs.is_deployable == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -162,8 +142,17 @@ jobs:
           elif [[ "${{ github.base_ref }}" == "dev" ]]; then
             STAGE="dev"
           fi
+        elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+          # For workflow_run events, use the triggering workflow's branch
+          if [[ "${{ github.event.workflow_run.head_branch }}" == "main" ]]; then
+            STAGE="prod"
+          elif [[ "${{ github.event.workflow_run.head_branch }}" == "dev" ]]; then
+            STAGE="dev"
+          elif [[ "${{ github.event.workflow_run.head_branch }}" == "test" ]]; then
+            STAGE="test"
+          fi
         else
-          # For direct pushes or workflow_run events, use the branch name
+          # For direct pushes or workflow_dispatch, use the current branch
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             STAGE="prod"
           elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
@@ -187,12 +176,11 @@ jobs:
           echo "Zappa deployment does not exist. Performing initial deployment..."
           poetry run zappa deploy $STAGE
         fi
-      working-directory: ${{ env.WORKING_DIRECTORY }}
 
   notify:
-    needs: deploy_lambda
+    needs: [should_run, deploy_lambda]
+    if: always() && needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
-    if: always()
     steps:
     - name: Check job status
       id: check_job_status
