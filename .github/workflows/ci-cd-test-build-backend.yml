@@ -22,6 +22,7 @@ on:
       - '.github/workflows/ci-cd-test-build-backend.yml'
   workflow_dispatch:  # Manual trigger
 env:
+  TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_AWS_REGION }}
   WORKING_DIRECTORY: backend
   ENVIRONMENT: ${{ github.ref_name }}
   DOMAIN_NAME: ${{ github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.ref_name, vars.TF_VAR_DOMAIN_NAME) }}
@@ -215,7 +216,7 @@ jobs:
       id: terraform_init
       run: |
         terraform init \
-          -backend-config="bucket=${TF_STATE_BUCKET}" \
+          -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
           -backend-config="key=terraform.tfstate-${{ env.ENVIRONMENT }}" \
           -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
           -reconfigure
