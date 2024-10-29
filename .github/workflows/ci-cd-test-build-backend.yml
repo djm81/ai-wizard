@@ -166,19 +166,22 @@ jobs:
         
         # Copy application code
         cp -r app build/
-        # cp lambda_handler.py build/
         
         # Create requirements file excluding development dependencies
         poetry export --only main -f requirements.txt --without-hashes --output requirements.txt
         
-        # Install only required dependencies
+        # Install dependencies
         pip install \
-          --platform manylinux2014_x86_64 \
           --target=build \
           --implementation cp \
           --python-version 3.12 \
-          --only-binary=:all: \
-          -r requirements.txt
+          --only-binary=:all: --platform manylinux2014_x86_64 \
+          -r requirements.txt \
+          || pip install \
+             --target=build \
+             --implementation cp \
+             --python-version 3.12 \
+             -r requirements.txt
         
         # Remove unnecessary files to reduce package size
         cd build

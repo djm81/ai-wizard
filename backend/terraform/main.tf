@@ -330,7 +330,7 @@ resource "aws_lambda_function" "api" {
   filename         = "${path.module}/lambda/lambda_package.zip"
   function_name    = "${var.lambda_function_name_prefix}-${var.environment}"
   role            = aws_iam_role.lambda_exec.arn
-  handler         = "lambda_handler.lambda_handler"
+  handler         = "app.lambda_handler.handler"
   runtime         = "python3.12"
   source_code_hash = var.lambda_source_code_hash
 
