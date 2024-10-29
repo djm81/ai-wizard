@@ -89,7 +89,7 @@ jobs:
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     - name: Install dependencies and configure Zappa
-      working-directory: ${{ env.WORKING_DIRECTORY }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/backend
       run: |
         # Install dependencies
         poetry install
