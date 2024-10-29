@@ -176,13 +176,7 @@ jobs:
           --implementation cp \
           --python-version 3.12 \
           --only-binary=:all: --platform manylinux2014_x86_64 \
-          -r requirements.txt \
-          || pip install \
-             --target=build \
-             --implementation cp \
-             --python-version 3.12 \
-             --only-binary=:all: \
-             -r requirements.txt
+          -r requirements.txt
         
         # Remove unnecessary files to reduce package size
         cd build
