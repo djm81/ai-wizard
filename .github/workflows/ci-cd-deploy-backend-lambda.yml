@@ -93,7 +93,7 @@ jobs:
       run: |
         # Install dependencies
         poetry install
-        poetry add zappa
+        poetry add zappa@latest
 
         # Create Zappa settings file if needed
         if [ ! -e "zappa_settings.json" ]; then
@@ -175,10 +175,7 @@ jobs:
         fi
 
         echo "Deploying to stage: $STAGE"
-        
-        # Ensure Poetry environment is activated
-        source $HOME/.local/share/pypoetry/venv/bin/activate
-        
+                
         # Check if we're in the correct directory with pyproject.toml
         if [ ! -f "pyproject.toml" ]; then
           echo "Error: pyproject.toml not found in current directory"
