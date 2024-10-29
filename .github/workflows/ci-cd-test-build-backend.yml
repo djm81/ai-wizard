@@ -166,7 +166,8 @@ jobs:
         
         # Copy application code
         cp -r app build/
-        cp lambda_handler.py build/
+        # lambda_handler.py is already in the build directory
+        # cp lambda_handler.py build/
         
         # Create requirements file excluding development dependencies
         poetry export -f requirements.txt --without-dev --without-hashes --output requirements.txt
