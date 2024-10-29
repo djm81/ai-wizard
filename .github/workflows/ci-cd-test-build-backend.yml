@@ -181,6 +181,7 @@ jobs:
              --target=build \
              --implementation cp \
              --python-version 3.12 \
+             --no-binary=:all: \
              -r requirements.txt
         
         # Remove unnecessary files to reduce package size
