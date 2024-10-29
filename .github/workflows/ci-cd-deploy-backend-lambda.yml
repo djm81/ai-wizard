@@ -89,7 +89,7 @@ jobs:
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     - name: Install dependencies and configure Zappa
-      working-directory: ${{ env.WORKING_DIRECTORY }}/backend
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
         # Install dependencies
         poetry install
@@ -126,7 +126,7 @@ jobs:
         echo "role_arn=arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole" >> $GITHUB_OUTPUT
 
     - name: Deploy with Zappa
-      working-directory: ${{ env.WORKING_DIRECTORY }}/backend
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       env:
         AWS_ACCESS_KEY_ID: ${{ steps.assume_role.outputs.aws_access_key_id }}
         AWS_SECRET_ACCESS_KEY: ${{ steps.assume_role.outputs.aws_secret_access_key }}
@@ -134,6 +134,10 @@ jobs:
         AWS_REGION: ${{ steps.assume_role.outputs.aws_region }}
         HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
       run: |
+        # First, ensure we're in the correct directory
+        pwd
+        ls -la
+        
         # Get the correct stage based on branch or PR target
         STAGE=""
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
@@ -171,6 +175,15 @@ jobs:
         fi
 
         echo "Deploying to stage: $STAGE"
+        
+        # Ensure Poetry environment is activated
+        source $HOME/.local/share/pypoetry/venv/bin/activate
+        
+        # Check if we're in the correct directory with pyproject.toml
+        if [ ! -f "pyproject.toml" ]; then
+          echo "Error: pyproject.toml not found in current directory"
+          exit 1
+        fi
         
         if poetry run zappa status $STAGE; then
           echo "Zappa deployment exists. Updating..."

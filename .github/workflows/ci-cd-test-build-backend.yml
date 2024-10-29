@@ -106,6 +106,7 @@ jobs:
           sed -i 's/##aws_region##/${{ vars.TF_VAR_AWS_REGION }}/g' zappa_settings.json
           sed -i 's;##s3_bucket##;${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }};g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
+          sed -i 's/##lambda_name##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
           sed -i 's/##lambda_function##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
           sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role-${{ env.ENVIRONMENT }};g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.TEST_DATABASE_URL }};g' zappa_settings.json
@@ -168,6 +169,7 @@ jobs:
           sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
           sed -i 's;##s3_bucket##;${{ vars.TF_VAR_zappa_deployments_bucket_name }};g' zappa_settings.json
           sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
+          sed -i 's/##lambda_name##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
           sed -i 's/##lambda_function##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
           sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role;g' zappa_settings.json
           sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
