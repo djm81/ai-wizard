@@ -20,6 +20,7 @@
         "keep_warm": false,
         "api_key_required": false,
         "cors": true,
+        "cloudformation_enabled": false,
         "aws_environment_variables": {
             "STAGE": "dev"
         }

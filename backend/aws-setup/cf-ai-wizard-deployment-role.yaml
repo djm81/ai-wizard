@@ -76,6 +76,8 @@ Resources:
               - 'lambda:TagResource'
               - 'lambda:UntagResource'
               - 'lambda:AddPermission'
+              - 'lambda:DeleteFunctionConcurrency'
+              - 'lambda:PutFunctionConcurrency'
             Resource: 
               - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-*'
           - Effect: Allow
@@ -158,6 +160,54 @@ Resources:
               - 'sts:AssumeRole'
               - 'sts:TagSession'
             Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
+          - Effect: Allow
+            Action:
+              - 'cloudformation:CreateStack'
+              - 'cloudformation:DeleteStack'
+              - 'cloudformation:DescribeStacks'
+              - 'cloudformation:UpdateStack'
+              - 'cloudformation:ListStacks'
+              - 'cloudformation:DescribeStackResource'
+              - 'cloudformation:DescribeStackResources'
+              - 'cloudformation:DescribeStackEvents'
+              - 'cloudformation:ValidateTemplate'
+            Resource: 
+              - !Sub 'arn:aws:cloudformation:${S3BucketRegion}:${TrustedAccount}:stack/*'
+          - Effect: Allow
+            Action:
+              - 'apigateway:GET'
+              - 'apigateway:POST'
+              - 'apigateway:PUT'
+              - 'apigateway:DELETE'
+              - 'apigateway:PATCH'
+              - 'apigateway:HEAD'
+              - 'apigateway:OPTIONS'
+              - 'apigateway:*'
+            Resource: 
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apikeys'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apikeys/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/usageplans'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/usageplans/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apis'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apis/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags/*'
+          - Effect: Allow
+            Action:
+              - 'events:DeleteRule'
+              - 'events:DescribeRule'
+              - 'events:ListRuleNamesByTarget'
+              - 'events:ListRules'
+              - 'events:ListTargetsByRule'
+              - 'events:PutRule'
+              - 'events:PutTargets'
+              - 'events:RemoveTargets'
+            Resource: 
+              - !Sub 'arn:aws:events:${S3BucketRegion}:${TrustedAccount}:rule/*'
 
   # Create the IAM role
   AIWizardDeploymentRole:
