@@ -130,15 +130,15 @@ jobs:
 
   build:
     needs: [should_run, test]
-    if: needs.should_run.outputs.run_deployment == 'true'
+    if: |
+      needs.should_run.outputs.run_deployment == 'true' &&
+      needs.should_run.outputs.is_deployable == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
-      id: checkout_repo
       uses: actions/checkout@v4
     
     - name: Set up Python
-      id: setup_python
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
@@ -148,12 +148,10 @@ jobs:
         curl -sSL https://install.python-poetry.org | python3 -
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-    - name: Install dependencies
-      id: install_dependencies
+    - name: Install dependencies and export requirements
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
         poetry install
-        poetry add zappa
-        poetry add setuptools
         poetry export -f requirements.txt --output requirements.txt --without-hashes
 
         # Create Firebase config file if needed
@@ -161,70 +159,43 @@ jobs:
           echo "Creating Firebase config file 'app/config/firebase-adminsdk.json' ..."
           echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
         fi
-
-        # Create Zappa settings file if needed
-        if [ ! -e "zappa_settings.json" ]; then
-          echo "Creating Zappa settings file 'zappa_settings.json' ..."
-          cp zappa_settings.json.example zappa_settings.json
-          sed -i 's/##aws_region##/${{ vars.TF_VAR_aws_region }}/g' zappa_settings.json
-          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_zappa_deployments_bucket_name }};g' zappa_settings.json
-          sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
-          sed -i 's/##lambda_name##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
-          sed -i 's/##lambda_function##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
-          sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role;g' zappa_settings.json
-          sed -i 's;##database_url##;${{ vars.PROD_DATABASE_URL }};g' zappa_settings.json
-        fi
+        
+    - name: Package Lambda function
       working-directory: ${{ env.WORKING_DIRECTORY }}
-
-    - name: Configure AWS credentials
-      id: configure_aws_credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ vars.TF_VAR_aws_region }}
-        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
-        mask-aws-account-id: 'false'
-
-    - name: Package application
-      id: package_app
       run: |
-        # Get the correct stage based on branch or PR target
-        STAGE=""
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          # For pull requests, use the target branch
-          if [[ "${{ github.base_ref }}" == "main" ]]; then
-            STAGE="prod"
-          elif [[ "${{ github.base_ref }}" == "test" ]]; then
-            STAGE="test"
-          elif [[ "${{ github.base_ref }}" == "dev" ]]; then
-            STAGE="dev"
-          fi
-        else
-          # For direct pushes, use the branch name
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            STAGE="prod"
-          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
-            STAGE="dev"
-          elif [[ "${{ github.ref }}" == "refs/heads/test" ]]; then
-            STAGE="test"
-          fi
-        fi
+        # Create a temporary build directory
+        mkdir -p build
+        
+        # Copy application code
+        cp -r app build/
+        cp lambda_handler.py build/
+        
+        # Install dependencies into the build directory
+        pip install -r requirements.txt --target build/
+        
+        # Create deployment package
+        cd build
+        zip -r ../lambda_package.zip .
+        cd ..
+        
+        # Create lambda directory if it doesn't exist
+        mkdir -p terraform/lambda
+        
+        # Move package to terraform lambda directory
+        mv lambda_package.zip terraform/lambda/
 
-        if [[ -z "$STAGE" ]]; then
-          echo "No valid stage found for this event"
-          exit 1
-        fi
-
-        echo "Packaging for stage: $STAGE"
-        poetry run zappa package $STAGE -o lambda_package.zip
+    - name: Calculate Lambda package hash
+      id: lambda_hash
       working-directory: ${{ env.WORKING_DIRECTORY }}
+      run: |
+        HASH=$(openssl dgst -sha256 -binary terraform/lambda/lambda_package.zip | openssl base64)
+        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
 
     - name: Upload Lambda package
       uses: actions/upload-artifact@v4
       with:
         name: lambda_package
-        path: ${{ env.WORKING_DIRECTORY }}/lambda_package.zip
+        path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda/lambda_package.zip
 
   deploy:
     needs: [should_run, test, build]
@@ -264,20 +235,20 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: lambda_package
-        path: ${{ env.WORKING_DIRECTORY }}
+        path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda/
 
     - name: Calculate Lambda package hash
       id: lambda_hash
       run: |
-        HASH=$(openssl dgst -sha256 -binary lambda_package.zip | openssl base64)
+        HASH=$(openssl dgst -sha256 -binary lambda/lambda_package.zip | openssl base64)
         echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
-      working-directory: ${{ env.WORKING_DIRECTORY }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Plan
       id: terraform_plan
       run: |
         terraform plan \
-          -target=aws_s3_bucket.zappa_deployments \
+          -target=aws_lambda_function.api \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
@@ -292,26 +263,14 @@ jobs:
           -out=tfplan-${{ env.ENVIRONMENT }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Create S3 bucket if needed
-      id: create_s3_bucket
+    - name: Terraform Apply
+      id: terraform_apply
       run: |
-        # Apply only the S3 bucket resource from previous plan
         terraform apply -auto-approve tfplan-${{ env.ENVIRONMENT }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Upload package to S3
-      id: upload_package
-      run: |
-        aws s3 cp lambda_package.zip s3://${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }}/lambda_package_${{ github.sha }}.zip
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-
-    - name: Set output
-      id: set_output
-      run: |
-        echo "package_s3_uri=s3://${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }}/lambda_package_${{ github.sha }}.zip" >> $GITHUB_OUTPUT
-
     outputs:
-      package_s3_uri: ${{ steps.set_output.outputs.package_s3_uri }}
+      lambda_function_name: ${{ steps.terraform_apply.outputs.lambda_function_name }}
 
   notify:
     needs: [should_run, test, build, deploy]
@@ -333,7 +292,7 @@ jobs:
         status: ${{ steps.check.outputs.status }}
         text: |
           ${{ steps.check.outputs.status == 'success' && format('{0} Test and Build succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Test or Build failed! :x:', env.ENVIRONMENT) }}
-          ${{ steps.check.outputs.status == 'success' && format('Package for {0} stage uploaded to: {1}', env.ENVIRONMENT, needs.deploy.outputs.package_s3_uri) || '' }}
+          ${{ steps.check.outputs.status == 'success' && format('Lambda function for {0} stage deployed to: {1}', env.ENVIRONMENT, needs.deploy.outputs.lambda_function_name) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

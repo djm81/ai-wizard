@@ -326,17 +326,17 @@ resource "aws_api_gateway_rest_api" "ai_wizard" {
 }
 
 # Lambda Function
-resource "aws_lambda_function" "ai_wizard" {
-  provider         = aws.assume_role
-  filename         = "${path.module}/lambda/lambda_function.zip"
+resource "aws_lambda_function" "api" {
+  filename         = "${path.module}/lambda/lambda_package.zip"
   function_name    = "${var.lambda_function_name_prefix}-${var.environment}"
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "lambda_handler.handler"
-  runtime          = "python3.12"
+  role            = aws_iam_role.lambda_exec.arn
+  handler         = "lambda_handler.lambda_handler"
+  runtime         = "python3.12"
   source_code_hash = var.lambda_source_code_hash
 
   environment {
     variables = {
+      STAGE = var.environment
       DATABASE_URL = var.database_url
     }
   }
@@ -345,14 +345,6 @@ resource "aws_lambda_function" "ai_wizard" {
     Name    = "${var.lambda_function_name_prefix}-${var.environment}"
     Service = "ai-wizard-backend"
   })
-
-  lifecycle {
-    ignore_changes = [
-      source_code_hash,
-      filename,
-      function_name
-    ]
-  }
 }
 
 # API Gateway Integration
@@ -378,7 +370,7 @@ resource "aws_api_gateway_integration" "lambda" {
   http_method             = aws_api_gateway_method.proxy.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.ai_wizard.invoke_arn
+  uri                     = aws_lambda_function.api.invoke_arn
 }
 
 # Lambda Permission for API Gateway
@@ -386,7 +378,7 @@ resource "aws_lambda_permission" "apigw" {
   provider      = aws.assume_role
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.ai_wizard.function_name
+  function_name = aws_lambda_function.api.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.ai_wizard.execution_arn}/*/*"
 }
