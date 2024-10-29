@@ -333,6 +333,7 @@ resource "aws_lambda_function" "api" {
   handler         = "app.lambda_handler.handler"
   runtime         = "python3.12"
   source_code_hash = var.lambda_source_code_hash
+  publish         = true  # Enable versioning
 
   environment {
     variables = {
@@ -345,6 +346,30 @@ resource "aws_lambda_function" "api" {
     Name    = "${var.lambda_function_name_prefix}-${var.environment}"
     Service = "ai-wizard-backend"
   })
+
+  lifecycle {
+    ignore_changes = [
+      # Ignore changes to tags, etc
+      tags,
+      # Don't recreate on code updates
+      filename,
+      # Allow updates through code hash
+      source_code_hash,
+    ]
+    create_before_destroy = true
+  }
+}
+
+# Add Lambda alias for stable deployments
+resource "aws_lambda_alias" "api_alias" {
+  name             = var.environment
+  description      = "Alias for ${var.environment} environment"
+  function_name    = aws_lambda_function.api.function_name
+  function_version = aws_lambda_function.api.version
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # API Gateway Integration
@@ -363,6 +388,7 @@ resource "aws_api_gateway_method" "proxy" {
   authorization = "NONE"
 }
 
+# Update API Gateway to use the alias
 resource "aws_api_gateway_integration" "lambda" {
   provider                = aws.assume_role
   rest_api_id             = aws_api_gateway_rest_api.ai_wizard.id
@@ -370,15 +396,16 @@ resource "aws_api_gateway_integration" "lambda" {
   http_method             = aws_api_gateway_method.proxy.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
+  uri                     = aws_lambda_alias.api_alias.invoke_arn  # Use alias instead of function directly
 }
 
-# Lambda Permission for API Gateway
+# Update Lambda permission to use the alias
 resource "aws_lambda_permission" "apigw" {
   provider      = aws.assume_role
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.api.function_name
+  qualifier     = aws_lambda_alias.api_alias.name  # Use alias name as qualifier
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.ai_wizard.execution_arn}/*/*"
 }
