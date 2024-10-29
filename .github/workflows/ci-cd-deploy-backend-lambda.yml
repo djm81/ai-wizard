@@ -1,18 +1,18 @@
 name: Deploy Backend Lambda
 
 on:
-  workflow_run:
-    workflows: ["Test and Build Backend API"]
-    types:
-      - completed
-    branches:
-      - dev
-      - test
-      - main
-  pull_request:
-    branches:
-      - test  # PR from dev to test
-      - main  # PR from test to main
+  # workflow_run:
+  #   workflows: ["Test and Build Backend API"]
+  #   types:
+  #     - completed
+  #   branches:
+  #     - dev
+  #     - test
+  #     - main
+  # pull_request:
+  #   branches:
+  #     - test  # PR from dev to test
+  #     - main  # PR from test to main
   workflow_dispatch:  # Manual trigger
 
 env:
