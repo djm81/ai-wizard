@@ -166,13 +166,32 @@ jobs:
         
         # Copy application code
         cp -r app build/
+        cp lambda_handler.py build/
         
-        # Install dependencies into the build directory
-        pip install -r requirements.txt --target build/
+        # Create requirements file excluding development dependencies
+        poetry export -f requirements.txt --without-dev --without-hashes --output requirements.txt
+        
+        # Install only required dependencies
+        pip install \
+          --platform manylinux2014_x86_64 \
+          --target=build \
+          --implementation cp \
+          --python-version 3.12 \
+          --only-binary=:all: \
+          -r requirements.txt
+        
+        # Remove unnecessary files to reduce package size
+        cd build
+        find . -type d -name "tests" -exec rm -rf {} +
+        find . -type d -name "__pycache__" -exec rm -rf {} +
+        find . -type f -name "*.pyc" -delete
+        find . -type f -name "*.pyo" -delete
+        find . -type f -name "*.pyd" -delete
+        find . -type d -name "*.dist-info" -exec rm -rf {} +
+        find . -type d -name "*.egg-info" -exec rm -rf {} +
         
         # Create deployment package
-        cd build
-        zip -r ../lambda_package.zip .
+        zip -r9 ../lambda_package.zip .
         cd ..
         
         # Create lambda directory if it doesn't exist
@@ -180,6 +199,9 @@ jobs:
         
         # Move package to terraform lambda directory
         mv lambda_package.zip terraform/lambda/
+        
+        # Show package size
+        ls -lh terraform/lambda/lambda_package.zip
 
     - name: Calculate Lambda package hash
       id: lambda_hash
