@@ -111,7 +111,7 @@ jobs:
     - name: Calculate Lambda package hash
       id: lambda_hash
       run: |
-        HASH=$(openssl dgst -sha256 -binary lambda_function.zip | openssl base64)
+        HASH=$(openssl dgst -sha256 -binary lambda_package.zip | openssl base64)
         echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
 
@@ -221,7 +221,7 @@ jobs:
     - name: Calculate Lambda package hash
       id: lambda_hash
       run: |
-        HASH=$(openssl dgst -sha256 -binary lambda_function.zip | openssl base64)
+        HASH=$(openssl dgst -sha256 -binary lambda_package.zip | openssl base64)
         echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
   
