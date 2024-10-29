@@ -1,5 +1,5 @@
 #!/bin/bash
-zip -j lambda_function.zip lambda_handler.py
+zip -j lambda_package.zip lambda_handler.py
 echo "Lambda package created successfully:"
 pwd
-ls -lh lambda_function.zip
+ls -lh lambda_package.zip
