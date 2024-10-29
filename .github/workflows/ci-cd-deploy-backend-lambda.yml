@@ -132,6 +132,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ steps.assume_role.outputs.aws_secret_access_key }}
         AWS_SESSION_TOKEN: ${{ steps.assume_role.outputs.aws_session_token }}
         AWS_REGION: ${{ steps.assume_role.outputs.aws_region }}
+        HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
       run: |
         # Get the correct stage based on branch or PR target
         STAGE=""
@@ -146,11 +147,11 @@ jobs:
           fi
         elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
           # For workflow_run events, use the triggering workflow's branch
-          if [[ "${{ github.event.workflow_run.head_branch }}" == "main" ]]; then
+          if [[ "$HEAD_BRANCH" == "main" ]]; then
             STAGE="prod"
-          elif [[ "${{ github.event.workflow_run.head_branch }}" == "dev" ]]; then
+          elif [[ "$HEAD_BRANCH" == "dev" ]]; then
             STAGE="dev"
-          elif [[ "${{ github.event.workflow_run.head_branch }}" == "test" ]]; then
+          elif [[ "$HEAD_BRANCH" == "test" ]]; then
             STAGE="test"
           fi
         else
