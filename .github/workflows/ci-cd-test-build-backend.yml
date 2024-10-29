@@ -130,9 +130,7 @@ jobs:
 
   build:
     needs: [should_run, test]
-    if: |
-      needs.should_run.outputs.run_deployment == 'true' &&
-      needs.should_run.outputs.is_deployable == 'true'
+    if: needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
@@ -168,7 +166,6 @@ jobs:
         
         # Copy application code
         cp -r app build/
-        cp lambda_handler.py build/
         
         # Install dependencies into the build directory
         pip install -r requirements.txt --target build/
@@ -272,7 +269,32 @@ jobs:
     outputs:
       lambda_function_name: ${{ steps.terraform_apply.outputs.lambda_function_name }}
 
-  notify:
+  notify_build:
+    needs: [should_run, test, build]
+    if: always() && needs.should_run.outputs.run_deployment == 'false'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check job status
+      id: check
+      run: |
+        if [[ ${{ needs.test.result }} == 'success' && ${{ needs.build.result }} == 'success' ]]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "status=failure" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ steps.check.outputs.status }}
+        text: |
+          ${{ steps.check.outputs.status == 'success' && format('{0} Test and Build succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Test or Build failed! :x:', env.ENVIRONMENT) }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}    
+
+  notify_deployment:
     needs: [should_run, test, build, deploy]
     if: always() && needs.should_run.outputs.run_deployment == 'true'
     runs-on: ubuntu-latest
