@@ -76,8 +76,12 @@ Resources:
               - 'lambda:TagResource'
               - 'lambda:UntagResource'
               - 'lambda:AddPermission'
+              - 'lambda:RemovePermission'
               - 'lambda:DeleteFunctionConcurrency'
               - 'lambda:PutFunctionConcurrency'
+              - 'lambda:CreateAlias'
+              - 'lambda:DeleteAlias'
+              - 'lambda:UpdateAlias'
             Resource: 
               - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-*'
           - Effect: Allow
