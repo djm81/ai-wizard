@@ -1,9 +1,10 @@
 import { useApi } from './hooks/useApi';
+import { getEnvConfig } from './config/env';
 import { Project } from './types/project';
 import { AIInteraction } from './types/aiInteraction';
 import axios from 'axios';
 
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api';
+const { API_URL } = getEnvConfig();
 
 export const useProjects = () => {
   const { apiCall } = useApi();

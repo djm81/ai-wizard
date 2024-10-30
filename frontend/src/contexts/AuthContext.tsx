@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { User, initializeGoogleAuth, signInWithGoogle, signOut, getIdToken } from '../auth/fedcmAuth';
+import { User, initializeGoogleAuth, signInWithGoogle, signOut as firebaseSignOut, getIdToken } from '../auth/fedcmAuth';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 interface AuthContextType {
@@ -10,7 +10,14 @@ interface AuthContextType {
   getAuthToken: () => Promise<string | null>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Initialize context with default values
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  signIn: async () => {},
+  signOut: async () => {},
+  loading: true,
+  getAuthToken: async () => null
+});
 
 export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -47,15 +54,17 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
       setUser(user);
     } catch (error) {
       console.error('Error signing in:', error);
+      throw error;
     }
   };
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      await firebaseSignOut();
       setUser(null);
     } catch (error) {
       console.error('Error signing out:', error);
+      throw error;
     }
   };
 
