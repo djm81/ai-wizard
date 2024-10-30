@@ -99,18 +99,18 @@ jobs:
           echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
         fi
 
-        # Create Zappa settings file if needed
-        if [ ! -e "zappa_settings.json" ]; then
-          echo "Creating Zappa settings file 'zappa_settings.json' ..."
-          cp zappa_settings.json.example zappa_settings.json
-          sed -i 's/##aws_region##/${{ vars.TF_VAR_AWS_REGION }}/g' zappa_settings.json
-          sed -i 's;##s3_bucket##;${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }};g' zappa_settings.json
-          sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
-          sed -i 's/##lambda_name##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
-          sed -i 's/##lambda_function##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
-          sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role-${{ env.ENVIRONMENT }};g' zappa_settings.json
-          sed -i 's;##database_url##;${{ vars.TEST_DATABASE_URL }};g' zappa_settings.json
-        fi
+        # # Create Zappa settings file if needed
+        # if [ ! -e "zappa_settings.json" ]; then
+        #   echo "Creating Zappa settings file 'zappa_settings.json' ..."
+        #   cp zappa_settings.json.example zappa_settings.json
+        #   sed -i 's/##aws_region##/${{ vars.TF_VAR_AWS_REGION }}/g' zappa_settings.json
+        #   sed -i 's;##s3_bucket##;${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }};g' zappa_settings.json
+        #   sed -i 's/##project_name##/ai-wizard/g' zappa_settings.json
+        #   sed -i 's/##lambda_name##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
+        #   sed -i 's/##lambda_function##/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}/g' zappa_settings.json
+        #   sed -i 's;##role_arn##;arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/ai-wizard-lambda-exec-role-${{ env.ENVIRONMENT }};g' zappa_settings.json
+        #   sed -i 's;##database_url##;${{ vars.TEST_DATABASE_URL }};g' zappa_settings.json
+        # fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Run tests
@@ -202,16 +202,16 @@ jobs:
         ls -lh terraform/lambda/lambda_package.zip
 
     - name: Calculate Lambda package hash
-      id: lambda_hash
+      id: lambda_package_hash
       working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
         HASH=$(openssl dgst -sha256 -binary terraform/lambda/lambda_package.zip | openssl base64)
-        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
+        echo "lambda_package_hash=${HASH}" >> $GITHUB_OUTPUT
 
     - name: Upload Lambda package
       uses: actions/upload-artifact@v4
       with:
-        name: lambda_package
+        name: lambda_app_package
         path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda/lambda_package.zip
 
   deploy:
@@ -251,15 +251,20 @@ jobs:
     - name: Download Lambda package
       uses: actions/download-artifact@v4
       with:
-        name: lambda_package
+        name: lambda_app_package
         path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda/
 
-    - name: Calculate Lambda package hash
-      id: lambda_hash
+    - name: Show Lambda package files
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
-        HASH=$(openssl dgst -sha256 -binary lambda/lambda_package.zip | openssl base64)
-        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+        ls -lh terraform/lambda/
+
+    - name: Calculate Lambda package hash
+      id: lambda_package_hash
+      run: |
+        HASH=$(openssl dgst -sha256 -binary terraform/lambda/lambda_package.zip | openssl base64)
+        echo "lambda_package_hash=${HASH}" >> $GITHUB_OUTPUT
+      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Terraform Plan
       id: terraform_plan
@@ -276,7 +281,7 @@ jobs:
           -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
           -var="environment=${{ env.ENVIRONMENT }}" \
-          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
+          -var="lambda_source_code_hash=${{ steps.lambda_package_hash.outputs.lambda_package_hash }}" \
           -out=tfplan-${{ env.ENVIRONMENT }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 

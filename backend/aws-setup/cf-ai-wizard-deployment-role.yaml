@@ -82,6 +82,7 @@ Resources:
               - 'lambda:CreateAlias'
               - 'lambda:DeleteAlias'
               - 'lambda:UpdateAlias'
+              - 'lambda:PublishVersion'
             Resource: 
               - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-*'
           - Effect: Allow
