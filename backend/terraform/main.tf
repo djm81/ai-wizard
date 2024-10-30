@@ -348,14 +348,14 @@ resource "aws_lambda_function" "api" {
   })
 
   lifecycle {
-    ignore_changes = [
-      # Ignore changes to tags, etc
-      tags,
-      # Don't recreate on code updates
-      filename,
-      # Allow updates through code hash
-      source_code_hash,
-    ]
+    # ignore_changes = [
+    #   # Ignore changes to tags, etc
+    #   tags,
+    #   # Don't recreate on code updates
+    #   filename,
+    #   # Allow updates through code hash
+    #   source_code_hash,
+    # ]
     create_before_destroy = true
   }
 }
