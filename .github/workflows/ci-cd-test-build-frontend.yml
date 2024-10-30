@@ -1,0 +1,174 @@
+name: Test and Build Frontend
+
+on:
+  push:
+    branches: 
+      - dev
+      - test
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/ci-cd-test-build-frontend.yml'
+  pull_request:
+    branches:
+      - test  # PR from dev to test
+      - main  # PR from test to main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/ci-cd-test-build-frontend.yml'
+  workflow_dispatch:  # Manual trigger
+
+env:
+  WORKING_DIRECTORY: frontend
+  ENVIRONMENT: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || github.base_ref) || (github.ref_name == 'main' && 'prod' || github.ref_name) }}
+
+jobs:
+  should_run:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
+      (github.event_name == 'push' && (
+        github.ref == 'refs/heads/dev' ||
+        github.ref == 'refs/heads/test' ||
+        github.ref == 'refs/heads/main'
+      ))
+    outputs:
+      run_deployment: ${{ steps.check.outputs.run }}
+      is_deployable: ${{ steps.check.outputs.deployable }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+            echo "deployable=true" >> $GITHUB_OUTPUT
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+            echo "deployable=false" >> $GITHUB_OUTPUT
+          fi
+
+  test:
+    needs: should_run
+    if: needs.should_run.outputs.run_deployment == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIRECTORY }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+      - name: Run tests
+        run: npm test
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+  build:
+    needs: [should_run, test]
+    if: needs.should_run.outputs.run_deployment == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIRECTORY }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+      - name: Create env file
+        run: |
+          echo "PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+          echo "PUBLIC_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env
+          echo "PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.FIREBASE_AUTH_DOMAIN }}" >> .env
+          echo "PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env
+          echo "PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> .env
+          echo "PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}" >> .env
+          echo "PUBLIC_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}" >> .env
+          echo "PUBLIC_API_URL=https://api.${{ env.ENVIRONMENT == 'prod' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', env.ENVIRONMENT, vars.TF_VAR_DOMAIN_NAME) }}" >> .env
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+      - name: Build
+        run: npm run build
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: ${{ env.WORKING_DIRECTORY }}/dist
+
+  deploy:
+    needs: [should_run, test, build]
+    if: |
+      needs.should_run.outputs.run_deployment == 'true' &&
+      needs.should_run.outputs.is_deployable == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.TF_VAR_AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
+          mask-aws-account-id: 'false'
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: dist
+
+      - name: Deploy to S3
+        run: |
+          aws s3 sync dist/ s3://${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}-${{ env.ENVIRONMENT }} --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?contains(@, '${{ env.ENVIRONMENT == 'prod' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', env.ENVIRONMENT, vars.TF_VAR_DOMAIN_NAME) }}')]].Id" --output text)
+          aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
+
+  notify:
+    needs: [should_run, test, build, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job status
+        id: check
+        run: |
+          if [[ ${{ needs.test.result }} == 'success' && ${{ needs.build.result }} == 'success' && ${{ needs.deploy.result }} == 'success' ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ steps.check.outputs.status }}
+          text: |
+            ${{ steps.check.outputs.status == 'success' && format('{0} Frontend deployment succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Frontend deployment failed! :x:', env.ENVIRONMENT) }}
+            ${{ steps.check.outputs.status == 'success' && format('Frontend for {0} stage deployed to: https://{1}', env.ENVIRONMENT, env.ENVIRONMENT == 'prod' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', env.ENVIRONMENT, vars.TF_VAR_DOMAIN_NAME)) || '' }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} 
