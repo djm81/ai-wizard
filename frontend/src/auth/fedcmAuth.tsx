@@ -1,5 +1,8 @@
+import { ENV } from 'config';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCredential, GoogleAuthProvider, User as FirebaseUser } from 'firebase/auth';
+import { getAuth, signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
+import type { User as FirebaseUser } from 'firebase/auth';
+import type { User } from '../types/auth';
 
 declare global {
     interface Window {
@@ -7,17 +10,17 @@ declare global {
     }
 }
 
-// Initialize Firebase (make sure to replace with your actual config)
+// Initialize Firebase with ENV variables
 const firebaseConfig = {
-  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
-  authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.PUBLIC_FIREBASE_APP_ID
+  apiKey: ENV.PUBLIC_FIREBASE_API_KEY,
+  authDomain: ENV.PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: ENV.PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: ENV.PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: ENV.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: ENV.PUBLIC_FIREBASE_APP_ID
 };
 
-console.log('Firebase config:', firebaseConfig); // Add this line for debugging
+console.log('Firebase config:', firebaseConfig); // For debugging
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -29,12 +32,12 @@ interface GoogleClient {
 
 let googleClient: GoogleClient | null = null;
 
-export interface User {
-  displayName: string | null;
-  email: string | null;
-  photoURL: string | null;
-  uid: string;
-}
+// export interface User {
+//   displayName: string | null;
+//   email: string | null;
+//   photoURL: string | null;
+//   uid: string;
+// }
 
 export function initializeGoogleAuth(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -61,9 +64,9 @@ export async function signInWithGoogle(): Promise<User> {
 
   return new Promise((resolve, reject) => {
     try {
-      console.log('Initializing Google client with Client ID:', import.meta.env.PUBLIC_GOOGLE_CLIENT_ID);
+      console.log('Initializing Google client with Client ID:', ENV.PUBLIC_GOOGLE_CLIENT_ID);
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: import.meta.env.PUBLIC_GOOGLE_CLIENT_ID,
+        client_id: ENV.PUBLIC_GOOGLE_CLIENT_ID,
         scope: 'email profile',
         callback: async (response: { error?: string; access_token?: string }) => {
           if (response.error) {

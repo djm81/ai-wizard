@@ -1,12 +1,13 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { User, initializeGoogleAuth, signInWithGoogle, signOut as firebaseSignOut, getIdToken } from '../auth/fedcmAuth';
+import { initializeGoogleAuth, signInWithGoogle, signOut as firebaseSignOut, getIdToken, User } from 'auth/fedcmAuth';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import type { User as FirebaseUser } from 'firebase/auth';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
+  loading: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
-  loading: boolean;
   getAuthToken: () => Promise<string | null>;
 }
 
@@ -25,7 +26,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
 
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         const user: User = {
           displayName: firebaseUser.displayName,
@@ -40,10 +41,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
       setLoading(false);
     });
 
-    initializeGoogleAuth().catch((error: Error) => {
-      console.error('Failed to initialize Google Auth:', error);
-      setLoading(false);
-    });
+    initializeGoogleAuth()
+      .then(() => {
+        setLoading(false);
+      })
+      .catch((error: Error) => {
+        console.error('Failed to initialize Google Auth:', error);
+        setLoading(false);
+      });
 
     return () => unsubscribe();
   }, []);
@@ -83,7 +88,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');

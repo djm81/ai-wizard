@@ -14,10 +14,15 @@ describe('AIInteractions component', () => {
   ];
 
   beforeEach(() => {
+    jest.clearAllMocks();
     (useAIInteractions as jest.Mock).mockReturnValue({
       getAIInteractions: jest.fn().mockResolvedValue(mockInteractions),
       createAIInteraction: jest.fn().mockResolvedValue({ id: 3, prompt: 'New Prompt', response: 'New Response' }),
     });
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
   });
 
   test('renders AI Interactions list', async () => {

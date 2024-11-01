@@ -15,10 +15,15 @@ describe('Projects component', () => {
   ];
 
   beforeEach(() => {
+    jest.clearAllMocks();
     (useProjects as jest.Mock).mockReturnValue({
       getProjects: jest.fn().mockResolvedValue(mockProjects),
       createProject: jest.fn().mockResolvedValue({ id: 3, name: 'New Project', description: '' }),
     });
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
   });
 
   test('renders projects list', async () => {

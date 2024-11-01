@@ -38,6 +38,10 @@ describe('API hooks', () => {
     });
   });
 
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
   describe('useProjects', () => {
     test('getProjects calls apiCall with correct URL', async () => {
       const { getProjects } = useProjects();

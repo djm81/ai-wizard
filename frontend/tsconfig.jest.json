@@ -1,0 +1,18 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+      "module": "ESNext",
+      "jsx": "react-jsx",
+      "esModuleInterop": true,
+      "moduleResolution": "node",
+      "allowSyntheticDefaultImports": true,
+      "isolatedModules": true,
+      "paths": {
+        "config": ["config.tsx"],
+        "auth/*": ["auth/*"],
+        //"firebase/auth": ["__mocks__/firebase/auth.tsx"]
+        // Add other aliases here
+      }  
+    },
+    "include": ["src", "src/globals.d.ts", "src/jest.setup.ts"]
+  }

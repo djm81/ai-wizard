@@ -26,10 +26,15 @@ describe('useApi hook', () => {
   afterEach(() => {
     // Restore console.error
     console.error = originalError;
+    jest.resetAllMocks();
   });
 
   test('apiCall sends request with authorization header', async () => {
     const { result } = renderHook(() => useApi());
+    
+    // Ensure the mock token is available
+    mockGetAuthToken.mockResolvedValueOnce('mock-token');
+    
     const response = await result.current.apiCall('http://example.com/api');
 
     expect(axios).toHaveBeenCalledWith({
