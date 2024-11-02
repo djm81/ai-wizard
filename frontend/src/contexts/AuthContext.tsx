@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { initializeGoogleAuth, signInWithGoogle, signOut as firebaseSignOut, getIdToken, User } from 'auth/fedcmAuth';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import type { User as FirebaseUser } from 'firebase/auth';
+//import type { User as FirebaseUser } from 'firebase/auth';
 
 export interface AuthContextType {
   user: User | null;
@@ -22,19 +22,30 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+
+    if (!auth) {
+      console.error('Auth instance is undefined');
+      setLoading(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: User | null) => {
       if (firebaseUser) {
-        const user: User = {
-          displayName: firebaseUser.displayName,
-          email: firebaseUser.email,
-          photoURL: firebaseUser.photoURL,
-          uid: firebaseUser.uid
-        };
-        setUser(user);
+        // const user: User = {
+        //   displayName: firebaseUser.displayName,
+        //   email: firebaseUser.email,
+        //   photoURL: firebaseUser.photoURL,
+        //   uid: firebaseUser.uid
+        // };
+        try {
+          setUser(firebaseUser);
+        } catch (error) {
+          console.error('Failed to set user:', error);
+        }
       } else {
         setUser(null);
       }
@@ -43,10 +54,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
 
     initializeGoogleAuth()
       .then(() => {
-        setLoading(false);
-      })
-      .catch((error: Error) => {
-        console.error('Failed to initialize Google Auth:', error);
+      setLoading(false);
+    })
+    .catch((error: Error) => {
+      console.error('Failed to initialize Google Auth:', error);
         setLoading(false);
       });
 
@@ -73,7 +84,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     }
   };
 
-  const getAuthToken = async () => {
+  const getAuthToken = async (): Promise<string | null> => {
     return getIdToken();
   };
 
@@ -90,7 +101,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

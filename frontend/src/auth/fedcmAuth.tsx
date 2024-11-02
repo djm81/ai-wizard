@@ -32,6 +32,11 @@ interface GoogleClient {
 
 let googleClient: GoogleClient | null = null;
 
+// Export a setter for googleClient for testing
+export function setGoogleClient(client: GoogleClient) {
+  googleClient = client;
+}
+
 // export interface User {
 //   displayName: string | null;
 //   email: string | null;

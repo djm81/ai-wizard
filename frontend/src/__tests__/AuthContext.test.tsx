@@ -2,64 +2,17 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import type { AuthContextType } from '../contexts/AuthContext';
-import { initializeGoogleAuth } from 'auth/fedcmAuth';
-import type { Auth, User as FirebaseUser } from 'firebase/auth';
+import { initializeGoogleAuth, User } from 'auth/fedcmAuth';
 
-// Mock fedcmAuth first
-jest.mock('auth/fedcmAuth', () => ({
-  initializeGoogleAuth: jest.fn().mockResolvedValue(Promise.resolve()),
-  signInWithGoogle: jest.fn().mockResolvedValue({
-    displayName: 'Test User',
-    email: 'test@example.com',
-    photoURL: null,
-    uid: 'test-uid'
-  }),
-  signOut: jest.fn().mockResolvedValue(Promise.resolve()),
-  getIdToken: jest.fn().mockResolvedValue(Promise.resolve('mock-id-token'))
-}));
+// Only mock 'auth/fedcmAuth' since 'firebase/auth' is manually mocked
+jest.mock('auth/fedcmAuth');
 
-// Create mock user
-const mockUser: FirebaseUser = {
-  uid: 'test-uid',
-  email: 'test@example.com',
+const mockUser: User = {
   displayName: 'Test User',
+  email: 'test@example.com',
   photoURL: null,
-  emailVerified: true,
-  isAnonymous: false,
-  metadata: {},
-  providerData: [],
-  refreshToken: '',
-  tenantId: null,
-  delete: jest.fn(),
-  getIdToken: jest.fn().mockResolvedValue(Promise.resolve('mock-id-token')),
-  getIdTokenResult: jest.fn(),
-  reload: jest.fn(),
-  toJSON: jest.fn(),
-  phoneNumber: null,
-  providerId: 'google.com'
+  uid: 'test-uid'
 };
-
-// Mock Firebase Auth
-jest.mock('firebase/auth', () => {
-  const unsubscribe = jest.fn();
-  return {
-    getAuth: jest.fn(() => ({
-      currentUser: null,
-      onAuthStateChanged: jest.fn((callback) => {
-        callback(mockUser); // Call with mock user
-        return unsubscribe;
-      }),
-      signOut: jest.fn().mockResolvedValue(Promise.resolve())
-    })),
-    signInWithCredential: jest.fn(),
-    signOut: jest.fn(),
-    getIdToken: jest.fn(),
-    onAuthStateChanged: jest.fn(),
-    GoogleAuthProvider: {
-      credential: jest.fn()
-    }
-  };
-});
 
 describe('AuthContext', () => {
   let authValue: AuthContextType;
@@ -88,7 +41,7 @@ describe('AuthContext', () => {
 
     await waitFor(() => {
       expect(authValue).toEqual(expect.objectContaining({
-        user: null,
+        user: mockUser,
         loading: false,
         signIn: expect.any(Function),
         signOut: expect.any(Function),
@@ -111,16 +64,34 @@ describe('AuthContext', () => {
     });
   });
 
+  test('AuthProvider provides user after onAuthStateChanged', async () => {
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestComponent setAuth={(auth) => { authValue = auth; }} />
+        </AuthProvider>
+      );
+    });
+
+    await waitFor(() => {
+      expect(authValue).toEqual(expect.objectContaining({
+        user: {
+          displayName: 'Test User',
+          email: 'test@example.com',
+          photoURL: null,
+          uid: 'test-uid'
+        },
+        loading: false,
+        signIn: expect.any(Function),
+        signOut: expect.any(Function),
+        getAuthToken: expect.any(Function)
+      }));
+    });
+  });
+  
   test('signIn updates the user state', async () => {
-    const { getAuth } = require('firebase/auth');
-    getAuth.mockImplementationOnce(() => ({
-      currentUser: mockUser,
-      onAuthStateChanged: jest.fn((callback) => {
-        callback(mockUser);
-        return jest.fn();
-      }),
-      signOut: jest.fn().mockResolvedValue(Promise.resolve())
-    }));
+    const { signInWithGoogle } = require('auth/fedcmAuth');
+    signInWithGoogle.mockResolvedValueOnce(mockUser);
 
     await act(async () => {
       render(
@@ -128,6 +99,10 @@ describe('AuthContext', () => {
           <TestComponent setAuth={(auth) => { authValue = auth; }} />
         </AuthProvider>
       );
+    });
+
+    await act(async () => {
+      await authValue.signIn();
     });
 
     await waitFor(() => {
@@ -141,16 +116,8 @@ describe('AuthContext', () => {
   });
 
   test('signOut updates the user state to null', async () => {
-    const { getAuth } = require('firebase/auth');
-    const signOutSpy = jest.fn().mockResolvedValue(Promise.resolve());
-    getAuth.mockImplementationOnce(() => ({
-      currentUser: mockUser,
-      onAuthStateChanged: jest.fn((callback) => {
-        callback(null);
-        return jest.fn();
-      }),
-      signOut: signOutSpy
-    }));
+    const { signOut } = require('auth/fedcmAuth');
+    signOut.mockResolvedValueOnce();
 
     await act(async () => {
       render(

@@ -9,15 +9,11 @@ import {
   UserCredential,
   User as FirebaseUser
 } from 'firebase/auth';
-import { initializeGoogleAuth, signInWithGoogle, signOut as signOutFunction, getIdToken as getIdTokenFunction } from '../auth/fedcmAuth';
+import { initializeGoogleAuth, signInWithGoogle, signOut as signOutFunction, getIdToken as getIdTokenFunction, setGoogleClient } from '../auth/fedcmAuth';
 import type { User } from '../types/auth';
 
-// Explicitly type the mocked functions
-const mockedGetAuth = getAuth as jest.MockedFunction<typeof getAuth>;
-const mockedSignOut = signOut as jest.MockedFunction<typeof signOut>;
-const mockedSignInWithCredential = signInWithCredential as jest.MockedFunction<typeof signInWithCredential>;
-const mockedGetIdToken = getIdToken as jest.MockedFunction<typeof getIdToken>;
-const mockedGoogleProviderCredential = GoogleAuthProvider.credential as jest.MockedFunction<typeof GoogleAuthProvider.credential>;
+// Ensure Jest uses the manual mock
+jest.mock('firebase/auth');
 
 describe('fedcmAuth', () => {
   beforeEach(() => {
@@ -42,7 +38,8 @@ describe('fedcmAuth', () => {
       writable: true
     });
 
-    // Mock Firebase auth responses
+    // Cast signInWithCredential as a Jest mocked function
+    const mockedSignInWithCredential = signInWithCredential as jest.MockedFunction<typeof signInWithCredential>;
     mockedSignInWithCredential.mockResolvedValue({
       user: {
         uid: 'test-uid',
@@ -65,9 +62,11 @@ describe('fedcmAuth', () => {
       } as FirebaseUser,
       providerId: 'google.com',
       operationType: 'signIn'
-    } as UserCredential);
+    } as unknown as UserCredential);
 
-    mockedGoogleProviderCredential.mockReturnValue({
+    // Cast GoogleAuthProvider.credential as a Jest mocked function
+    const mockedCredential = GoogleAuthProvider.credential as jest.MockedFunction<typeof GoogleAuthProvider.credential>;
+    mockedCredential.mockReturnValue({
       providerId: 'google.com',
       signInMethod: 'google.com'
     } as OAuthCredential);
@@ -76,7 +75,10 @@ describe('fedcmAuth', () => {
   test('signInWithGoogle calls Google OAuth and Firebase signInWithCredential', async () => {
     const user = await signInWithGoogle();
 
-    expect(mockedGoogleProviderCredential).toHaveBeenCalledWith(null, 'mock_token');
+    const mockedCredential = GoogleAuthProvider.credential as jest.MockedFunction<typeof GoogleAuthProvider.credential>;
+    const mockedSignInWithCredential = signInWithCredential as jest.MockedFunction<typeof signInWithCredential>;
+
+    expect(mockedCredential).toHaveBeenCalledWith(null, 'mock_token');
     expect(mockedSignInWithCredential).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
@@ -93,15 +95,29 @@ describe('fedcmAuth', () => {
   });
 
   test('signOut calls Firebase signOut and revokes Google token', async () => {
+    const mockedSignOut = signOut as jest.MockedFunction<typeof signOut>;
     mockedSignOut.mockResolvedValueOnce(undefined);
+
+    // Set the access token in googleClient
+    setGoogleClient({
+      requestAccessToken: jest.fn(),
+      access_token: 'mock_token'
+    });
+
+    const mockedRevoke = window.google.accounts.oauth2.revoke as jest.MockedFunction<typeof window.google.accounts.oauth2.revoke>;
+
     await signOutFunction();
+
     expect(mockedSignOut).toHaveBeenCalled();
+    expect(mockedRevoke).toHaveBeenCalledWith('mock_token', expect.any(Function));
   });
 
   test('getIdToken returns null when no user is signed in', async () => {
+    const mockedGetAuth = getAuth as jest.MockedFunction<typeof getAuth>;
     mockedGetAuth.mockReturnValueOnce({
       currentUser: null,
-      signOut: mockedSignOut
+      signOut: signOut
+      // Mock other necessary methods if used
     } as unknown as Auth);
     
     const token = await getIdTokenFunction();

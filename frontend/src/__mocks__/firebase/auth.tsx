@@ -1,55 +1,38 @@
-// frontend/src/__mocks__/firebase/auth.tsx
+import type { User as FirebaseUser, Auth, OAuthCredential, UserCredential } from 'firebase/auth';
 
-// Import necessary Firebase modules if needed (optional)
-// import { GoogleAuthProvider } from 'firebase/auth';
-
-// Mock implementations of Firebase Auth functions
-import type { User, Auth, AuthCredential } from 'firebase/auth';
-
-// Create a simple mock user with all required properties
-const mockUser: User = {
-  uid: 'test-uid',
-  email: 'test@example.com',
+// Define a mock user matching your User type
+const mockUser: FirebaseUser = {
   displayName: 'Test User',
+  email: 'test@example.com',
   photoURL: null,
-  emailVerified: false,
-  isAnonymous: false,
-  metadata: {},
-  providerData: [],
-  refreshToken: '',
-  tenantId: null,
-  delete: jest.fn(),
-  getIdToken: jest.fn().mockResolvedValue(Promise.resolve('mock-token')),
-  getIdTokenResult: jest.fn(),
-  reload: jest.fn(),
-  toJSON: jest.fn(),
-  phoneNumber: null,
-  providerId: 'google.com'
-};
+  uid: 'test-uid',
+  getIdToken: jest.fn().mockResolvedValue('mock-id-token'),
+} as unknown as FirebaseUser;
 
-// Create a simple mock auth with proper unsubscribe function
-const unsubscribe = jest.fn();
-const mockAuth = {
-  currentUser: null,
-  onAuthStateChanged: jest.fn((callback) => {
-    callback(mockUser); // Call with mock user
-    return unsubscribe;
-  }),
-  signOut: jest.fn().mockResolvedValue(Promise.resolve())
+// Mock Auth object
+const mockAuth: Auth = {
+  currentUser: mockUser,
+  signOut: jest.fn().mockResolvedValue(undefined),
 } as unknown as Auth;
 
-// Export simple mock functions
+// Mock onAuthStateChanged as a standalone function
+export const onAuthStateChanged = jest.fn(
+  (auth: Auth, callback: (user: FirebaseUser | null) => void) => {
+    callback(auth.currentUser);
+    return jest.fn(); // Mock unsubscribe function
+  }
+);
+
+// Mock getAuth to return the mockAuth object
 export const getAuth = jest.fn(() => mockAuth);
-export const signInWithCredential = jest.fn().mockResolvedValue(Promise.resolve({ user: mockUser }));
-export const signOut = jest.fn().mockResolvedValue(Promise.resolve());
-export const getIdToken = jest.fn().mockResolvedValue(Promise.resolve('test-token'));
+
+// Mock other Firebase auth functions as needed
+export const signInWithCredential = jest.fn().mockResolvedValue({
+  user: mockUser,
+} as UserCredential);
+
+export const getIdToken = jest.fn().mockResolvedValue('mock-id-token');
 
 export const GoogleAuthProvider = {
-  credential: jest.fn().mockReturnValue({
-    providerId: 'google.com',
-    signInMethod: 'google.com'
-  } as AuthCredential)
+  credential: jest.fn().mockReturnValue({} as OAuthCredential),
 };
-
-// Export for test manipulation
-export const mockAuthInstance = mockAuth;

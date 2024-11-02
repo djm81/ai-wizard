@@ -1,18 +1,12 @@
 import '@testing-library/jest-dom';
-import { mockAuthInstance } from './__mocks__/firebase/auth';
 
 // Reset all mocks before each test
 beforeEach(() => {
   jest.clearAllMocks();
-  
-  // Reset auth state
-  Object.assign(mockAuthInstance, {
-    currentUser: null,
-    onAuthStateChanged: jest.fn((auth, callback) => {
-      callback(null);
-      return () => {};
-    })
-  });
+});
+
+afterEach(() => {
+  jest.resetAllMocks();
 });
 
 // Mock import.meta.env
