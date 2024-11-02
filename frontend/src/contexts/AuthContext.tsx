@@ -1,7 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { initializeGoogleAuth, signInWithGoogle, signOut as firebaseSignOut, getIdToken, User } from 'auth/fedcmAuth';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-//import type { User as FirebaseUser } from 'firebase/auth';
 
 export interface AuthContextType {
   user: User | null;
@@ -25,42 +24,38 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const auth = getAuth();
-
-    if (!auth) {
-      console.error('Auth instance is undefined');
-      setLoading(false);
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: User | null) => {
-      if (firebaseUser) {
-        // const user: User = {
-        //   displayName: firebaseUser.displayName,
-        //   email: firebaseUser.email,
-        //   photoURL: firebaseUser.photoURL,
-        //   uid: firebaseUser.uid
-        // };
-        try {
-          setUser(firebaseUser);
-        } catch (error) {
-          console.error('Failed to set user:', error);
+    let unsubscribe = () => {};
+    
+    const initAuth = async () => {
+      try {
+        await initializeGoogleAuth();
+        const auth = getAuth();
+        
+        if (auth) {
+          unsubscribe = onAuthStateChanged(auth, (firebaseUser: User | null) => {
+            if (firebaseUser) {
+              setUser({
+                displayName: firebaseUser.displayName,
+                email: firebaseUser.email,
+                photoURL: firebaseUser.photoURL,
+                uid: firebaseUser.uid
+              });
+            } else {
+              setUser(null);
+            }
+            setLoading(false);
+          });
+        } else {
+          console.error('Auth instance is undefined');
+          setLoading(false);
         }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    initializeGoogleAuth()
-      .then(() => {
-      setLoading(false);
-    })
-    .catch((error: Error) => {
-      console.error('Failed to initialize Google Auth:', error);
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
         setLoading(false);
-      });
+      }
+    };
 
+    initAuth();
     return () => unsubscribe();
   }, []);
 

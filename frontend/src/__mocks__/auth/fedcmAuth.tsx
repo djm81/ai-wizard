@@ -1,21 +1,28 @@
 import type { User } from '../../types/auth';
+import { mockFirebaseUser } from '../firebase/auth';
 
 // Create a mock user that matches our User type
-const mockUser: User = {
-  displayName: 'Test User',
-  email: 'test@example.com',
-  photoURL: null,
-  uid: 'test-uid'
+export const mockAuthUser: User = {
+  displayName: mockFirebaseUser.displayName,
+  email: mockFirebaseUser.email,
+  photoURL: mockFirebaseUser.photoURL,
+  uid: mockFirebaseUser.uid
 };
 
-// Ensure all async functions return Promises
-export const initializeGoogleAuth = jest.fn().mockResolvedValue(Promise.resolve());
+// Mock functions that return consistent values
+export const initializeGoogleAuth = jest.fn().mockResolvedValue(undefined);
+export const signInWithGoogle = jest.fn().mockResolvedValue(mockAuthUser);
+export const signOut = jest.fn().mockResolvedValue(undefined);
+export const getIdToken = jest.fn().mockResolvedValue('mock-token');
 
-export const signInWithGoogle = jest.fn().mockResolvedValue(Promise.resolve(mockUser));
+// Mock the Google client
+export const setGoogleClient = jest.fn();
 
-export const signOut = jest.fn().mockResolvedValue(Promise.resolve());
-
-export const getIdToken = jest.fn().mockResolvedValue(Promise.resolve('mock-id-token'));
-
-// Export mock user for tests
-export const mockAuthUser = mockUser;
+// Export mock functions for tests
+export const mockFunctions = {
+  initializeGoogleAuth,
+  signInWithGoogle,
+  signOut,
+  getIdToken,
+  setGoogleClient
+};

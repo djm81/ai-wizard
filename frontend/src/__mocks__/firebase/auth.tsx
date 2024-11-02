@@ -1,38 +1,73 @@
-import type { User as FirebaseUser, Auth, OAuthCredential, UserCredential } from 'firebase/auth';
+import type { User, Auth, AuthCredential, NextOrObserver } from 'firebase/auth';
 
-// Define a mock user matching your User type
-const mockUser: FirebaseUser = {
-  displayName: 'Test User',
-  email: 'test@example.com',
-  photoURL: null,
+// Create a mock user with all required properties
+const mockUser: User = {
   uid: 'test-uid',
-  getIdToken: jest.fn().mockResolvedValue('mock-id-token'),
-} as unknown as FirebaseUser;
+  email: 'test@example.com',
+  displayName: 'Test User',
+  photoURL: null,
+  emailVerified: false,
+  isAnonymous: false,
+  metadata: {},
+  providerData: [],
+  refreshToken: '',
+  tenantId: null,
+  delete: jest.fn(),
+  getIdToken: jest.fn().mockResolvedValue('mock-token'),
+  getIdTokenResult: jest.fn(),
+  reload: jest.fn(),
+  toJSON: jest.fn(),
+  phoneNumber: null,
+  providerId: 'google.com'
+};
 
-// Mock Auth object
-const mockAuth: Auth = {
-  currentUser: mockUser,
-  signOut: jest.fn().mockResolvedValue(undefined),
+// Create a mock auth instance with proper unsubscribe function
+const unsubscribe = jest.fn();
+
+// Create a mutable auth state
+let currentUser: User | null = mockUser;
+
+// Create the mock auth instance
+const mockAuth = {
+  get currentUser() { return currentUser; },
+  onAuthStateChanged: jest.fn((nextOrObserver: NextOrObserver<User | null>) => {
+    if (typeof nextOrObserver === 'function') {
+      setTimeout(() => nextOrObserver(currentUser), 0);
+    } else {
+      setTimeout(() => nextOrObserver.next?.(currentUser), 0);
+    }
+    return unsubscribe;
+  }),
+  signOut: jest.fn().mockResolvedValue(undefined)
 } as unknown as Auth;
 
-// Mock onAuthStateChanged as a standalone function
-export const onAuthStateChanged = jest.fn(
-  (auth: Auth, callback: (user: FirebaseUser | null) => void) => {
-    callback(auth.currentUser);
-    return jest.fn(); // Mock unsubscribe function
-  }
-);
-
-// Mock getAuth to return the mockAuth object
-export const getAuth = jest.fn(() => mockAuth);
-
-// Mock other Firebase auth functions as needed
-export const signInWithCredential = jest.fn().mockResolvedValue({
-  user: mockUser,
-} as UserCredential);
-
-export const getIdToken = jest.fn().mockResolvedValue('mock-id-token');
+// Export functions that return consistent values
+export const getAuth = jest.fn().mockReturnValue(mockAuth);
+export const signInWithCredential = jest.fn().mockResolvedValue({ user: mockUser });
+export const signOut = jest.fn().mockResolvedValue(undefined);
+export const getIdToken = jest.fn().mockResolvedValue('mock-token');
 
 export const GoogleAuthProvider = {
-  credential: jest.fn().mockReturnValue({} as OAuthCredential),
+  credential: jest.fn().mockReturnValue({
+    providerId: 'google.com',
+    signInMethod: 'google.com'
+  } as AuthCredential)
+};
+
+// Export for test manipulation
+export const mockAuthInstance = mockAuth;
+export const mockFirebaseUser = mockUser;
+export const mockUnsubscribe = unsubscribe;
+
+// Reset function for tests that updates the mutable state
+export const resetMockAuth = (user: User | null = mockUser) => {
+  currentUser = user;
+  (mockAuth.onAuthStateChanged as jest.Mock).mockImplementation((nextOrObserver: NextOrObserver<User | null>) => {
+    if (typeof nextOrObserver === 'function') {
+      setTimeout(() => nextOrObserver(currentUser), 0);
+    } else {
+      setTimeout(() => nextOrObserver.next?.(currentUser), 0);
+    }
+    return unsubscribe;
+  });
 };

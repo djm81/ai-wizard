@@ -2,17 +2,14 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import type { AuthContextType } from '../contexts/AuthContext';
-import { initializeGoogleAuth, User } from 'auth/fedcmAuth';
+import { initializeGoogleAuth, signInWithGoogle, signOut, getIdToken } from '../auth/fedcmAuth';
+import { mockAuthUser } from '../__mocks__/auth/fedcmAuth';
+import { mockFirebaseUser, resetMockAuth } from '../__mocks__/firebase/auth';
+import type { User as FirebaseUser } from 'firebase/auth';
 
-// Only mock 'auth/fedcmAuth' since 'firebase/auth' is manually mocked
-jest.mock('auth/fedcmAuth');
-
-const mockUser: User = {
-  displayName: 'Test User',
-  email: 'test@example.com',
-  photoURL: null,
-  uid: 'test-uid'
-};
+// Mock the modules
+jest.mock('firebase/auth');
+jest.mock('../auth/fedcmAuth');
 
 describe('AuthContext', () => {
   let authValue: AuthContextType;
@@ -28,6 +25,15 @@ describe('AuthContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     authValue = {} as AuthContextType;
+
+    // Reset auth state before each test
+    resetMockAuth(null);
+
+    // Set up mock implementations for each test
+    (initializeGoogleAuth as jest.Mock).mockResolvedValue(undefined);
+    (signInWithGoogle as jest.Mock).mockResolvedValue(mockAuthUser);
+    (signOut as jest.Mock).mockResolvedValue(undefined);
+    (getIdToken as jest.Mock).mockResolvedValue('mock-token');
   });
 
   test('AuthProvider provides default values', async () => {
@@ -41,7 +47,7 @@ describe('AuthContext', () => {
 
     await waitFor(() => {
       expect(authValue).toEqual(expect.objectContaining({
-        user: mockUser,
+        user: null,
         loading: false,
         signIn: expect.any(Function),
         signOut: expect.any(Function),
@@ -64,34 +70,9 @@ describe('AuthContext', () => {
     });
   });
 
-  test('AuthProvider provides user after onAuthStateChanged', async () => {
-    await act(async () => {
-      render(
-        <AuthProvider>
-          <TestComponent setAuth={(auth) => { authValue = auth; }} />
-        </AuthProvider>
-      );
-    });
-
-    await waitFor(() => {
-      expect(authValue).toEqual(expect.objectContaining({
-        user: {
-          displayName: 'Test User',
-          email: 'test@example.com',
-          photoURL: null,
-          uid: 'test-uid'
-        },
-        loading: false,
-        signIn: expect.any(Function),
-        signOut: expect.any(Function),
-        getAuthToken: expect.any(Function)
-      }));
-    });
-  });
-  
   test('signIn updates the user state', async () => {
-    const { signInWithGoogle } = require('auth/fedcmAuth');
-    signInWithGoogle.mockResolvedValueOnce(mockUser);
+    (signInWithGoogle as jest.Mock).mockResolvedValueOnce(mockAuthUser);
+    resetMockAuth(mockFirebaseUser);
 
     await act(async () => {
       render(
@@ -106,18 +87,15 @@ describe('AuthContext', () => {
     });
 
     await waitFor(() => {
-      expect(authValue.user).toEqual({
-        displayName: mockUser.displayName,
-        email: mockUser.email,
-        photoURL: mockUser.photoURL,
-        uid: mockUser.uid
-      });
+      expect(authValue.user).toEqual(mockAuthUser);
     });
+
+    expect(signInWithGoogle).toHaveBeenCalled();
   });
 
   test('signOut updates the user state to null', async () => {
-    const { signOut } = require('auth/fedcmAuth');
-    signOut.mockResolvedValueOnce();
+    (signOut as jest.Mock).mockResolvedValueOnce(undefined);
+    resetMockAuth(null);
 
     await act(async () => {
       render(
@@ -134,12 +112,13 @@ describe('AuthContext', () => {
     await waitFor(() => {
       expect(authValue.user).toBeNull();
     });
+
+    expect(signOut).toHaveBeenCalled();
   });
 
   test('getAuthToken returns the token', async () => {
-    const { getIdToken } = require('auth/fedcmAuth');
-    const mockToken = 'mock-id-token';
-    getIdToken.mockResolvedValueOnce(mockToken);
+    (getIdToken as jest.Mock).mockResolvedValueOnce('mock-token');
+    resetMockAuth(mockFirebaseUser);
 
     await act(async () => {
       render(
@@ -150,6 +129,7 @@ describe('AuthContext', () => {
     });
 
     const token = await authValue.getAuthToken();
-    expect(token).toBe(mockToken);
+    expect(token).toBe('mock-token');
+    expect(getIdToken).toHaveBeenCalled();
   });
 }); 
