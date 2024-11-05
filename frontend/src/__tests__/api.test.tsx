@@ -1,6 +1,7 @@
 import { useProjects, useAIInteractions } from '../api';
 import type { Project } from '../types/project';
 import type { AIInteraction } from '../types/aiInteraction';
+import { mockAuthUser } from '../__mocks__/auth';  // Updated import if needed
 
 // Create a mock function that we can track
 const mockApiCall = jest.fn();

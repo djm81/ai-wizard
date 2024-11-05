@@ -1,5 +1,5 @@
 import { useApi } from './hooks/useApi';
-import { getEnvConfig } from './config/env';
+import { getEnvConfig } from 'config';
 import { Project } from './types/project';
 import { AIInteraction } from './types/aiInteraction';
 import axios from 'axios';

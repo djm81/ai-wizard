@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { useApi } from '../hooks/useApi';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { mockAuthUser } from '../__mocks__/auth';
 
 // Mock axios and auth
 jest.mock('axios');

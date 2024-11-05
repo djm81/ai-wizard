@@ -6,7 +6,7 @@ import type { User } from '../types/auth';
 
 declare global {
     interface Window {
-        google: any;
+        google: GoogleAuthAPI;
     }
 }
 

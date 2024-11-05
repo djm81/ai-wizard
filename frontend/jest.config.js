@@ -5,11 +5,10 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/src/jest.setup.ts'],
   moduleNameMapper: {
     '\\.(css|less|sass|scss)$': 'identity-obj-proxy',
-    '^auth/(.*)$': '<rootDir>/src/auth/$1',
-    '^config$': '<rootDir>/src/__mocks__/config/env.ts',
-    '^./config/env$': '<rootDir>/src/__mocks__/config/env.ts',
-    '^firebase/auth$': '<rootDir>/src/__mocks__/firebase/auth.tsx',
-    '^axios$': require.resolve('axios')
+    '^config$': '<rootDir>/src/__mocks__/env',
+    '^auth/(.*)$': '<rootDir>/src/__mocks__/auth',
+    '^axios$': require.resolve('axios'),
+    '^jest.setup$': '<rootDir>/src/jest.setup.ts'
   },
   moduleDirectories: ['node_modules', 'src'],
   transform: {
