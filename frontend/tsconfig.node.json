@@ -1,10 +1,25 @@
 {
   "compilerOptions": {
-    "composite": true,
+    "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": "src",
+    "paths": {
+      "config": ["config.tsx"],
+      "auth/*": ["auth/*"]
+      // Add other aliases here
+    }
   },
-  "include": ["rsbuild.config.ts"]
+  "include": ["src", "src/globals.d.ts", "rsbuild.config.ts"]
 }

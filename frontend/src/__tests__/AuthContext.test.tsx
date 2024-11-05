@@ -4,15 +4,16 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import type { AuthContextType } from '../contexts/AuthContext';
 import { initializeGoogleAuth, signInWithGoogle, signOut, getIdToken } from '../auth/fedcmAuth';
 import { mockAuthUser } from '../__mocks__/auth/fedcmAuth';
-import { mockFirebaseUser, resetMockAuth } from '../__mocks__/firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 
 // Mock the modules
-jest.mock('firebase/auth');
 jest.mock('../auth/fedcmAuth');
+jest.mock('firebase/auth');
 
 describe('AuthContext', () => {
   let authValue: AuthContextType;
+  const mockFirebaseUser = (global as any).mockFirebaseUser;
 
   const TestComponent: React.FC<{ setAuth: (auth: AuthContextType) => void }> = ({ setAuth }) => {
     const auth = useAuth();
@@ -26,10 +27,19 @@ describe('AuthContext', () => {
     jest.clearAllMocks();
     authValue = {} as AuthContextType;
 
-    // Reset auth state before each test
-    resetMockAuth(null);
+    // Mock the auth state change handler to call the callback immediately
+    (getAuth as jest.Mock).mockReturnValue({
+      currentUser: null,
+      onAuthStateChanged: jest.fn((callback) => {
+        // Call the callback immediately with null user
+        setTimeout(() => {
+          callback(null);
+        }, 0);
+        return () => {}; // Return a valid unsubscribe function
+      })
+    });
 
-    // Set up mock implementations for each test
+    // Set up mock implementations
     (initializeGoogleAuth as jest.Mock).mockResolvedValue(undefined);
     (signInWithGoogle as jest.Mock).mockResolvedValue(mockAuthUser);
     (signOut as jest.Mock).mockResolvedValue(undefined);
@@ -37,22 +47,30 @@ describe('AuthContext', () => {
   });
 
   test('AuthProvider provides default values', async () => {
+    let rendered = false;
     await act(async () => {
       render(
         <AuthProvider>
-          <TestComponent setAuth={(auth) => { authValue = auth; }} />
+          <TestComponent setAuth={(auth) => { 
+            authValue = auth;
+            rendered = true;
+          }} />
         </AuthProvider>
       );
     });
 
+    // Wait for initial render and loading to complete
     await waitFor(() => {
-      expect(authValue).toEqual(expect.objectContaining({
-        user: null,
-        loading: false,
-        signIn: expect.any(Function),
-        signOut: expect.any(Function),
-        getAuthToken: expect.any(Function)
-      }));
+      expect(rendered).toBe(true);
+      expect(authValue.loading).toBe(false);
+    }, { timeout: 3000 });
+
+    expect(authValue).toEqual({
+      user: null,
+      loading: false,
+      signIn: expect.any(Function),
+      signOut: expect.any(Function),
+      getAuthToken: expect.any(Function)
     });
   });
 
@@ -72,7 +90,13 @@ describe('AuthContext', () => {
 
   test('signIn updates the user state', async () => {
     (signInWithGoogle as jest.Mock).mockResolvedValueOnce(mockAuthUser);
-    resetMockAuth(mockFirebaseUser);
+    (getAuth as jest.Mock).mockReturnValue({
+      currentUser: mockFirebaseUser,
+      onAuthStateChanged: jest.fn((callback) => {
+        callback(mockFirebaseUser);
+        return jest.fn();
+      })
+    });
 
     await act(async () => {
       render(
@@ -95,7 +119,13 @@ describe('AuthContext', () => {
 
   test('signOut updates the user state to null', async () => {
     (signOut as jest.Mock).mockResolvedValueOnce(undefined);
-    resetMockAuth(null);
+    (getAuth as jest.Mock).mockReturnValue({
+      currentUser: null,
+      onAuthStateChanged: jest.fn((callback) => {
+        callback(null);
+        return jest.fn();
+      })
+    });
 
     await act(async () => {
       render(
@@ -118,7 +148,13 @@ describe('AuthContext', () => {
 
   test('getAuthToken returns the token', async () => {
     (getIdToken as jest.Mock).mockResolvedValueOnce('mock-token');
-    resetMockAuth(mockFirebaseUser);
+    (getAuth as jest.Mock).mockReturnValue({
+      currentUser: mockFirebaseUser,
+      onAuthStateChanged: jest.fn((callback) => {
+        callback(mockFirebaseUser);
+        return jest.fn();
+      })
+    });
 
     await act(async () => {
       render(

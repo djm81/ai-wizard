@@ -9,7 +9,7 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -18,8 +18,7 @@
     "paths": {
       "config": ["config.tsx"],
       "auth/*": ["auth/*"]
-      // Add other aliases here
     }
   },
-  "include": ["src", "src/globals.d.ts"]
+  "include": ["src", "src/globals.d.ts", "rsbuild.config.ts"]
 }

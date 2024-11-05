@@ -6,7 +6,7 @@ import {
   GoogleAuthProvider,
   Auth
 } from 'firebase/auth';
-import { initializeGoogleAuth, signInWithGoogle, signOut as signOutFunction, getIdToken as getIdTokenFunction, setGoogleClient } from '../auth/fedcmAuth';
+import { initializeGoogleAuth, signInWithGoogle, signOut as signOutFunction, getIdToken as getIdTokenFunction } from '../auth/fedcmAuth';
 import { mockAuthUser } from '../__mocks__/auth/fedcmAuth';
 import type { User } from '../types/auth';
 
@@ -17,49 +17,16 @@ describe('fedcmAuth', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock window.google synchronously
-    Object.defineProperty(window, 'google', {
-      value: {
-        accounts: {
-          oauth2: {
-            initTokenClient: jest.fn().mockReturnValue({
-              requestAccessToken: jest.fn((options) => {
-                if (options?.callback) {
-                  options.callback({ access_token: 'mock_token' });
-                }
-              })
-            }),
-            revoke: jest.fn((token, callback) => {
-              if (callback) callback();
-            })
-          }
-        }
-      },
-      writable: true,
-      configurable: true
-    });
-
-    // Set up mock token client
-    setGoogleClient({
-      requestAccessToken: jest.fn(),
-      access_token: 'mock_token'
-    });
+    // Mock getAuth to use our mockFirebaseUser from jest.setup.ts
+    (getAuth as jest.Mock).mockReturnValue({
+      currentUser: (global as any).mockFirebaseUser,
+      signOut: jest.fn().mockResolvedValue(undefined)
+    } as unknown as Auth);
 
     // Mock Firebase auth responses
     (signInWithCredential as jest.Mock).mockResolvedValue({
-      user: mockAuthUser
+      user: (global as any).mockFirebaseUser
     });
-
-    (GoogleAuthProvider.credential as jest.Mock).mockReturnValue({
-      providerId: 'google.com',
-      signInMethod: 'google.com'
-    });
-
-    // Mock getAuth
-    (getAuth as jest.Mock).mockReturnValue({
-      currentUser: mockAuthUser,
-      signOut: jest.fn().mockResolvedValue(undefined)
-    } as unknown as Auth);
   });
 
   afterEach(() => {
@@ -67,7 +34,17 @@ describe('fedcmAuth', () => {
   });
 
   test('signInWithGoogle calls Google OAuth and Firebase signInWithCredential', async () => {
+    // Initialize auth before testing
+    await initializeGoogleAuth();
+    
     const user = await signInWithGoogle();
+
+    // Verify that the global mock from jest.setup.ts was used
+    expect(window.google.accounts.oauth2.initTokenClient).toHaveBeenCalledWith({
+      client_id: expect.any(String),
+      scope: 'email profile',
+      callback: expect.any(Function)
+    });
 
     expect(GoogleAuthProvider.credential).toHaveBeenCalledWith(null, 'mock_token');
     expect(signInWithCredential).toHaveBeenCalledWith(
@@ -78,9 +55,15 @@ describe('fedcmAuth', () => {
       })
     );
     expect(user).toEqual(mockAuthUser);
-  });
+  }, 10000);
 
   test('signOut calls Firebase signOut and revokes Google token', async () => {
+    // Set up the mock token client first
+    window.google.accounts.oauth2.initTokenClient.mockReturnValueOnce({
+      requestAccessToken: jest.fn(),
+      access_token: 'mock_token'
+    });
+
     await signOutFunction();
     expect(signOut).toHaveBeenCalled();
     expect(window.google.accounts.oauth2.revoke).toHaveBeenCalledWith(

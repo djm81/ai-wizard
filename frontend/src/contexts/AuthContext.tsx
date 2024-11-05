@@ -10,7 +10,6 @@ export interface AuthContextType {
   getAuthToken: () => Promise<string | null>;
 }
 
-// Initialize context with default values
 const AuthContext = createContext<AuthContextType>({
   user: null,
   signIn: async () => {},
@@ -32,7 +31,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
         const auth = getAuth();
         
         if (auth) {
-          unsubscribe = onAuthStateChanged(auth, (firebaseUser: User | null) => {
+          unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
               setUser({
                 displayName: firebaseUser.displayName,
@@ -56,7 +55,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     };
 
     initAuth();
-    return () => unsubscribe();
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const signIn = async () => {
