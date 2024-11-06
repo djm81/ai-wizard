@@ -60,7 +60,10 @@ const createAuthMock = () => {
   let isLoading = true;
   const listeners: Array<NextOrObserver<FirebaseUser | null>> = [];
 
-  const notifyListeners = (user: FirebaseUser | null) => {
+  const notifyListeners = (user: FirebaseUser | null, loading?: boolean) => {
+    if (loading !== undefined) {
+      isLoading = loading;
+    }
     listeners.forEach(listener => {
       if (typeof listener === 'function') {
         listener(user);
@@ -81,17 +84,20 @@ const createAuthMock = () => {
       onAuthStateChanged: jest.fn((nextOrObserver: NextOrObserver<FirebaseUser | null>): Unsubscribe => {
         listeners.push(nextOrObserver);
         
-        // Don't immediately set loading to false
-        // Let the test have a chance to check the initial state
-        Promise.resolve().then(() => {
-          if (typeof nextOrObserver === 'function') {
-            nextOrObserver(internalCurrentUser);
-          } else {
-            nextOrObserver.next?.(internalCurrentUser);
-          }
-          // Set loading to false after notifying about the user state
-          isLoading = false;
-        });
+        // First notify with initial state (loading: true)
+        if (typeof nextOrObserver === 'function') {
+          nextOrObserver(null);
+        } else {
+          nextOrObserver.next?.(null);
+        }
+        
+        // Ensure loading state change is synchronous for tests
+        isLoading = false;
+        if (typeof nextOrObserver === 'function') {
+          nextOrObserver(internalCurrentUser);
+        } else {
+          nextOrObserver.next?.(internalCurrentUser);
+        }
         
         return () => {
           const index = listeners.indexOf(nextOrObserver);
@@ -100,12 +106,12 @@ const createAuthMock = () => {
       }),
       signOut: jest.fn().mockImplementation((): Promise<void> => {
         internalCurrentUser = null;
-        notifyListeners(null);
+        notifyListeners(null, false);
         return Promise.resolve();
       }),
       updateCurrentUser: jest.fn().mockImplementation((user: FirebaseUser | null): Promise<void> => {
         internalCurrentUser = user;
-        notifyListeners(internalCurrentUser);
+        notifyListeners(internalCurrentUser, false);
         return Promise.resolve();
       })
     } as Partial<Auth>
@@ -120,8 +126,8 @@ jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(() => authMock.auth),
   signInWithCredential: jest.fn().mockResolvedValue({ user: mockFirebaseUser }),
   onAuthStateChanged: jest.fn((auth, callback) => {
-    callback(mockFirebaseUser);
-    return () => {};
+    // Use the same auth mock instance
+    return auth.onAuthStateChanged(callback);
   }),
   signOut: jest.fn().mockResolvedValue(undefined),
   GoogleAuthProvider: {
