@@ -57,6 +57,7 @@ export const mockAuthUser: User = {
 // Create auth mock instance with proper state management
 const createAuthMock = () => {
   let internalCurrentUser: FirebaseUser | null = null;
+  let isLoading = true;
   const listeners: Array<NextOrObserver<FirebaseUser | null>> = [];
 
   const notifyListeners = (user: FirebaseUser | null) => {
@@ -74,13 +75,24 @@ const createAuthMock = () => {
       get currentUser() {
         return internalCurrentUser;
       },
+      get loading() {
+        return isLoading;
+      },
       onAuthStateChanged: jest.fn((nextOrObserver: NextOrObserver<FirebaseUser | null>): Unsubscribe => {
         listeners.push(nextOrObserver);
-        if (typeof nextOrObserver === 'function') {
-          nextOrObserver(internalCurrentUser);
-        } else {
-          nextOrObserver.next?.(internalCurrentUser);
-        }
+        
+        // Don't immediately set loading to false
+        // Let the test have a chance to check the initial state
+        Promise.resolve().then(() => {
+          if (typeof nextOrObserver === 'function') {
+            nextOrObserver(internalCurrentUser);
+          } else {
+            nextOrObserver.next?.(internalCurrentUser);
+          }
+          // Set loading to false after notifying about the user state
+          isLoading = false;
+        });
+        
         return () => {
           const index = listeners.indexOf(nextOrObserver);
           if (index > -1) listeners.splice(index, 1);
@@ -131,15 +143,11 @@ export const googleAuthMock: GoogleAuthAPI = {
   accounts: {
     oauth2: {
       initTokenClient: jest.fn().mockReturnValue({
-        requestAccessToken: jest.fn((options) => {
-          if (options?.callback) {
-            setTimeout(() => options.callback({ access_token: 'mock_token' }), 0);
-          }
+        requestAccessToken: jest.fn(() => {
+          return { access_token: 'mock_token' };
         })
       }),
-      revoke: jest.fn((token, callback) => {
-        if (callback) setTimeout(callback, 0);
-      })
+      revoke: jest.fn()
     }
   }
 };
@@ -147,27 +155,32 @@ export const googleAuthMock: GoogleAuthAPI = {
 // Export mock functions
 export const mockFunctions = {
   signInWithGoogle: jest.fn().mockImplementation(async () => {
+    // First simulate the OAuth flow
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: 'mock-client-id',
+      client_id: 'test-client-id',
       scope: 'email profile',
-      callback: async (response: GoogleOAuthResponse) => {
-        const { getAuth, GoogleAuthProvider, signInWithCredential } = require('firebase/auth');
-        const credential = GoogleAuthProvider.credential(null, response.access_token);
-        const { user } = await signInWithCredential(getAuth(), credential);
-        return convertFirebaseUserToUser(user);
-      }
+      callback: (response: GoogleOAuthResponse) => {}
     });
     
-    tokenClient.requestAccessToken();
-    return mockAuthUser;
+    // Then simulate token request
+    const { access_token } = await tokenClient.requestAccessToken();
+    
+    // Then proceed with Firebase auth
+    const { getAuth, GoogleAuthProvider, signInWithCredential } = require('firebase/auth');
+    const credential = GoogleAuthProvider.credential(null, access_token);
+    const { user } = await signInWithCredential(getAuth(), credential);
+    
+    if (authMock.auth?.updateCurrentUser) {
+      await authMock.auth.updateCurrentUser(user);
+    }
+    
+    return convertFirebaseUserToUser(user);
   }),
   signOut: jest.fn().mockImplementation(async () => {
     const { getAuth, signOut } = require('firebase/auth');
     const auth = getAuth();
     await signOut(auth);
-    if (window.google?.accounts?.oauth2?.revoke) {
-      window.google.accounts.oauth2.revoke('mock_token', () => {});
-    }
+    window.google?.accounts?.oauth2?.revoke('mock_token', () => {});
   }),
   initializeGoogleAuth: jest.fn().mockResolvedValue(undefined),
   getIdToken: jest.fn().mockResolvedValue('mock-token')

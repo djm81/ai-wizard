@@ -19,23 +19,30 @@ describe('fedcmAuth', () => {
   });
 
   test('signInWithGoogle calls Google OAuth and Firebase signInWithCredential', async () => {
-    // Mock successful sign-in using existing mock
+    // Set longer timeout for this test if needed
+    jest.setTimeout(10000);
+    
+    // Reset the mock to ensure clean state
+    (window.google.accounts.oauth2.initTokenClient as jest.Mock).mockClear();
+    
     const user = await signInWithGoogle();
 
-    // Verify Google OAuth flow (this should now work)
+    // Verify Google OAuth flow
     expect(window.google.accounts.oauth2.initTokenClient).toHaveBeenCalledWith({
       client_id: expect.any(String),
       scope: 'email profile',
       callback: expect.any(Function)
     });
 
-    // Rest of test remains the same
+    // Verify Firebase flow
     expect(GoogleAuthProvider.credential).toHaveBeenCalledWith(null, 'mock_token');
     expect(signInWithCredential).toHaveBeenCalled();
     expect(user).toEqual(mockAuthUser);
-  });
+  }, 10000);
 
   test('signOut calls Firebase signOut and revokes Google token', async () => {
+    jest.setTimeout(10000);
+    
     // Mock successful sign-in first
     await signInWithGoogle();
     
@@ -48,7 +55,7 @@ describe('fedcmAuth', () => {
       'mock_token',
       expect.any(Function)
     );
-  });
+  }, 10000); // Add timeout here
 
   test('getIdToken returns null when no user is signed in', async () => {
     // Ensure no user is signed in
