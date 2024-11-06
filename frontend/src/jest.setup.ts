@@ -1,6 +1,14 @@
 import '@testing-library/jest-dom';
 import { authMock, mockFunctions, mockFirebaseUser } from './__mocks__/auth';
 
+// Use the mapped path 'auth/fedcmAuth' instead of relative path
+jest.mock('auth/fedcmAuth', () => ({
+  initializeGoogleAuth: jest.fn().mockResolvedValue(undefined),
+  signInWithGoogle: jest.fn().mockResolvedValue(mockFirebaseUser),
+  signOut: jest.fn().mockResolvedValue(undefined),
+  getIdToken: jest.fn().mockResolvedValue('mock-token')
+}));
+
 // Mock Firebase Auth
 jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(() => authMock.auth),
@@ -27,28 +35,13 @@ jest.mock('firebase/auth', () => ({
   }
 }));
 
-// Mock fedcmAuth - this is the key fix
-jest.mock('./auth/fedcmAuth', () => ({
-  __esModule: true,
-  initializeGoogleAuth: mockFunctions.initializeGoogleAuth,
-  signInWithGoogle: mockFunctions.signInWithGoogle,
-  signOut: mockFunctions.signOut,
-  getIdToken: mockFunctions.getIdToken,
-  default: mockFunctions
-}));
-
+// Reset all mocks before each test
 beforeEach(() => {
   jest.clearAllMocks();
   // Reset auth state
   if (authMock.auth?.updateCurrentUser) {
     authMock.auth.updateCurrentUser(null);
   }
-  // Reset mock functions
-  Object.values(mockFunctions).forEach(mock => {
-    if (typeof mock === 'function') {
-      mock.mockClear();
-    }
-  });
 });
 
 afterEach(() => {
