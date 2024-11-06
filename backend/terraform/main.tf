@@ -141,35 +141,16 @@ resource "aws_s3_bucket_policy" "frontend" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowCloudFrontServicePrincipal"
+        Sid       = "AllowCloudFrontOAI"
         Effect    = "Allow"
         Principal = {
-          Service = "cloudfront.amazonaws.com"
+          AWS = aws_cloudfront_origin_access_identity.frontend.iam_arn
         }
-        Action    = "s3:GetObject"
-        Resource  = "${aws_s3_bucket.frontend.arn}/*"
-        Condition = {
-          StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.frontend.arn
-          }
-        }
+        Action   = "s3:GetObject"
+        Resource = "${aws_s3_bucket.frontend.arn}/*"
       }
     ]
   })
-}
-
-# S3 bucket website configuration
-resource "aws_s3_bucket_website_configuration" "frontend" {
-  provider = aws.assume_role
-  bucket   = aws_s3_bucket.frontend.id
-
-  index_document {
-    suffix = "index.html"
-  }
-
-  error_document {
-    key = "index.html"
-  }
 }
 
 resource "aws_acm_certificate" "frontend" {
@@ -223,13 +204,11 @@ resource "aws_cloudfront_origin_access_identity" "frontend" {
 resource "aws_cloudfront_distribution" "frontend" {
   provider = aws.assume_role
   origin {
-    domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
+    domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id   = "S3-${aws_s3_bucket.frontend.id}"
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+    
+    s3_origin_config {
+      origin_access_identity = aws_cloudfront_origin_access_identity.frontend.cloudfront_access_identity_path
     }
   }
 
@@ -274,6 +253,18 @@ resource "aws_cloudfront_distribution" "frontend" {
     Name = "ai-wizard-frontend-cdn-${var.environment}"
     Service = "ai-wizard-frontend"
   })
+
+  custom_error_response {
+    error_code         = 403
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+
+  custom_error_response {
+    error_code         = 404
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
 }
 
 # Route 53 record for frontend
@@ -297,10 +288,6 @@ output "dynamodb_table_name" {
 
 output "lambda_role_arn" {
   value = aws_iam_role.lambda_exec.arn
-}
-
-output "frontend_bucket_website_endpoint" {
-  value = aws_s3_bucket_website_configuration.frontend.website_endpoint
 }
 
 output "zappa_deployment_bucket" {
