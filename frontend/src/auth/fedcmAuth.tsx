@@ -98,7 +98,7 @@ export async function signInWithGoogle(): Promise<User> {
         },
       });
 
-      console.log('Requesting access token');
+      console.log('Requesting access token with redirect URI:', window.location.href);
       tokenClient.requestAccessToken();
     } catch (error) {
       console.error('Error initializing Google client:', error);
