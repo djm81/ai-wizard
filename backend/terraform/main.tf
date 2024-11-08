@@ -377,35 +377,35 @@ resource "aws_api_gateway_method" "proxy" {
   authorization = "NONE"
 }
 
-# Update API Gateway to use the alias
-resource "aws_api_gateway_integration" "lambda" {
+# Update API Gateway Integration
+resource "aws_api_gateway_integration" "backend_lambda" {
   provider                = aws.assume_role
   rest_api_id             = aws_api_gateway_rest_api.ai_wizard.id
   resource_id             = aws_api_gateway_method.proxy.resource_id
   http_method             = aws_api_gateway_method.proxy.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_alias.api_alias.invoke_arn  # Use alias instead of function directly
+  uri                     = aws_lambda_alias.api_alias.invoke_arn
 }
 
-# Update Lambda permission to use the alias
-resource "aws_lambda_permission" "apigw" {
+# Update Lambda permission
+resource "aws_lambda_permission" "backend_apigw" {
   provider      = aws.assume_role
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.api.function_name
-  qualifier     = aws_lambda_alias.api_alias.name  # Use alias name as qualifier
+  qualifier     = aws_lambda_alias.api_alias.name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.ai_wizard.execution_arn}/*/*"
 }
 
-# API Gateway Deployment
+# Update API Gateway Deployment dependency
 resource "aws_api_gateway_deployment" "ai_wizard" {
   provider  = aws.assume_role
-  depends_on = [aws_api_gateway_integration.lambda]
+  depends_on = [aws_api_gateway_integration.backend_lambda]
 
   rest_api_id = aws_api_gateway_rest_api.ai_wizard.id
-  stage_name  = "${var.environment}"
+  stage_name  = var.environment
 
   lifecycle {
     create_before_destroy = true
@@ -418,13 +418,13 @@ output "api_gateway_url" {
 }
 
 # API Gateway Custom Domain Certificate (in the same region as API Gateway)
-resource "aws_acm_certificate" "api" {
+resource "aws_acm_certificate" "backend_api" {
   provider          = aws.assume_role
   domain_name       = "api.${var.domain_name}"
   validation_method = "DNS"
 
   tags = merge(local.common_tags, {
-    Name    = "ai-wizard-api-cert-${var.environment}"
+    Name    = "ai-wizard-backend-api-cert-${var.environment}"
     Service = "ai-wizard-backend"
   })
 
@@ -434,10 +434,10 @@ resource "aws_acm_certificate" "api" {
 }
 
 # Route 53 record for API certificate validation
-resource "aws_route53_record" "api_cert_validation" {
+resource "aws_route53_record" "backend_api_cert_validation" {
   provider = aws.assume_role
   for_each = {
-    for dvo in aws_acm_certificate.api.domain_validation_options : dvo.domain_name => {
+    for dvo in aws_acm_certificate.backend_api.domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
@@ -453,47 +453,47 @@ resource "aws_route53_record" "api_cert_validation" {
 }
 
 # Certificate validation
-resource "aws_acm_certificate_validation" "api" {
+resource "aws_acm_certificate_validation" "backend_api" {
   provider                = aws.assume_role
-  certificate_arn         = aws_acm_certificate.api.arn
-  validation_record_fqdns = [for record in aws_route53_record.api_cert_validation : record.fqdn]
+  certificate_arn         = aws_acm_certificate.backend_api.arn
+  validation_record_fqdns = [for record in aws_route53_record.backend_api_cert_validation : record.fqdn]
 }
 
 # API Gateway Custom Domain
-resource "aws_api_gateway_domain_name" "api_regional" {
+resource "aws_api_gateway_domain_name" "backend_api_domain" {
   provider                 = aws.assume_role
   domain_name             = "api.${var.domain_name}"
-  regional_certificate_arn = aws_acm_certificate.api.arn
+  regional_certificate_arn = aws_acm_certificate.backend_api.arn
   security_policy         = "TLS_1_2"
   endpoint_configuration {
     types = ["REGIONAL"]
   }
 
   tags = merge(local.common_tags, {
-    Name    = "ai-wizard-api-domain-${var.environment}"
+    Name    = "ai-wizard-backend-api-domain-${var.environment}"
     Service = "ai-wizard-backend"
   })
 }
 
 # API Gateway Base Path Mapping
-resource "aws_api_gateway_base_path_mapping" "api" {
+resource "aws_api_gateway_base_path_mapping" "backend_api" {
   provider    = aws.assume_role
   api_id      = aws_api_gateway_rest_api.ai_wizard.id
   stage_name  = aws_api_gateway_deployment.ai_wizard.stage_name
-  domain_name = aws_api_gateway_domain_name.api_regional.domain_name
+  domain_name = aws_api_gateway_domain_name.backend_api_domain.domain_name
 }
 
 # Route 53 record for API Gateway custom domain
-resource "aws_route53_record" "api" {
+resource "aws_route53_record" "backend_api" {
   provider = aws.assume_role
-  name     = aws_api_gateway_domain_name.api_regional.domain_name
+  name     = aws_api_gateway_domain_name.backend_api_domain.domain_name
   type     = "A"
   zone_id  = var.route53_hosted_zone_id
 
   alias {
     evaluate_target_health = true
-    name                   = aws_api_gateway_domain_name.api_regional.regional_domain_name
-    zone_id                = aws_api_gateway_domain_name.api_regional.regional_zone_id
+    name                   = aws_api_gateway_domain_name.backend_api_domain.regional_domain_name
+    zone_id                = aws_api_gateway_domain_name.backend_api_domain.regional_zone_id
   }
 }
 
@@ -569,27 +569,11 @@ resource "aws_api_gateway_account" "main" {
   cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
 }
 
-# Update API Gateway Domain Name to use regional certificate
-resource "aws_api_gateway_domain_name" "api_regional" {
-  provider                 = aws.assume_role
-  domain_name             = "api.${var.domain_name}"
-  regional_certificate_arn = aws_acm_certificate.api.arn
-  security_policy         = "TLS_1_2"
-  endpoint_configuration {
-    types = ["REGIONAL"]
-  }
-
-  tags = merge(local.common_tags, {
-    Name    = "ai-wizard-api-domain-${var.environment}"
-    Service = "ai-wizard-backend"
-  })
-}
-
 output "domain_name" {
   value = var.domain_name
 }
 
 output "api_domain" {
-  value = aws_api_gateway_domain_name.api_regional.domain_name
+  value = aws_api_gateway_domain_name.backend_api_domain.domain_name
 }
 
