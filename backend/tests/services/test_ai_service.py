@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from app.services.ai_service import AIService
 from app.core.config import Settings
 
@@ -23,11 +23,18 @@ class TestAIService:
     @pytest.mark.asyncio
     async def test_refine_requirements_success(self, ai_service):
         """Test successful requirements refinement"""
+        # Create a proper mock response structure
+        mock_choice = MagicMock()
+        mock_choice.message.content = "Refined requirements"
         mock_response = AsyncMock()
-        mock_response.choices = [AsyncMock()]
-        mock_response.choices[0].message.content = "Refined requirements"
+        mock_response.choices = [mock_choice]
         
-        with patch.object(ai_service.client.chat.completions, 'create', return_value=mock_response):
+        # Mock the create method of chat.completions
+        mock_completions = AsyncMock()
+        mock_completions.create.return_value = mock_response
+        
+        # Apply the mock to the client's chat.completions
+        with patch.object(ai_service.client, 'chat', completions=mock_completions):
             conversation_history = [
                 "Create a web application",
                 "What kind of web application?",
@@ -35,11 +42,23 @@ class TestAIService:
             ]
             result = await ai_service.refine_requirements(conversation_history)
             assert result == "Refined requirements"
+            
+            # Verify the mock was called with correct parameters
+            mock_completions.create.assert_called_once()
+            call_args = mock_completions.create.call_args[1]
+            assert call_args['model'] == ai_service.model
+            assert len(call_args['messages']) == len(conversation_history) + 2  # +2 for system and final messages
+            assert call_args['temperature'] == 0.7
+            assert call_args['max_tokens'] == 1000
 
     @pytest.mark.asyncio
     async def test_refine_requirements_error(self, ai_service):
         """Test requirements refinement with error"""
-        with patch.object(ai_service.client.chat.completions, 'create', side_effect=Exception("API Error")):
+        # Create a mock that raises an exception
+        mock_completions = AsyncMock()
+        mock_completions.create.side_effect = Exception("API Error")
+        
+        with patch.object(ai_service.client, 'chat', completions=mock_completions):
             conversation_history = [
                 "Create a web application",
                 "What kind of web application?",
