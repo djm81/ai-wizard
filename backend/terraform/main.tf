@@ -460,7 +460,7 @@ resource "aws_acm_certificate_validation" "api" {
 }
 
 # API Gateway Custom Domain
-resource "aws_api_gateway_domain_name" "api" {
+resource "aws_api_gateway_domain_name" "api_regional" {
   provider                 = aws.assume_role
   domain_name             = "api.${var.domain_name}"
   regional_certificate_arn = aws_acm_certificate.api.arn
@@ -480,20 +480,20 @@ resource "aws_api_gateway_base_path_mapping" "api" {
   provider    = aws.assume_role
   api_id      = aws_api_gateway_rest_api.ai_wizard.id
   stage_name  = aws_api_gateway_deployment.ai_wizard.stage_name
-  domain_name = aws_api_gateway_domain_name.api.domain_name
+  domain_name = aws_api_gateway_domain_name.api_regional.domain_name
 }
 
 # Route 53 record for API Gateway custom domain
 resource "aws_route53_record" "api" {
   provider = aws.assume_role
-  name     = aws_api_gateway_domain_name.api.domain_name
+  name     = aws_api_gateway_domain_name.api_regional.domain_name
   type     = "A"
   zone_id  = var.route53_hosted_zone_id
 
   alias {
     evaluate_target_health = true
-    name                   = aws_api_gateway_domain_name.api.regional_domain_name
-    zone_id                = aws_api_gateway_domain_name.api.regional_zone_id
+    name                   = aws_api_gateway_domain_name.api_regional.regional_domain_name
+    zone_id                = aws_api_gateway_domain_name.api_regional.regional_zone_id
   }
 }
 
@@ -570,7 +570,7 @@ resource "aws_api_gateway_account" "main" {
 }
 
 # Update API Gateway Domain Name to use regional certificate
-resource "aws_api_gateway_domain_name" "api" {
+resource "aws_api_gateway_domain_name" "api_regional" {
   provider                 = aws.assume_role
   domain_name             = "api.${var.domain_name}"
   regional_certificate_arn = aws_acm_certificate.api.arn
@@ -590,6 +590,6 @@ output "domain_name" {
 }
 
 output "api_domain" {
-  value = aws_api_gateway_domain_name.api.domain_name
+  value = aws_api_gateway_domain_name.api_regional.domain_name
 }
 
