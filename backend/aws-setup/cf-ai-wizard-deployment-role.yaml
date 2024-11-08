@@ -161,6 +161,7 @@ Resources:
             Resource: 
               - !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role'
               - !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role-*'
+              - !Sub 'arn:aws:iam::${TrustedAccount}:role/api-gateway-cloudwatch-*'
           - Effect: Allow
             Action: 
               - 'sts:AssumeRole'

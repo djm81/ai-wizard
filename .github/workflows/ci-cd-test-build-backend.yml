@@ -280,8 +280,8 @@ jobs:
         terraform plan \
           -target=aws_lambda_function.api \
           -target=aws_lambda_alias.api_alias \
-          -target=aws_api_gateway_integration.lambda \
-          -target=aws_api_gateway_domain_name.api_regional \
+          -target=aws_api_gateway_integration.backend_lambda \
+          -target=aws_api_gateway_domain_name.backend_api_domain \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \

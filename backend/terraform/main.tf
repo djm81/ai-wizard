@@ -402,7 +402,10 @@ resource "aws_lambda_permission" "backend_apigw" {
 # Update API Gateway Deployment dependency
 resource "aws_api_gateway_deployment" "ai_wizard" {
   provider  = aws.assume_role
-  depends_on = [aws_api_gateway_integration.backend_lambda]
+  depends_on = [
+    aws_api_gateway_integration.backend_lambda,
+    aws_api_gateway_integration.root
+  ]
 
   rest_api_id = aws_api_gateway_rest_api.ai_wizard.id
   stage_name  = var.environment
@@ -575,5 +578,25 @@ output "domain_name" {
 
 output "api_domain" {
   value = aws_api_gateway_domain_name.backend_api_domain.domain_name
+}
+
+# Add root method
+resource "aws_api_gateway_method" "root" {
+  provider      = aws.assume_role
+  rest_api_id   = aws_api_gateway_rest_api.ai_wizard.id
+  resource_id   = aws_api_gateway_rest_api.ai_wizard.root_resource_id
+  http_method   = "ANY"
+  authorization = "NONE"
+}
+
+# Add root integration
+resource "aws_api_gateway_integration" "root" {
+  provider                = aws.assume_role
+  rest_api_id             = aws_api_gateway_rest_api.ai_wizard.id
+  resource_id             = aws_api_gateway_rest_api.ai_wizard.root_resource_id
+  http_method             = aws_api_gateway_method.root.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_alias.api_alias.invoke_arn
 }
 
