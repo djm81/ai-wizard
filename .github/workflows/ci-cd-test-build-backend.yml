@@ -96,11 +96,13 @@ jobs:
         echo "OPENAI_API_KEY=dummy-api-key-for-testing" >> .env.test
         echo "OPENAI_MODEL=gpt-4-turbo-preview" >> .env.test
         
-        # Create Firebase config file if needed
+        # Create Firebase config directory and file
+        mkdir -p app/config
         if [ ! -e "app/config/firebase-adminsdk.json" ]; then
           echo "Creating Firebase config file 'app/config/firebase-adminsdk.json' ..."
           echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
         fi
+      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Run tests
       id: run_tests
@@ -151,7 +153,8 @@ jobs:
         poetry install
         poetry export -f requirements.txt --output requirements.txt --without-hashes
 
-        # Create Firebase config file if needed
+        # Create Firebase config directory and file
+        mkdir -p app/config
         if [ ! -e "app/config/firebase-adminsdk.json" ]; then
           echo "Creating Firebase config file 'app/config/firebase-adminsdk.json' ..."
           echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
