@@ -417,3 +417,107 @@ output "api_gateway_url" {
   value = aws_api_gateway_deployment.ai_wizard.invoke_url
 }
 
+# API Gateway Custom Domain Certificate (in us-east-1)
+resource "aws_acm_certificate" "api" {
+  provider          = aws.assume_role_us_east_1
+  domain_name       = "api.${var.domain_name}"
+  validation_method = "DNS"
+
+  tags = merge(local.common_tags, {
+    Name    = "ai-wizard-api-cert-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Route 53 record for API certificate validation
+resource "aws_route53_record" "api_cert_validation" {
+  provider = aws.assume_role
+  for_each = {
+    for dvo in aws_acm_certificate.api.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = var.route53_hosted_zone_id
+}
+
+# Certificate validation
+resource "aws_acm_certificate_validation" "api" {
+  provider                = aws.assume_role_us_east_1
+  certificate_arn         = aws_acm_certificate.api.arn
+  validation_record_fqdns = [for record in aws_route53_record.api_cert_validation : record.fqdn]
+}
+
+# API Gateway Custom Domain
+resource "aws_api_gateway_domain_name" "api" {
+  provider                 = aws.assume_role
+  domain_name             = "api.${var.domain_name}"
+  regional_certificate_arn = aws_acm_certificate.api.arn
+  security_policy         = "TLS_1_2"
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+
+  tags = merge(local.common_tags, {
+    Name    = "ai-wizard-api-domain-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+}
+
+# API Gateway Base Path Mapping
+resource "aws_api_gateway_base_path_mapping" "api" {
+  provider    = aws.assume_role
+  api_id      = aws_api_gateway_rest_api.ai_wizard.id
+  stage_name  = aws_api_gateway_deployment.ai_wizard.stage_name
+  domain_name = aws_api_gateway_domain_name.api.domain_name
+}
+
+# Route 53 record for API Gateway custom domain
+resource "aws_route53_record" "api" {
+  provider = aws.assume_role
+  name     = aws_api_gateway_domain_name.api.domain_name
+  type     = "A"
+  zone_id  = var.route53_hosted_zone_id
+
+  alias {
+    evaluate_target_health = true
+    name                   = aws_api_gateway_domain_name.api.regional_domain_name
+    zone_id                = aws_api_gateway_domain_name.api.regional_zone_id
+  }
+}
+
+# Update API Gateway settings to enforce HTTPS
+resource "aws_api_gateway_method_settings" "all" {
+  provider    = aws.assume_role
+  rest_api_id = aws_api_gateway_rest_api.ai_wizard.id
+  stage_name  = aws_api_gateway_deployment.ai_wizard.stage_name
+  method_path = "*/*"
+
+  settings {
+    metrics_enabled        = true
+    logging_level         = "INFO"
+    data_trace_enabled    = true
+    throttling_burst_limit = 5000
+    throttling_rate_limit  = 10000
+  }
+}
+
+output "domain_name" {
+  value = var.domain_name
+}
+
+output "api_domain" {
+  value = aws_api_gateway_domain_name.api.domain_name
+}
+

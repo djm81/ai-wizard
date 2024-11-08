@@ -1,25 +1,25 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.router import api_router
+from app.api.router import router
 from app.core.config import settings
 
-app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
+app = FastAPI(title="AI Wizard API")
 
-# Set up CORS
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=["*"],  # In production, replace with actual origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include API router
-app.include_router(api_router, prefix="/api")
+# Include routers
+app.include_router(router, prefix="/api")
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the AI Assistant API"}
+    return {"message": "Welcome to the AI Wizard API"}
 
 if __name__ == "__main__":
     import uvicorn

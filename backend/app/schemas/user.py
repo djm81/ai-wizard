@@ -1,43 +1,56 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
+from typing import Optional, Dict, Any
 from datetime import datetime
 
-class UserCreate(BaseModel):
+class UserBase(BaseModel):
+    """Base schema for User data"""
     email: EmailStr
-    password: str
     full_name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class UserCreate(UserBase):
+    """Schema for creating a new user"""
+    password: str
 
 class UserUpdate(BaseModel):
-    email: str | None = None
-    full_name: str | None = None
-    password: str | None = None
+    """Schema for updating a user"""
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    password: Optional[str] = None
 
-class UserProfileCreate(BaseModel):
-    bio: str | None = None
-    preferences: dict | None = None
+    model_config = ConfigDict(from_attributes=True)
 
-class UserProfileUpdate(BaseModel):
-    bio: str | None = None
-    preferences: dict | None = None
-
-class UserProfile(UserProfileCreate):
+class User(UserBase):
+    """Schema for user response"""
     id: int
-    user_id: int
-
-    class Config:
-        from_attributes = True
-
-class User(BaseModel):
-    id: int
-    email: str
-    full_name: str
+    is_active: bool
+    is_superuser: bool
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+class UserProfileBase(BaseModel):
+    """Base schema for UserProfile data"""
+    bio: Optional[str] = None
+    preferences: Optional[Dict[str, Any]] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class UserProfileCreate(UserProfileBase):
+    """Schema for creating a new user profile"""
+    pass
+
+class UserProfileUpdate(UserProfileBase):
+    """Schema for updating a user profile"""
+    pass
+
+class UserProfile(UserProfileBase):
+    """Schema for user profile response"""
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
 
 class UserWithProfile(User):
-    profile: UserProfile | None
-
-    class Config:
-        from_attributes = True
+    """Schema for user with profile response"""
+    profile: Optional[UserProfile] = None

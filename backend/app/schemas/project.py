@@ -1,21 +1,25 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from typing import Optional
 from datetime import datetime
 
-class ProjectCreate(BaseModel):
+class ProjectBase(BaseModel):
+    """Base schema for Project data"""
     name: str
-    description: str | None = None
+    description: Optional[str] = None
 
-class ProjectUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
+    model_config = ConfigDict(from_attributes=True)
 
-class Project(BaseModel):
+class ProjectCreate(ProjectBase):
+    """Schema for creating a new project"""
+    pass
+
+class ProjectUpdate(ProjectBase):
+    """Schema for updating a project"""
+    name: Optional[str] = None
+
+class Project(ProjectBase):
+    """Schema for project response"""
     id: int
     user_id: int
-    name: str
-    description: str | None = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True

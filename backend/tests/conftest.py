@@ -1,40 +1,88 @@
-import sys
-import os
-from dotenv import load_dotenv
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-# Add the project root to the Python path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, project_root)
-
-from app.models.base import Base
-from app.db.database import get_db
-from app.main import app
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from app.main import app
+from app.db.database import get_db
+from app.models.base import Base
+from app.models.user import User
+from app.models.project import Project
+from app.models.ai_interaction import AIInteraction
+from app.services.auth_service import AuthService
+from typing import Generator
 
-# Load test environment variables
-load_dotenv(".env.test")
-
-# Set up the in-memory SQLite database for testing
-test_engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+# Test database setup
+SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./test.db"
+engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 @pytest.fixture(scope="function")
-def db():
-    # Create all tables in the test database
-    Base.metadata.create_all(bind=test_engine)
-    
-    # Create a new session for the test
-    db = TestingSessionLocal()
+def db_session() -> Generator[Session, None, None]:
+    """Create a fresh database session for each test."""
+    Base.metadata.create_all(bind=engine)
+    session = TestingSessionLocal()
     try:
-        yield db
+        yield session
     finally:
-        db.close()
+        session.close()
+        Base.metadata.drop_all(bind=engine)
 
-@pytest.fixture(scope="module")
-def client():
-    app.dependency_overrides[get_db] = lambda: TestingSessionLocal()
-    with TestClient(app) as c:
-        yield c
+@pytest.fixture
+def test_user(db_session: Session) -> User:
+    """Create a test user"""
+    user = User(
+        email="test@example.com",
+        hashed_password="hashed_password",
+        full_name="Test User"
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+@pytest.fixture
+def auth_headers() -> dict[str, str]:
+    """Provide mock auth headers for testing"""
+    return {"Authorization": "Bearer mock-token"}
+
+@pytest.fixture
+def client(db_session: Session, test_user: User) -> Generator[TestClient, None, None]:
+    """Test client fixture with auth and DB overrides"""
+    def get_test_db():
+        yield db_session
+
+    async def mock_get_current_user() -> User:
+        return test_user
+
+    app.dependency_overrides[get_db] = get_test_db
+    app.dependency_overrides[AuthService.get_current_user] = mock_get_current_user
+
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()
+
+@pytest.fixture
+def test_project(db_session: Session, test_user: User) -> Project:
+    project = Project(
+        user_id=test_user.id,
+        name="Test Project",
+        description="Test Description"
+    )
+    db_session.add(project)
+    db_session.commit()
+    db_session.refresh(project)
+    return project
+
+@pytest.fixture
+def test_ai_interaction(db_session: Session, test_user: User, test_project: Project) -> AIInteraction:
+    interaction = AIInteraction(
+        user_id=test_user.id,
+        project_id=test_project.id,
+        prompt="Test prompt",
+        response="Test response"
+    )
+    db_session.add(interaction)
+    db_session.commit()
+    db_session.refresh(interaction)
+    return interaction

@@ -271,11 +271,14 @@ jobs:
       id: output_application_url
       run: |
         echo "Your application for ${{ env.ENVIRONMENT }} stage is accessible at: $(terraform output -raw website_url)"
+        echo "Your API for ${{ env.ENVIRONMENT }} stage is accessible at: https://api.$(terraform output -raw domain_name)"
         echo "application_url=$(terraform output -raw website_url)" >> $GITHUB_OUTPUT
+        echo "api_url=https://api.$(terraform output -raw domain_name)" >> $GITHUB_OUTPUT
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     outputs:
       application_url: ${{ steps.output_application_url.outputs.application_url }}
+      api_url: ${{ steps.output_application_url.outputs.api_url }}
 
   notify:
     needs: [should_run, deploy]
@@ -298,6 +301,7 @@ jobs:
         text: |
           ${{ steps.check_job_status.outputs.status == 'success' && format('{0} Deployment succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Deployment failed! :x:', env.ENVIRONMENT) }}
           ${{ steps.check_job_status.outputs.status == 'success' && format('Application for {0} stage is accessible at: {1}', env.ENVIRONMENT, needs.deploy.outputs.application_url) || '' }}
+          ${{ steps.check_job_status.outputs.status == 'success' && format('API for {0} stage is accessible at: {1}', env.ENVIRONMENT, needs.deploy.outputs.api_url) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

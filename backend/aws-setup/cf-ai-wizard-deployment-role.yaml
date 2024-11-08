@@ -188,8 +188,17 @@ Resources:
               - 'apigateway:PATCH'
               - 'apigateway:HEAD'
               - 'apigateway:OPTIONS'
-              - 'apigateway:*'
+              - 'apigateway:Get*'
+              - 'apigateway:CreateDomainName'
+              - 'apigateway:DeleteDomainName'
+              - 'apigateway:UpdateDomainName'
+              - 'apigateway:CreateBasePathMapping'
+              - 'apigateway:DeleteBasePathMapping'
+              - 'apigateway:UpdateBasePathMapping'
+              - 'apigateway:UpdateMethodSettings'
             Resource: 
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/domainnames'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/domainnames/*'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis/*'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apikeys'
@@ -214,7 +223,6 @@ Resources:
               - 'events:RemoveTargets'
             Resource: 
               - !Sub 'arn:aws:events:${S3BucketRegion}:${TrustedAccount}:rule/*'
-
   # Create the IAM role
   AIWizardDeploymentRole:
     Type: 'AWS::IAM::Role'

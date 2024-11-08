@@ -115,8 +115,16 @@ jobs:
 
     - name: Run tests
       id: run_tests
+      env:
+        PYTHONPATH: ${{ env.WORKING_DIRECTORY }}
+        SECRET_KEY: dummy_secret_key_for_testing
+        DYNAMODB_TABLE_NAME: ai-wizard-table-test
       run: |
-        poetry run pytest --cov=app tests/
+        poetry run pytest \
+          --cov=app \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          tests/
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Upload coverage data to coveralls.io
