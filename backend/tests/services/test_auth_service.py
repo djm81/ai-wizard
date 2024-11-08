@@ -5,7 +5,7 @@ import firebase_admin.auth
 from unittest.mock import patch, MagicMock
 from app.services.auth_service import AuthService
 
-@pytest.mark.unit
+@pytest.mark.asyncio
 class TestAuthService:
     """Test suite for AuthService"""
 

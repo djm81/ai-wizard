@@ -46,6 +46,7 @@ Resources:
               - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}/*'
               - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}-*'
               - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}-*/*'
+
           - Effect: Allow
             Action:
               - 'dynamodb:CreateTable'
@@ -63,6 +64,7 @@ Resources:
             Resource: 
               - !Sub 'arn:aws:dynamodb:${S3BucketRegion}:${TrustedAccount}:table/ai-wizard-table'
               - !Sub 'arn:aws:dynamodb:${S3BucketRegion}:${TrustedAccount}:table/ai-wizard-backend-table-*'
+
           - Effect: Allow
             Action:
               - 'lambda:CreateFunction'
@@ -85,6 +87,7 @@ Resources:
               - 'lambda:PublishVersion'
             Resource: 
               - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-*'
+
           - Effect: Allow
             Action:
               - 'cloudfront:CreateDistribution'
@@ -100,16 +103,19 @@ Resources:
               - 'cloudfront:UntagResource'
               - 'cloudfront:CreateInvalidation'
             Resource: '*'
+
           - Effect: Allow
             Action:
               - 'route53:ChangeResourceRecordSets'
             Resource: !Sub 'arn:aws:route53:::hostedzone/${Route53ZoneId}'
+
           - Effect: Allow
             Action:
               - 'route53:Describe*'
               - 'route53:Get*'
               - 'route53:List*'
             Resource: '*'
+
           - Effect: Allow
             Action:
               - 'acm:RequestCertificate'
@@ -120,6 +126,7 @@ Resources:
               - 'acm:AddTagsToCertificate'
               - 'acm:RemoveTagsFromCertificate'
             Resource: '*'
+
           - Effect: Allow
             Action:
               - 'apigateway:Create*'
@@ -146,6 +153,7 @@ Resources:
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages/*'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags/*'
+
           - Effect: Allow
             Action:
               - 'iam:CreateRole'
@@ -158,15 +166,19 @@ Resources:
               - 'iam:PassRole'
               - 'iam:TagRole'
               - 'iam:UntagRole'
+              - 'iam:PutRolePolicy'
+              - 'iam:DeleteRolePolicy'
             Resource: 
               - !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role'
               - !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role-*'
               - !Sub 'arn:aws:iam::${TrustedAccount}:role/api-gateway-cloudwatch-*'
+
           - Effect: Allow
             Action: 
               - 'sts:AssumeRole'
               - 'sts:TagSession'
             Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
+
           - Effect: Allow
             Action:
               - 'cloudformation:CreateStack'
@@ -180,6 +192,7 @@ Resources:
               - 'cloudformation:ValidateTemplate'
             Resource: 
               - !Sub 'arn:aws:cloudformation:${S3BucketRegion}:${TrustedAccount}:stack/*'
+
           - Effect: Allow
             Action:
               - 'apigateway:GET'
@@ -212,6 +225,9 @@ Resources:
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages/*'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/account'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/account/*'
+
           - Effect: Allow
             Action:
               - 'events:DeleteRule'
@@ -224,6 +240,25 @@ Resources:
               - 'events:RemoveTargets'
             Resource: 
               - !Sub 'arn:aws:events:${S3BucketRegion}:${TrustedAccount}:rule/*'
+
+          - Effect: Allow
+            Action:
+              - iam:CreateServiceLinkedRole
+            Resource: 'arn:aws:iam::*:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway'
+                                      
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - logs:DescribeLogGroups
+              - logs:DescribeLogStreams
+              - logs:GetLogEvents
+              - logs:FilterLogEvents
+              - logs:TagLogGroup
+              - logs:UntagLogGroup
+            Resource: 
+              - 'arn:aws:logs:*:*:*'
   # Create the IAM role
   AIWizardDeploymentRole:
     Type: 'AWS::IAM::Role'

@@ -4,7 +4,7 @@ from app.services.ai_service import AIService
 from app.core.config import Settings
 import openai
 
-@pytest.mark.unit
+@pytest.mark.asyncio
 class TestAIService:
     """Test suite for AIService"""
 
