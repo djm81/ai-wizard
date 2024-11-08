@@ -6,7 +6,16 @@ class Settings(BaseSettings):
     """Application settings and configuration"""
     PROJECT_NAME: str = "AI Wizard"
     PROJECT_VERSION: str = "1.0.0"
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]  # Update this with your frontend URL
+    
+    # Get CORS origins from env or use default local frontend
+    ALLOWED_ORIGINS: list[str] = [
+        origin.strip() 
+        for origin in os.getenv(
+            "ALLOWED_ORIGINS", 
+            "http://localhost:3000"
+        ).split(",")
+    ]
+    
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///:memory:")
     SECRET_KEY: SecretStr = SecretStr(os.getenv("SECRET_KEY", "fallback_secret_key_for_development"))
     ALGORITHM: str = "HS256"

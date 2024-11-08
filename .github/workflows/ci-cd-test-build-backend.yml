@@ -95,6 +95,7 @@ jobs:
         echo "DYNAMODB_TABLE_NAME=ai-wizard-table-test" >> .env.test
         echo "OPENAI_API_KEY=dummy-api-key-for-testing" >> .env.test
         echo "OPENAI_MODEL=gpt-4-turbo-preview" >> .env.test
+        echo "ALLOWED_ORIGINS=https://${{ env.DOMAIN_NAME }}" >> .env.test
         
         # Create Firebase config directory and file
         mkdir -p app/config
@@ -112,6 +113,7 @@ jobs:
         DYNAMODB_TABLE_NAME: ai-wizard-table-test
         OPENAI_API_KEY: dummy-api-key-for-testing
         OPENAI_MODEL: gpt-4-turbo-preview
+        ALLOWED_ORIGINS: "https://${{ env.DOMAIN_NAME }}"
       run: |
         poetry run pytest \
           --cov=app \
