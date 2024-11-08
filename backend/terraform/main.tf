@@ -417,9 +417,9 @@ output "api_gateway_url" {
   value = aws_api_gateway_deployment.ai_wizard.invoke_url
 }
 
-# API Gateway Custom Domain Certificate (in us-east-1)
+# API Gateway Custom Domain Certificate (in the same region as API Gateway)
 resource "aws_acm_certificate" "api" {
-  provider          = aws.assume_role_us_east_1
+  provider          = aws.assume_role
   domain_name       = "api.${var.domain_name}"
   validation_method = "DNS"
 
@@ -454,7 +454,7 @@ resource "aws_route53_record" "api_cert_validation" {
 
 # Certificate validation
 resource "aws_acm_certificate_validation" "api" {
-  provider                = aws.assume_role_us_east_1
+  provider                = aws.assume_role
   certificate_arn         = aws_acm_certificate.api.arn
   validation_record_fqdns = [for record in aws_route53_record.api_cert_validation : record.fqdn]
 }
@@ -511,6 +511,78 @@ resource "aws_api_gateway_method_settings" "all" {
     throttling_burst_limit = 5000
     throttling_rate_limit  = 10000
   }
+}
+
+# Create IAM role for API Gateway CloudWatch logging
+resource "aws_iam_role" "api_gateway_cloudwatch" {
+  provider = aws.assume_role
+  name     = "api-gateway-cloudwatch-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(local.common_tags, {
+    Name    = "api-gateway-cloudwatch-role-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+}
+
+# Attach CloudWatch policy to the IAM role
+resource "aws_iam_role_policy" "api_gateway_cloudwatch" {
+  provider = aws.assume_role
+  name     = "api-gateway-cloudwatch-policy-${var.environment}"
+  role     = aws_iam_role.api_gateway_cloudwatch.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:PutLogEvents",
+          "logs:GetLogEvents",
+          "logs:FilterLogEvents"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Set up API Gateway account settings for CloudWatch
+resource "aws_api_gateway_account" "main" {
+  provider         = aws.assume_role
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
+}
+
+# Update API Gateway Domain Name to use regional certificate
+resource "aws_api_gateway_domain_name" "api" {
+  provider                 = aws.assume_role
+  domain_name             = "api.${var.domain_name}"
+  regional_certificate_arn = aws_acm_certificate.api.arn
+  security_policy         = "TLS_1_2"
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+
+  tags = merge(local.common_tags, {
+    Name    = "ai-wizard-api-domain-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
 }
 
 output "domain_name" {
