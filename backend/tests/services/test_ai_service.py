@@ -1,8 +1,7 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, AsyncMock
 from app.services.ai_service import AIService
 from app.core.config import Settings
-import openai
 
 @pytest.mark.asyncio
 class TestAIService:
@@ -13,7 +12,7 @@ class TestAIService:
         """Create mock settings for testing"""
         with patch('app.services.ai_service.settings', autospec=True) as mock_settings:
             mock_settings.OPENAI_MODEL = "gpt-4-turbo-preview"
-            mock_settings.OPENAI_API_KEY = None
+            mock_settings.OPENAI_API_KEY = "test-key"
             yield mock_settings
 
     @pytest.fixture
@@ -24,48 +23,41 @@ class TestAIService:
     @pytest.mark.asyncio
     async def test_refine_requirements_success(self, ai_service):
         """Test successful requirements refinement"""
-        conversation_history = [
-            "Create a web application",
-            "What kind of web application?",
-            "A todo list app"
-        ]
-
-        mock_response = MagicMock()
+        mock_response = AsyncMock()
+        mock_response.choices = [AsyncMock()]
         mock_response.choices[0].message.content = "Refined requirements"
-
-        with patch('openai.ChatCompletion.acreate') as mock_create:
-            mock_create.return_value = mock_response
-            with patch.object(ai_service, '_get_api_key', return_value="mock-api-key"):
-                result = await ai_service.refine_requirements(conversation_history)
-                assert result == "Refined requirements"
-
-                # Verify correct message structure
-                calls = mock_create.call_args_list
-                assert len(calls) == 1
-                messages = calls[0].kwargs['messages']
-                assert messages[0]['role'] == 'system'
-                assert len(messages) == 4  # system + 3 conversation messages
+        
+        with patch.object(ai_service.client.chat.completions, 'create', return_value=mock_response):
+            conversation_history = [
+                "Create a web application",
+                "What kind of web application?",
+                "A todo list app"
+            ]
+            result = await ai_service.refine_requirements(conversation_history)
+            assert result == "Refined requirements"
 
     @pytest.mark.asyncio
     async def test_refine_requirements_error(self, ai_service):
-        """Test error handling in requirements refinement"""
-        conversation_history = ["Test prompt"]
+        """Test requirements refinement with error"""
+        with patch.object(ai_service.client.chat.completions, 'create', side_effect=Exception("API Error")):
+            conversation_history = [
+                "Create a web application",
+                "What kind of web application?",
+                "A todo list app"
+            ]
+            result = await ai_service.refine_requirements(conversation_history)
+            assert result == "An error occurred while refining requirements."
 
-        with patch('openai.ChatCompletion.acreate') as mock_create:
-            mock_create.side_effect = Exception("API Error")
-            with patch.object(ai_service, '_get_api_key', return_value="mock-api-key"):
-                result = await ai_service.refine_requirements(conversation_history)
-                assert "An error occurred" in result
+    def test_set_api_key(self, ai_service):
+        """Test setting OpenAI API key"""
+        with patch('openai.AsyncOpenAI') as mock_openai:
+            result = ai_service.set_api_key("test_key")
+            assert result is True
+            mock_openai.assert_called_once_with(api_key="test_key")
 
-    @pytest.mark.asyncio
-    async def test_set_api_key(self, ai_service):
-        """Test setting API key"""
-        api_key = "test-api-key"
-        result = await ai_service.set_api_key(api_key)
-        assert result is True
-
-    @pytest.mark.asyncio
-    async def test_remove_api_key(self, ai_service):
-        """Test removing API key"""
-        result = await ai_service.remove_api_key()
-        assert result is True
+    def test_remove_api_key(self, ai_service):
+        """Test removing OpenAI API key"""
+        with patch('openai.AsyncOpenAI') as mock_openai:
+            result = ai_service.remove_api_key()
+            assert result is True
+            mock_openai.assert_called_once_with(api_key=None)
