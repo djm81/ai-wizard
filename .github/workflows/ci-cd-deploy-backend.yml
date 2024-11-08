@@ -119,6 +119,14 @@ jobs:
       id: terraform_plan
       run: |
         terraform plan \
+          -target=aws_iam_role.api_gateway_cloudwatch \
+          -target=aws_iam_role_policy.api_gateway_cloudwatch \
+          -target=aws_api_gateway_account.main \
+          -target=aws_lambda_function.api \
+          -target=aws_lambda_alias.api_alias \
+          -target=aws_api_gateway_integration.backend_lambda \
+          -target=aws_api_gateway_domain_name.backend_api_domain \
+          -target=aws_api_gateway_method_settings.all \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
@@ -131,6 +139,27 @@ jobs:
           -var="environment=${{ env.ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
           -out=tfplan-${{ env.ENVIRONMENT }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Terraform Apply CloudWatch Role First
+      id: terraform_apply_cloudwatch
+      run: |
+        terraform apply -auto-approve \
+          -target=aws_iam_role.api_gateway_cloudwatch \
+          -target=aws_iam_role_policy.api_gateway_cloudwatch \
+          -target=aws_api_gateway_account.main \
+          tfplan-${{ env.ENVIRONMENT }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Wait for CloudWatch Role Propagation
+      run: |
+        echo "Waiting for CloudWatch role to propagate..."
+        sleep 30
+
+    - name: Terraform Apply Remaining Resources
+      id: terraform_apply_remaining
+      run: |
+        terraform apply -auto-approve tfplan-${{ env.ENVIRONMENT }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Setup Infracost
