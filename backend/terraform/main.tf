@@ -36,21 +36,6 @@ locals {
   }
 }
 
-# S3 bucket for Zappa deployments
-resource "aws_s3_bucket" "zappa_deployments" {
-  provider = aws.assume_role
-  bucket   = "${var.zappa_deployments_bucket_name}-${var.environment}"
-
-  tags = merge(local.common_tags, {
-    Name = "${var.zappa_deployments_bucket_name}-${var.environment}"
-    Service = "ai-wizard-backend"
-  })
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
 # DynamoDB table
 resource "aws_dynamodb_table" "ai_wizard" {
   provider         = aws.assume_role
@@ -75,7 +60,7 @@ resource "aws_dynamodb_table" "ai_wizard" {
   }
 }
 
-# IAM role for Lambda (to be used by Zappa)
+# IAM role for Lambda
 resource "aws_iam_role" "lambda_exec" {
   provider = aws.assume_role
   name     = "ai-wizard-lambda-exec-role-${var.environment}"
@@ -288,10 +273,6 @@ output "dynamodb_table_name" {
 
 output "lambda_role_arn" {
   value = aws_iam_role.lambda_exec.arn
-}
-
-output "zappa_deployment_bucket" {
-  value = aws_s3_bucket.zappa_deployments.id
 }
 
 output "cloudfront_distribution_domain" {

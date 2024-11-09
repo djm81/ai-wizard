@@ -13,7 +13,7 @@ Parameters:
     Description: The region of the S3 bucket
 
 Resources:
-  # Create the new managed policy for Zappa and serverless resources
+  # Create the new managed policy for serverless resources
   AIWizardServerlessManagedPolicy:
     Type: 'AWS::IAM::ManagedPolicy'
     Properties:
@@ -38,10 +38,6 @@ Resources:
               - 's3:PutBucketPublicAccessBlock'
               - 's3:HeadBucket'
             Resource: 
-              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}'
-              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}/*'
-              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}-*'
-              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}-*/*'
               - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}'
               - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}/*'
               - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}-*'

@@ -127,7 +127,6 @@ jobs:
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
           -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
           -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
-          -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}" \
           -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
           -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
@@ -150,7 +149,6 @@ jobs:
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
           -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
           -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
-          -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}" \
           -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
           -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
@@ -240,7 +238,6 @@ jobs:
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
           -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
           -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
-          -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}" \
           -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
           -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
@@ -272,7 +269,6 @@ jobs:
                             --terraform-var "domain_name=${{ env.DOMAIN_NAME }}" \
                             --terraform-var "route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
                             --terraform-var "frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
-                            --terraform-var "zappa_deployments_bucket_name=${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}" \
                             --terraform-var "lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
                             --terraform-var "dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
                             --terraform-var "environment=${{ env.ENVIRONMENT }}" \
@@ -292,42 +288,6 @@ jobs:
       with:
         name: tfplan-${{ env.ENVIRONMENT }}
         path: ${{ env.WORKING_DIRECTORY }}/terraform/tfplan-${{ env.ENVIRONMENT }}
-
-    - name: Check and Import Zappa Deployment Bucket
-      run: |
-        echo "Checking for bucket aws_s3_bucket.zappa_deployments: ${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }}"
-        echo "Current Terraform state resources:"
-        terraform state list || echo "No resources found in Terraform state."
-        
-        bucket_exists=false
-        if terraform state list aws_s3_bucket.zappa_deployments; then
-          if ! terraform state show aws_s3_bucket.zappa_deployments | grep -q "${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }}"; then
-            echo "Bucket not found in state."
-          else
-            echo "Bucket already found in state."
-            bucket_exists=true
-          fi
-        else
-          echo "Bucket not found in state."
-        fi
-
-        if [ "$bucket_exists" = false ]; then
-          echo "Bucket not found, importing..."
-          terraform import \
-            -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-            -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
-            -var="domain_name=${{ env.DOMAIN_NAME }}" \
-            -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
-            -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
-            -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}" \
-            -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
-            -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
-            -var="environment=${{ env.ENVIRONMENT }}" \
-            -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
-            -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
-            aws_s3_bucket.zappa_deployments ${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}-${{ env.ENVIRONMENT }}
-        fi
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Output Application URL
       id: output_application_url

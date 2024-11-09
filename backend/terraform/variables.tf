@@ -27,11 +27,6 @@ variable "environment" {
   }
 }
 
-variable "zappa_deployments_bucket_name" {
-  description = "The name prefix of the S3 bucket for Zappa deployments (will be suffixed with environment)"
-  type        = string
-}
-
 variable "dynamodb_table_name" {
   description = "The name prefix of the DynamoDB table (will be suffixed with environment)"
   type        = string

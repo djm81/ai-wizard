@@ -5,37 +5,15 @@ import os
 
 class Settings(BaseSettings):
     """Application settings and configuration"""
-    PROJECT_NAME: str = "AI Wizard"
+    PROJECT_NAME: str = "AI Wizard Backend API"
     PROJECT_VERSION: str = "1.0.0"
     
-    # CORS origins configuration with default value
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
-
-    @field_validator("ALLOWED_ORIGINS", mode="before")
-    @classmethod
-    def parse_allowed_origins(cls, v: str | List[str] | None) -> List[str]:
-        """Parse ALLOWED_ORIGINS from string or list
-        
-        Args:
-            v: Input value from default or direct assignment
-            
-        Returns:
-            List[str]: List of allowed origins
-        """
-        # Environment variable always takes precedence if it exists
-        env_value = os.getenv("ALLOWED_ORIGINS")
-        if env_value:
-            return [origin.strip() for origin in env_value.split(",") if origin.strip()]
-        
-        # If no environment variable, use the input value
-        if isinstance(v, list):
-            return [str(origin).strip() for origin in v if str(origin).strip()]
-        
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        
-        # Fallback to default
-        return ["http://localhost:3000"]
+    allowed_origins_env_value: str | None = os.getenv("ALLOWED_ORIGINS")
+    # CORS origins configuration with default value, if not provided
+    if allowed_origins_env_value:
+        ALLOWED_ORIGINS: List[str] = [origin.strip() for origin in allowed_origins_env_value.split(",") if origin.strip()]
+    else:
+        ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
 
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///:memory:")
     SECRET_KEY: SecretStr = SecretStr(os.getenv("SECRET_KEY", "fallback_secret_key_for_development"))

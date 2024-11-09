@@ -96,7 +96,7 @@ jobs:
         DYNAMODB_TABLE_NAME=ai-wizard-table-test
         OPENAI_API_KEY=dummy-api-key-for-testing
         OPENAI_MODEL=gpt-4-turbo-preview
-        ALLOWED_ORIGINS=http://localhost:3000,https://${{ env.DOMAIN_NAME }}
+        ALLOWED_ORIGINS=https://${{ env.DOMAIN_NAME }}
         EOL
         
         # Create Firebase config directory and file
@@ -115,7 +115,7 @@ jobs:
         DYNAMODB_TABLE_NAME: ai-wizard-table-test
         OPENAI_API_KEY: dummy-api-key-for-testing
         OPENAI_MODEL: gpt-4-turbo-preview
-        ALLOWED_ORIGINS: "http://localhost:3000,https://${{ env.DOMAIN_NAME }}"
+        ALLOWED_ORIGINS: "https://${{ env.DOMAIN_NAME }}"
       run: |
         poetry run pytest \
           --cov=app \
@@ -285,7 +285,6 @@ jobs:
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
           -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
           -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
-          -var="zappa_deployments_bucket_name=${{ vars.TF_VAR_ZAPPA_DEPLOYMENTS_BUCKET_NAME }}" \
           -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
           -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
