@@ -90,7 +90,7 @@ jobs:
     - name: Set up environment
       id: setup_environment
       run: |
-        # Create test environment file
+        # Create test environment file .env.test
         cat > .env.test << EOL
         SECRET_KEY=dummy_secret_key_for_testing
         DYNAMODB_TABLE_NAME=ai-wizard-table-test
