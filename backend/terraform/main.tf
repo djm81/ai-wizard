@@ -309,6 +309,7 @@ resource "aws_lambda_function" "api" {
     variables = {
       STAGE = var.environment
       DATABASE_URL = var.database_url
+      ALLOWED_ORIGINS = "https://${var.domain_name}"
     }
   }
 
