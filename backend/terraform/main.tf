@@ -315,25 +315,9 @@ resource "aws_route53_record" "frontend" {
   }
 }
 
-# Outputs
-output "dynamodb_table_name" {
-  value = aws_dynamodb_table.ai_wizard.name
-}
-
-output "lambda_role_arn" {
-  value = aws_iam_role.lambda_exec.arn
-}
-
-output "cloudfront_distribution_domain" {
-  value = aws_cloudfront_distribution.frontend.domain_name
-}
-
-output "website_url" {
-  value = "https://${var.domain_name}"
-}
-
 # Lambda Function
 resource "aws_lambda_function" "api_v2" {
+  provider         = aws.assume_role
   filename         = "${path.module}/lambda/lambda_package.zip"
   function_name    = "${var.lambda_function_name_prefix}-${var.environment}-v2"
   role            = aws_iam_role.lambda_exec.arn
@@ -374,6 +358,7 @@ resource "aws_lambda_function" "api_v2" {
 
 # Add Lambda alias for stable deployments
 resource "aws_lambda_alias" "api_alias_v2" {
+  provider         = aws.assume_role
   name             = "${var.environment}-v2"
   description      = "Alias for ${var.environment} environment (v2)"
   function_name    = aws_lambda_function.api_v2.function_name
@@ -426,17 +411,10 @@ resource "aws_acm_certificate_validation" "backend_api" {
   validation_record_fqdns = [for record in aws_route53_record.backend_api_cert_validation : record.fqdn]
 }
 
-output "domain_name" {
-  value = var.domain_name
-}
-
-output "api_domain" {
-  value = aws_apigatewayv2_domain_name.api.domain_name
-}
-
 resource "aws_apigatewayv2_api" "api" {
-  name          = "${var.lambda_function_name_prefix}-${var.environment}"
-  protocol_type = "HTTP"
+  provider        = aws.assume_role
+  name            = "${var.lambda_function_name_prefix}-${var.environment}"
+  protocol_type   = "HTTP"
 
   cors_configuration {
     allow_origins = [var.domain_name != "" ? "https://${var.domain_name}" : "*"]
@@ -465,8 +443,8 @@ resource "aws_apigatewayv2_api" "api" {
 
 resource "aws_apigatewayv2_integration" "lambda" {
   provider          = aws.assume_role
-  api_id           = aws_apigatewayv2_api.api.id
-  integration_type = "AWS_PROXY"
+  api_id            = aws_apigatewayv2_api.api.id
+  integration_type  = "AWS_PROXY"
 
   integration_uri    = aws_lambda_alias.api_alias_v2.invoke_arn
   integration_method = "POST"
@@ -474,6 +452,7 @@ resource "aws_apigatewayv2_integration" "lambda" {
 
 # Add a catch-all route
 resource "aws_apigatewayv2_route" "any" {
+  provider  = aws.assume_role
   api_id    = aws_apigatewayv2_api.api.id
   route_key = "ANY /{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
@@ -481,6 +460,7 @@ resource "aws_apigatewayv2_route" "any" {
 
 # Add explicit root route
 resource "aws_apigatewayv2_route" "root" {
+  provider  = aws.assume_role
   api_id    = aws_apigatewayv2_api.api.id
   route_key = "GET /"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
@@ -516,6 +496,7 @@ resource "aws_iam_role_policy" "lambda_execution" {
 
 # Add stage configuration
 resource "aws_apigatewayv2_stage" "lambda" {
+  provider = aws.assume_role
   api_id = aws_apigatewayv2_api.api.id
   name   = var.environment
   auto_deploy = true
@@ -555,6 +536,7 @@ resource "aws_apigatewayv2_stage" "lambda" {
 
 # Add CloudWatch log group for API Gateway
 resource "aws_cloudwatch_log_group" "api_gw" {
+  provider          = aws.assume_role
   name              = "/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}"
   retention_in_days = 14
 
@@ -576,12 +558,12 @@ resource "aws_cloudwatch_log_group" "api_gw" {
 
 # Update Lambda permission for API Gateway v2
 resource "aws_lambda_permission" "api_gw" {
+  provider      = aws.assume_role
   statement_id  = "AllowExecutionFromAPIGatewayV2"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.api_v2.function_name
   qualifier     = aws_lambda_alias.api_alias_v2.name
   principal     = "apigateway.amazonaws.com"
-  provider      = aws.assume_role
 
   source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
 }
@@ -600,7 +582,7 @@ resource "aws_apigatewayv2_domain_name" "api" {
 
 # Add API mapping
 resource "aws_apigatewayv2_api_mapping" "api" {
-  provider     = aws.assume_role
+  provider    = aws.assume_role
   api_id      = aws_apigatewayv2_api.api.id
   domain_name = aws_apigatewayv2_domain_name.api.id
   stage       = aws_apigatewayv2_stage.lambda.id
@@ -620,7 +602,31 @@ resource "aws_route53_record" "backend_api" {
   }
 }
 
-# Add missing outputs for API Gateway
+# Outputs
+output "dynamodb_table_name" {
+  value = aws_dynamodb_table.ai_wizard.name
+}
+
+output "lambda_role_arn" {
+  value = aws_iam_role.lambda_exec.arn
+}
+
+output "cloudfront_distribution_domain" {
+  value = aws_cloudfront_distribution.frontend.domain_name
+}
+
+output "website_url" {
+  value = "https://${var.domain_name}"
+}
+
+output "domain_name" {
+  value = var.domain_name
+}
+
+output "api_domain" {
+  value = aws_apigatewayv2_domain_name.api.domain_name
+}
+
 output "api_gateway_url" {
   description = "API Gateway invoke URL"
   value       = aws_apigatewayv2_api.api.api_endpoint
