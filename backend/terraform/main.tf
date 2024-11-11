@@ -668,19 +668,6 @@ resource "aws_apigatewayv2_route" "root" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
-# Lambda permission for API Gateway
-resource "aws_lambda_permission" "api_gateway" {
-  provider      = aws.assume_role
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
-  qualifier     = aws_lambda_alias.api_alias.name  # Important: Use the alias
-  principal     = "apigateway.amazonaws.com"
-
-  # The source ARN should include both the API Gateway and the stage/method
-  source_arn = "${aws_api_gateway_rest_api.ai_wizard.execution_arn}/*/*"
-}
-
 # Also verify the Lambda execution role has necessary permissions
 resource "aws_iam_role_policy" "lambda_execution" {
   provider = aws.assume_role
