@@ -83,7 +83,7 @@ Resources:
               - 'lambda:PublishVersion'
             Resource: 
               - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-*'
-
+              - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-*-v2'
           - Effect: Allow
             Action:
               - 'cloudfront:CreateDistribution'
@@ -125,33 +125,6 @@ Resources:
 
           - Effect: Allow
             Action:
-              - 'apigateway:Create*'
-              - 'apigateway:Delete*'
-              - 'apigateway:Get*'
-              - 'apigateway:Put*'
-              - 'apigateway:Test*'
-              - 'apigateway:Update*'
-              - 'apigateway:TagResource'
-              - 'apigateway:UntagResource'
-              - 'apigateway:PUT'
-              - 'apigateway:POST'
-              - 'apigateway:GET'
-              - 'apigateway:DELETE'
-              - 'apigateway:PATCH'
-              - 'apigateway:OPTIONS'
-              - 'apigateway:HEAD'
-            Resource: 
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apis'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apis/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags/*'
-
-          - Effect: Allow
-            Action:
               - 'iam:CreateRole'
               - 'iam:DeleteRole'
               - 'iam:AttachRolePolicy'
@@ -177,6 +150,7 @@ Resources:
             Resource: 
               - 'arn:aws:iam::*:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway'
               - 'arn:aws:iam::*:role/aws-service-role/ops.apigateway.amazonaws.com/*'
+              - !Sub 'arn:aws:iam::${TrustedAccount}:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway-${S3BucketRegion}-logging'
 
           - Effect: Allow
             Action: 
@@ -207,31 +181,24 @@ Resources:
               - 'apigateway:PATCH'
               - 'apigateway:HEAD'
               - 'apigateway:OPTIONS'
+              - 'apigateway:Create*'
+              - 'apigateway:Delete*'
               - 'apigateway:Get*'
-              - 'apigateway:CreateDomainName'
-              - 'apigateway:DeleteDomainName'
-              - 'apigateway:UpdateDomainName'
-              - 'apigateway:CreateBasePathMapping'
-              - 'apigateway:DeleteBasePathMapping'
-              - 'apigateway:UpdateBasePathMapping'
-              - 'apigateway:UpdateMethodSettings'
+              - 'apigateway:Put*'
+              - 'apigateway:Test*'
+              - 'apigateway:Update*'
+              - 'apigateway:TagResource'
+              - 'apigateway:UntagResource'
             Resource: 
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/domainnames'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/domainnames/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apikeys'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apikeys/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/usageplans'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/usageplans/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apis'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apis/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/account'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/account/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/v2/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/v2/apis/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/v2/stages/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/v2/tags/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/v2/domainnames/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/v2/restapis/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/v2/apikeys/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/v2/usageplans/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/v2/account/*'
 
           - Effect: Allow
             Action:
@@ -265,6 +232,8 @@ Resources:
               - logs:PutLogDelivery
             Resource: 
               - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:*'
+              - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/lambda/ai-wizard-backend-*-v2:*'
+              - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/api_gw/ai-wizard-backend-*:*'
 
   # Create the IAM role
   AIWizardDeploymentRole:
