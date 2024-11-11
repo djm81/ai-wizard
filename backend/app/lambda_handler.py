@@ -21,7 +21,18 @@ def log_request_details(event):
     logger.info(f"Resource Path: {event.get('resource', 'No resource')}")
     logger.info(f"API Gateway ARN: {event.get('requestContext', {}).get('apiId', 'No API ID')}")
     logger.info(f"Stage: {event.get('requestContext', {}).get('stage', 'No stage')}")
-    logger.info(f"Request Headers: {json.dumps(event.get('headers', {}), indent=2)}")
+    
+    # Add specific logging for Authorization header
+    headers = event.get('headers', {})
+    auth_header = headers.get('Authorization', 'No Authorization header')
+    logger.info(f"Authorization Header: {auth_header}")
+    
+    # Log other headers without sensitive info
+    safe_headers = {
+        k: v for k, v in headers.items() 
+        if k.lower() not in ["authorization", "cookie"]
+    }
+    logger.info(f"Request Headers: {json.dumps(safe_headers, indent=2)}")
     logger.info("=====================")
 
 def lambda_handler(event, context):

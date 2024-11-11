@@ -410,6 +410,10 @@ resource "aws_api_gateway_method" "proxy" {
   resource_id   = aws_api_gateway_resource.proxy.id
   http_method   = "ANY"
   authorization = "NONE"
+
+  request_parameters = {
+    "method.request.header.Authorization" = true
+  }
 }
 
 # Update API Gateway Integration
@@ -642,7 +646,9 @@ resource "aws_apigatewayv2_api" "api" {
   cors_configuration {
     allow_origins = ["*"]
     allow_methods = ["*"]
-    allow_headers = ["*"]
+    allow_headers = ["*", "Authorization"]
+    expose_headers = ["*"]
+    max_age = 300
   }
 }
 

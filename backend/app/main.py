@@ -58,6 +58,17 @@ async def root():
     logger.info("Root endpoint accessed")
     return {"message": "Welcome to the AI Wizard API"}
 
+@app.get("/test-auth")
+async def test_auth(request: Request):
+    """Test endpoint to verify authorization header handling"""
+    auth_header = request.headers.get('Authorization', '')
+    logger.info(f"Received Authorization header: {auth_header}")
+    return {
+        "message": "Auth test endpoint",
+        "auth_header": auth_header,
+        "auth_scheme": auth_header.split()[0] if ' ' in auth_header else 'No scheme'
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
