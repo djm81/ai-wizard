@@ -253,8 +253,12 @@ Resources:
               - logs:FilterLogEvents
               - logs:TagLogGroup
               - logs:UntagLogGroup
+              - logs:DeleteLogGroup
             Resource: 
-              - 'arn:aws:logs:*:*:*'
+              - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/lambda/ai-wizard-backend-*'
+              - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/lambda/ai-wizard-backend-*:*'
+              - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/apigateway/*'
+              - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/apigateway/*:*'
   # Create the IAM role
   AIWizardDeploymentRole:
     Type: 'AWS::IAM::Role'

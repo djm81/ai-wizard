@@ -82,6 +82,45 @@ resource "aws_iam_role" "lambda_exec" {
   })
 }
 
+# Add explicit CloudWatch Logs policy for Lambda
+resource "aws_iam_role_policy" "lambda_cloudwatch" {
+  provider = aws.assume_role
+  name     = "lambda-cloudwatch-policy-${var.environment}"
+  role     = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}:*",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}"
+        ]
+      }
+    ]
+  })
+}
+
+# Create CloudWatch Log Group explicitly
+resource "aws_cloudwatch_log_group" "lambda_logs" {
+  provider          = aws.assume_role
+  name              = "/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}"
+  retention_in_days = 14
+
+  tags = merge(local.common_tags, {
+    Name    = "/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+}
+
 # IAM policy for Lambda to access DynamoDB
 resource "aws_iam_role_policy_attachment" "lambda_dynamodb" {
   provider   = aws.assume_role
@@ -329,6 +368,10 @@ resource "aws_lambda_function" "api" {
     # ]
     create_before_destroy = true
   }
+
+  depends_on = [
+    aws_cloudwatch_log_group.lambda_logs
+  ]
 }
 
 # Add Lambda alias for stable deployments
