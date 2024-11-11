@@ -532,6 +532,11 @@ resource "aws_apigatewayv2_stage" "lambda" {
     Name    = "${var.lambda_function_name_prefix}-api-${var.environment}"
     Service = "ai-wizard-backend"
   })
+
+  depends_on = [
+    aws_iam_service_linked_role.apigw,
+    aws_cloudwatch_log_group.api_gw
+  ]
 }
 
 # Add CloudWatch log group for API Gateway
@@ -599,6 +604,21 @@ resource "aws_route53_record" "backend_api" {
     name                   = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].target_domain_name
     zone_id                = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].hosted_zone_id
     evaluate_target_health = false
+  }
+}
+
+# Create service-linked role for API Gateway logging
+resource "aws_iam_service_linked_role" "apigw" {
+  provider           = aws.assume_role
+  aws_service_name   = "ops.apigateway.amazonaws.com"
+  description        = "Service-linked role for API Gateway"
+
+  # Custom suffix is optional
+  custom_suffix      = "${var.environment}-logging"
+
+  # Prevent destroying this role as it might be used by other resources
+  lifecycle {
+    prevent_destroy = true
   }
 }
 

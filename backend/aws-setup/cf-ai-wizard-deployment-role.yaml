@@ -170,6 +170,15 @@ Resources:
               - !Sub 'arn:aws:iam::${TrustedAccount}:role/api-gateway-cloudwatch-*'
 
           - Effect: Allow
+            Action:
+              - iam:CreateServiceLinkedRole
+              - iam:GetRole
+              - iam:DeleteServiceLinkedRole
+            Resource: 
+              - 'arn:aws:iam::*:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway'
+              - 'arn:aws:iam::*:role/aws-service-role/ops.apigateway.amazonaws.com/*'
+
+          - Effect: Allow
             Action: 
               - 'sts:AssumeRole'
               - 'sts:TagSession'
@@ -236,11 +245,6 @@ Resources:
               - 'events:RemoveTargets'
             Resource: 
               - !Sub 'arn:aws:events:${S3BucketRegion}:${TrustedAccount}:rule/*'
-
-          - Effect: Allow
-            Action:
-              - iam:CreateServiceLinkedRole
-            Resource: 'arn:aws:iam::*:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway'
                                       
           - Effect: Allow
             Action:
@@ -260,13 +264,8 @@ Resources:
               - logs:DeleteLogDelivery
               - logs:PutLogDelivery
             Resource: 
-              # Allow describing log groups at account level
               - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:*'
-              # Specific permissions for Lambda and API Gateway log groups
-              # - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/lambda/ai-wizard-backend-*'
-              # - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/lambda/ai-wizard-backend-*:*'
-              # - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/apigateway/*'
-              # - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/apigateway/*:*'
+
   # Create the IAM role
   AIWizardDeploymentRole:
     Type: 'AWS::IAM::Role'

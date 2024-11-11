@@ -137,9 +137,8 @@ jobs:
       id: terraform_plan_cloudwatch
       run: |
         terraform plan \
-          -target=aws_iam_role.api_gateway_cloudwatch \
-          -target=aws_iam_role_policy.api_gateway_cloudwatch \
-          -target=aws_api_gateway_account.main \
+          -target=aws_iam_service_linked_role.apigw \
+          -target=aws_cloudwatch_log_group.api_gw \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
