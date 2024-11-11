@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
     OPENAI_API_KEY: SecretStr | None = None
 
+    # Logging configuration
+    LOG_LEVEL: str = "INFO"
+    DEBUG: bool = False
+
     model_config = SettingsConfigDict(
         # Only use env_file in local development
         env_file=None if IS_LAMBDA else env_file,
