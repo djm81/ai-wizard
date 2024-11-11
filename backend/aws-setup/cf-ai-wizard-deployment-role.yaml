@@ -247,18 +247,23 @@ Resources:
               - logs:CreateLogGroup
               - logs:CreateLogStream
               - logs:PutLogEvents
-              - logs:DescribeLogGroups
-              - logs:DescribeLogStreams
-              - logs:GetLogEvents
+              - logs:Describe*
+              - logs:Get*
+              - logs:List*
               - logs:FilterLogEvents
               - logs:TagLogGroup
               - logs:UntagLogGroup
               - logs:DeleteLogGroup
+              - logs:PutRetentionPolicy
+              - logs:DeleteRetentionPolicy
             Resource: 
-              - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/lambda/ai-wizard-backend-*'
-              - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/lambda/ai-wizard-backend-*:*'
-              - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/apigateway/*'
-              - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/apigateway/*:*'
+              # Allow describing log groups at account level
+              - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:*'
+              # Specific permissions for Lambda and API Gateway log groups
+              # - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/lambda/ai-wizard-backend-*'
+              # - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/lambda/ai-wizard-backend-*:*'
+              # - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/apigateway/*'
+              # - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/apigateway/*:*'
   # Create the IAM role
   AIWizardDeploymentRole:
     Type: 'AWS::IAM::Role'

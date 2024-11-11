@@ -30,6 +30,7 @@ build/
 *.sublime-project
 *.sublime-workspace
 *.local
+*.local.sh
 
 # OS generated files
 .DS_Store
@@ -57,9 +58,6 @@ terraform.tfstate.backup
 .terraform/
 .terraform.lock.hcl
 */terraform/tfplan*
-
-# Zappa
-*/zappa_settings.json
 
 # Lambda
 lambda_function.zip
