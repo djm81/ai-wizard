@@ -333,9 +333,9 @@ output "website_url" {
 }
 
 # Lambda Function
-resource "aws_lambda_function" "api" {
+resource "aws_lambda_function" "api_v2" {
   filename         = "${path.module}/lambda/lambda_package.zip"
-  function_name    = "${var.lambda_function_name_prefix}-${var.environment}"
+  function_name    = "${var.lambda_function_name_prefix}-${var.environment}-v2"
   role            = aws_iam_role.lambda_exec.arn
   handler         = "app.lambda_handler.mangum_handler"
   runtime         = "python3.12"
@@ -351,7 +351,7 @@ resource "aws_lambda_function" "api" {
   }
 
   tags = merge(local.common_tags, {
-    Name    = "${var.lambda_function_name_prefix}-${var.environment}"
+    Name    = "${var.lambda_function_name_prefix}-${var.environment}-v2"
     Service = "ai-wizard-backend"
   })
 
@@ -373,11 +373,11 @@ resource "aws_lambda_function" "api" {
 }
 
 # Add Lambda alias for stable deployments
-resource "aws_lambda_alias" "api_alias" {
-  name             = var.environment
-  description      = "Alias for ${var.environment} environment"
-  function_name    = aws_lambda_function.api.function_name
-  function_version = aws_lambda_function.api.version
+resource "aws_lambda_alias" "api_alias_v2" {
+  name             = "${var.environment}-v2"
+  description      = "Alias for ${var.environment} environment (v2)"
+  function_name    = aws_lambda_function.api_v2.function_name
+  function_version = aws_lambda_function.api_v2.version
 
   lifecycle {
     create_before_destroy = true
@@ -468,7 +468,7 @@ resource "aws_apigatewayv2_integration" "lambda" {
   api_id           = aws_apigatewayv2_api.api.id
   integration_type = "AWS_PROXY"
 
-  integration_uri    = aws_lambda_alias.api_alias.invoke_arn
+  integration_uri    = aws_lambda_alias.api_alias_v2.invoke_arn
   integration_method = "POST"
 }
 
@@ -507,7 +507,7 @@ resource "aws_iam_role_policy" "lambda_execution" {
         ]
         Resource = [
           "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}:*",
-          "${aws_lambda_function.api.arn}:*"
+          "${aws_lambda_function.api_v2.arn}:*"
         ]
       }
     ]
@@ -576,10 +576,10 @@ resource "aws_cloudwatch_log_group" "api_gw" {
 
 # Update Lambda permission for API Gateway v2
 resource "aws_lambda_permission" "api_gw" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGatewayV2"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
-  qualifier     = aws_lambda_alias.api_alias.name
+  function_name = aws_lambda_function.api_v2.function_name
+  qualifier     = aws_lambda_alias.api_alias_v2.name
   principal     = "apigateway.amazonaws.com"
   provider      = aws.assume_role
 
@@ -634,11 +634,11 @@ output "api_gateway_stage_url" {
 # Add missing output for Lambda function
 output "lambda_function_name" {
   description = "Name of the Lambda function"
-  value       = aws_lambda_function.api.function_name
+  value       = aws_lambda_function.api_v2.function_name
 }
 
 output "lambda_function_arn" {
   description = "ARN of the Lambda function"
-  value       = aws_lambda_function.api.arn
+  value       = aws_lambda_function.api_v2.arn
 }
 

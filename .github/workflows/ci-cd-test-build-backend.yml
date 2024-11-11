@@ -276,8 +276,8 @@ jobs:
       id: terraform_plan
       run: |
         terraform plan \
-          -target=aws_lambda_function.api \
-          -target=aws_lambda_alias.api_alias \
+          -target=aws_lambda_function.api_v2 \
+          -target=aws_lambda_alias.api_alias_v2 \
           -target=aws_apigatewayv2_integration.lambda \
           -target=aws_apigatewayv2_domain_name.api \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
