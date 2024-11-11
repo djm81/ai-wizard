@@ -349,7 +349,7 @@ resource "aws_lambda_function" "api" {
   filename         = "${path.module}/lambda/lambda_package.zip"
   function_name    = "${var.lambda_function_name_prefix}-${var.environment}"
   role            = aws_iam_role.lambda_exec.arn
-  handler         = "app.lambda_handler.handler"
+  handler         = "app.lambda_handler.mangum_handler"
   runtime         = "python3.12"
   source_code_hash = var.lambda_source_code_hash
   publish         = true  # Enable versioning
@@ -666,5 +666,42 @@ resource "aws_apigatewayv2_route" "root" {
   api_id    = aws_apigatewayv2_api.api.id
   route_key = "GET /"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+# Lambda permission for API Gateway
+resource "aws_lambda_permission" "api_gateway" {
+  provider      = aws.assume_role
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api.function_name
+  qualifier     = aws_lambda_alias.api_alias.name  # Important: Use the alias
+  principal     = "apigateway.amazonaws.com"
+
+  # The source ARN should include both the API Gateway and the stage/method
+  source_arn = "${aws_api_gateway_rest_api.ai_wizard.execution_arn}/*/*"
+}
+
+# Also verify the Lambda execution role has necessary permissions
+resource "aws_iam_role_policy" "lambda_execution" {
+  provider = aws.assume_role
+  name     = "lambda-execution-policy-${var.environment}"
+  role     = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}:*"
+        ]
+      }
+    ]
+  })
 }
 
