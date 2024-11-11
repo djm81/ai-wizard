@@ -586,28 +586,6 @@ resource "aws_lambda_permission" "api_gw" {
   source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
 }
 
-# Update the integration to use the Lambda alias
-resource "aws_apigatewayv2_integration" "lambda" {
-  api_id = aws_apigatewayv2_api.api.id
-
-  integration_uri    = aws_lambda_alias.api_alias.invoke_arn
-  integration_type   = "AWS_PROXY"
-  integration_method = "POST"
-}
-
-# Routes remain the same but reference the new integration
-resource "aws_apigatewayv2_route" "any" {
-  api_id    = aws_apigatewayv2_api.api.id
-  route_key = "ANY /{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
-
-resource "aws_apigatewayv2_route" "root" {
-  api_id    = aws_apigatewayv2_api.api.id
-  route_key = "GET /"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
-
 # Add HTTP API domain name
 resource "aws_apigatewayv2_domain_name" "api" {
   provider    = aws.assume_role
