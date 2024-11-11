@@ -635,3 +635,36 @@ resource "aws_api_gateway_integration" "root" {
   uri                     = aws_lambda_alias.api_alias.invoke_arn
 }
 
+resource "aws_apigatewayv2_api" "api" {
+  name          = "${var.lambda_function_name_prefix}-${var.environment}"
+  protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = ["*"]
+    allow_methods = ["*"]
+    allow_headers = ["*"]
+  }
+}
+
+resource "aws_apigatewayv2_integration" "lambda" {
+  api_id           = aws_apigatewayv2_api.api.id
+  integration_type = "AWS_PROXY"
+
+  integration_uri    = aws_lambda_function.api.invoke_arn
+  integration_method = "POST"
+}
+
+# Add a catch-all route
+resource "aws_apigatewayv2_route" "any" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "ANY /{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+# Add explicit root route
+resource "aws_apigatewayv2_route" "root" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "GET /"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+

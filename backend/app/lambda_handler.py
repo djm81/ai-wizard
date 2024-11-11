@@ -39,6 +39,7 @@ def lambda_handler(event: dict, context: object) -> dict:
     AWS Lambda handler function that wraps the FastAPI application.
     Uses Mangum to translate between AWS Lambda events and ASGI.
     """
+    logger.info("Raw event received: %s", json.dumps(event, indent=2))
     logger.info("Lambda function invoked")
     logger.info("Function name: %s", context.function_name)
     logger.info("Request ID: %s", context.aws_request_id)
