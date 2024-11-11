@@ -221,6 +221,11 @@ jobs:
     - name: Terraform Apply CloudWatch Role
       id: terraform_apply_cloudwatch
       run: |
+        # First try to import existing log group if it exists
+        terraform import \
+          aws_cloudwatch_log_group.lambda_logs \
+          "/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}" || true
+        
         terraform apply -auto-approve tfplan-cloudwatch-${{ env.ENVIRONMENT }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 

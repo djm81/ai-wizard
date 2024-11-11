@@ -109,7 +109,7 @@ resource "aws_iam_role_policy" "lambda_cloudwatch" {
   })
 }
 
-# Create CloudWatch Log Group explicitly
+# Create or import CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "lambda_logs" {
   provider          = aws.assume_role
   name              = "/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}"
@@ -119,6 +119,16 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
     Name    = "/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}"
     Service = "ai-wizard-backend"
   })
+
+  lifecycle {
+    prevent_destroy = false
+    ignore_changes = [
+      tags,
+      name,
+      # Also ignore retention policy changes to prevent conflicts
+      retention_in_days
+    ]
+  }
 }
 
 # IAM policy for Lambda to access DynamoDB
