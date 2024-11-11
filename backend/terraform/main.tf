@@ -332,18 +332,6 @@ output "website_url" {
   value = "https://${var.domain_name}"
 }
 
-# API Gateway
-resource "aws_api_gateway_rest_api" "ai_wizard" {
-  provider    = aws.assume_role
-  name        = "ai-wizard-backend-api-${var.environment}"
-  description = "AI Wizard Backend API (${var.environment})"
-
-  tags = merge(local.common_tags, {
-    Name = "ai-wizard-backend-api-${var.environment}"
-    Service = "ai-wizard-backend"
-  })
-}
-
 # Lambda Function
 resource "aws_lambda_function" "api" {
   filename         = "${path.module}/lambda/lambda_package.zip"
@@ -396,69 +384,6 @@ resource "aws_lambda_alias" "api_alias" {
   }
 }
 
-# API Gateway Integration
-resource "aws_api_gateway_resource" "proxy" {
-  provider    = aws.assume_role
-  rest_api_id = aws_api_gateway_rest_api.ai_wizard.id
-  parent_id   = aws_api_gateway_rest_api.ai_wizard.root_resource_id
-  path_part   = "{proxy+}"
-}
-
-resource "aws_api_gateway_method" "proxy" {
-  provider      = aws.assume_role
-  rest_api_id   = aws_api_gateway_rest_api.ai_wizard.id
-  resource_id   = aws_api_gateway_resource.proxy.id
-  http_method   = "ANY"
-  authorization = "NONE"
-
-  request_parameters = {
-    "method.request.header.Authorization" = true
-  }
-}
-
-# Update API Gateway Integration
-resource "aws_api_gateway_integration" "backend_lambda" {
-  provider                = aws.assume_role
-  rest_api_id             = aws_api_gateway_rest_api.ai_wizard.id
-  resource_id             = aws_api_gateway_method.proxy.resource_id
-  http_method             = aws_api_gateway_method.proxy.http_method
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_alias.api_alias.invoke_arn
-}
-
-# Update Lambda permission
-resource "aws_lambda_permission" "backend_apigw" {
-  provider      = aws.assume_role
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
-  qualifier     = aws_lambda_alias.api_alias.name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.ai_wizard.execution_arn}/*/*"
-}
-
-# Update API Gateway Deployment dependency
-resource "aws_api_gateway_deployment" "ai_wizard" {
-  provider  = aws.assume_role
-  depends_on = [
-    aws_api_gateway_integration.backend_lambda,
-    aws_api_gateway_integration.root
-  ]
-
-  rest_api_id = aws_api_gateway_rest_api.ai_wizard.id
-  stage_name  = var.environment
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Output the API Gateway URL
-output "api_gateway_url" {
-  value = aws_api_gateway_deployment.ai_wizard.invoke_url
-}
-
 # API Gateway Custom Domain Certificate (in the same region as API Gateway)
 resource "aws_acm_certificate" "backend_api" {
   provider          = aws.assume_role
@@ -501,142 +426,12 @@ resource "aws_acm_certificate_validation" "backend_api" {
   validation_record_fqdns = [for record in aws_route53_record.backend_api_cert_validation : record.fqdn]
 }
 
-# API Gateway Custom Domain
-resource "aws_api_gateway_domain_name" "backend_api_domain" {
-  provider                 = aws.assume_role
-  domain_name             = "api.${var.domain_name}"
-  regional_certificate_arn = aws_acm_certificate.backend_api.arn
-  security_policy         = "TLS_1_2"
-  endpoint_configuration {
-    types = ["REGIONAL"]
-  }
-
-  tags = merge(local.common_tags, {
-    Name    = "ai-wizard-backend-api-domain-${var.environment}"
-    Service = "ai-wizard-backend"
-  })
-}
-
-# API Gateway Base Path Mapping
-resource "aws_api_gateway_base_path_mapping" "backend_api" {
-  provider    = aws.assume_role
-  api_id      = aws_api_gateway_rest_api.ai_wizard.id
-  stage_name  = aws_api_gateway_deployment.ai_wizard.stage_name
-  domain_name = aws_api_gateway_domain_name.backend_api_domain.domain_name
-}
-
-# Route 53 record for API Gateway custom domain
-resource "aws_route53_record" "backend_api" {
-  provider = aws.assume_role
-  name     = aws_api_gateway_domain_name.backend_api_domain.domain_name
-  type     = "A"
-  zone_id  = var.route53_hosted_zone_id
-
-  alias {
-    evaluate_target_health = true
-    name                   = aws_api_gateway_domain_name.backend_api_domain.regional_domain_name
-    zone_id                = aws_api_gateway_domain_name.backend_api_domain.regional_zone_id
-  }
-}
-
-# Update API Gateway settings to enforce HTTPS
-resource "aws_api_gateway_method_settings" "all" {
-  provider    = aws.assume_role
-  rest_api_id = aws_api_gateway_rest_api.ai_wizard.id
-  stage_name  = aws_api_gateway_deployment.ai_wizard.stage_name
-  method_path = "*/*"
-
-  settings {
-    metrics_enabled        = true
-    logging_level         = "INFO"
-    data_trace_enabled    = true
-    throttling_burst_limit = 5000
-    throttling_rate_limit  = 10000
-  }
-}
-
-# Create IAM role for API Gateway CloudWatch logging
-resource "aws_iam_role" "api_gateway_cloudwatch" {
-  provider = aws.assume_role
-  name     = "api-gateway-cloudwatch-${var.environment}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "apigateway.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = merge(local.common_tags, {
-    Name    = "api-gateway-cloudwatch-role-${var.environment}"
-    Service = "ai-wizard-backend"
-  })
-}
-
-# Attach CloudWatch policy to the IAM role
-resource "aws_iam_role_policy" "api_gateway_cloudwatch" {
-  provider = aws.assume_role
-  name     = "api-gateway-cloudwatch-policy-${var.environment}"
-  role     = aws_iam_role.api_gateway_cloudwatch.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams",
-          "logs:PutLogEvents",
-          "logs:GetLogEvents",
-          "logs:FilterLogEvents"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-# Set up API Gateway account settings for CloudWatch
-resource "aws_api_gateway_account" "main" {
-  provider         = aws.assume_role
-  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
-}
-
 output "domain_name" {
   value = var.domain_name
 }
 
 output "api_domain" {
-  value = aws_api_gateway_domain_name.backend_api_domain.domain_name
-}
-
-# Add root method
-resource "aws_api_gateway_method" "root" {
-  provider      = aws.assume_role
-  rest_api_id   = aws_api_gateway_rest_api.ai_wizard.id
-  resource_id   = aws_api_gateway_rest_api.ai_wizard.root_resource_id
-  http_method   = "ANY"
-  authorization = "NONE"
-}
-
-# Add root integration
-resource "aws_api_gateway_integration" "root" {
-  provider                = aws.assume_role
-  rest_api_id             = aws_api_gateway_rest_api.ai_wizard.id
-  resource_id             = aws_api_gateway_rest_api.ai_wizard.root_resource_id
-  http_method             = aws_api_gateway_method.root.http_method
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_alias.api_alias.invoke_arn
+  value = aws_apigatewayv2_domain_name.api.domain_name
 }
 
 resource "aws_apigatewayv2_api" "api" {
@@ -644,19 +439,36 @@ resource "aws_apigatewayv2_api" "api" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_origins = ["*"]
-    allow_methods = ["*"]
-    allow_headers = ["*", "Authorization"]
-    expose_headers = ["*"]
+    allow_origins = [var.domain_name != "" ? "https://${var.domain_name}" : "*"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
+    allow_headers = [
+      "Content-Type",
+      "Authorization",
+      "X-Amz-Date",
+      "X-Api-Key",
+      "X-Amz-Security-Token",
+      "X-Requested-With"
+    ]
+    expose_headers = [
+      "Content-Type",
+      "Authorization"
+    ]
     max_age = 300
+    allow_credentials = true
   }
+
+  tags = merge(local.common_tags, {
+    Name    = "${var.lambda_function_name_prefix}-api-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
 }
 
 resource "aws_apigatewayv2_integration" "lambda" {
+  provider          = aws.assume_role
   api_id           = aws_apigatewayv2_api.api.id
   integration_type = "AWS_PROXY"
 
-  integration_uri    = aws_lambda_function.api.invoke_arn
+  integration_uri    = aws_lambda_alias.api_alias.invoke_arn
   integration_method = "POST"
 }
 
@@ -688,13 +500,167 @@ resource "aws_iam_role_policy" "lambda_execution" {
         Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
-          "logs:PutLogEvents"
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "lambda:InvokeFunction"
         ]
         Resource = [
-          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}:*"
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}:*",
+          "${aws_lambda_function.api.arn}:*"
         ]
       }
     ]
   })
+}
+
+# Add stage configuration
+resource "aws_apigatewayv2_stage" "lambda" {
+  api_id = aws_apigatewayv2_api.api.id
+  name   = var.environment
+  auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gw.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip            = "$context.identity.sourceIp"
+      requestTime   = "$context.requestTime"
+      httpMethod    = "$context.httpMethod"
+      routeKey      = "$context.routeKey"
+      status        = "$context.status"
+      protocol      = "$context.protocol"
+      responseLength = "$context.responseLength"
+      path          = "$context.path"
+      authorization = "$context.authorizer.error"
+    })
+  }
+
+  default_route_settings {
+    detailed_metrics_enabled = true
+    throttling_burst_limit  = 100
+    throttling_rate_limit   = 50
+  }
+
+  # Add stage variables
+  stage_variables = {
+    lambdaAlias = var.environment
+  }
+
+  tags = merge(local.common_tags, {
+    Name    = "${var.lambda_function_name_prefix}-api-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+}
+
+# Add CloudWatch log group for API Gateway
+resource "aws_cloudwatch_log_group" "api_gw" {
+  name              = "/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}"
+  retention_in_days = 14
+
+  tags = merge(local.common_tags, {
+    Name    = "/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+
+  lifecycle {
+    prevent_destroy = false
+    ignore_changes = [
+      tags,
+      name,
+      # Also ignore retention policy changes to prevent conflicts
+      retention_in_days
+    ]
+  }
+}
+
+# Update Lambda permission for API Gateway v2
+resource "aws_lambda_permission" "api_gw" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api.function_name
+  qualifier     = aws_lambda_alias.api_alias.name
+  principal     = "apigateway.amazonaws.com"
+  provider      = aws.assume_role
+
+  source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
+}
+
+# Update the integration to use the Lambda alias
+resource "aws_apigatewayv2_integration" "lambda" {
+  api_id = aws_apigatewayv2_api.api.id
+
+  integration_uri    = aws_lambda_alias.api_alias.invoke_arn
+  integration_type   = "AWS_PROXY"
+  integration_method = "POST"
+}
+
+# Routes remain the same but reference the new integration
+resource "aws_apigatewayv2_route" "any" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "ANY /{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_route" "root" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "GET /"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+# Add HTTP API domain name
+resource "aws_apigatewayv2_domain_name" "api" {
+  provider    = aws.assume_role
+  domain_name = "api.${var.domain_name}"
+
+  domain_name_configuration {
+    certificate_arn = aws_acm_certificate.backend_api.arn
+    endpoint_type   = "REGIONAL"
+    security_policy = "TLS_1_2"
+  }
+}
+
+# Add API mapping
+resource "aws_apigatewayv2_api_mapping" "api" {
+  provider     = aws.assume_role
+  api_id      = aws_apigatewayv2_api.api.id
+  domain_name = aws_apigatewayv2_domain_name.api.id
+  stage       = aws_apigatewayv2_stage.lambda.id
+}
+
+# Update Route53 record for API
+resource "aws_route53_record" "backend_api" {
+  provider = aws.assume_role
+  name     = aws_apigatewayv2_domain_name.api.domain_name
+  type     = "A"
+  zone_id  = var.route53_hosted_zone_id
+
+  alias {
+    name                   = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].target_domain_name
+    zone_id                = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+# Add missing outputs for API Gateway
+output "api_gateway_url" {
+  description = "API Gateway invoke URL"
+  value       = aws_apigatewayv2_api.api.api_endpoint
+}
+
+output "api_gateway_stage_url" {
+  description = "API Gateway stage invoke URL"
+  value       = "${aws_apigatewayv2_api.api.api_endpoint}/${var.environment}"
+}
+
+# Add missing output for Lambda function
+output "lambda_function_name" {
+  description = "Name of the Lambda function"
+  value       = aws_lambda_function.api.function_name
+}
+
+output "lambda_function_arn" {
+  description = "ARN of the Lambda function"
+  value       = aws_lambda_function.api.arn
 }
 
