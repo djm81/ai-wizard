@@ -256,6 +256,9 @@ Resources:
               - logs:DeleteLogGroup
               - logs:PutRetentionPolicy
               - logs:DeleteRetentionPolicy
+              - logs:CreateLogDelivery
+              - logs:DeleteLogDelivery
+              - logs:PutLogDelivery
             Resource: 
               # Allow describing log groups at account level
               - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:*'
