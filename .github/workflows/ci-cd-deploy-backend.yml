@@ -128,7 +128,7 @@ jobs:
           -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
           -var="environment=${{ env.ENVIRONMENT }}" \
-          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }} \
+          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
           aws_cloudwatch_log_group.lambda_logs \
           "/aws/lambda/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}-${{ env.ENVIRONMENT }}" || true
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
