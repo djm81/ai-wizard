@@ -2,6 +2,7 @@ import json
 import logging
 from mangum import Mangum
 from app.main import app
+import os
 
 # Configure logging with more detailed format
 logging.basicConfig(
@@ -10,8 +11,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 
+# Ensure environment variables are set
+os.environ.setdefault('STAGE', 'dev')
+os.environ.setdefault('ALLOWED_ORIGINS', '*')
+
 # Create Mangum handler for AWS Lambda
-mangum_handler = Mangum(app)
+mangum_handler = Mangum(app, lifespan="off")  # Disable lifespan events
 
 def log_request_details(event):
     """Helper function to log detailed request information"""
@@ -42,17 +47,14 @@ def lambda_handler(event, context):
     """
     logger.info("Lambda function invoked")
     log_request_details(event)
-    logger.info(f"Full Event: {json.dumps(event, indent=2)}")
-    logger.info(f"Context: {json.dumps(context.__dict__, indent=2)}")
 
     try:
-        # We use mangum_handler inside this function
         response = mangum_handler(event, context)
         logger.info(f"Response: {json.dumps(response, indent=2)}")
         return response
 
     except Exception as e:
-        logger.error(f"Error handling request: {str(e)}", exc_info=True)  # Added exc_info for stack trace
+        logger.error(f"Error handling request: {str(e)}", exc_info=True)
         return {
             "statusCode": 500,
             "body": json.dumps({"error": "Internal Server Error", "details": str(e)}),

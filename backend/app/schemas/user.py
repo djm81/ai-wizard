@@ -1,13 +1,25 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
 from typing import Optional, Dict, Any
 from datetime import datetime
+import re
+
+# Email validation regex pattern
+EMAIL_PATTERN = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 
 class UserBase(BaseModel):
     """Base schema for User data"""
-    email: EmailStr
+    email: str
     full_name: str
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        """Custom email validation without relying on email-validator package"""
+        if not re.match(EMAIL_PATTERN, v):
+            raise ValueError('Invalid email format')
+        return v.lower()
 
 class UserCreate(UserBase):
     """Schema for creating a new user"""
