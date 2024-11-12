@@ -613,9 +613,6 @@ resource "aws_iam_service_linked_role" "apigw" {
   aws_service_name   = "ops.apigateway.amazonaws.com"
   description        = "Service-linked role for API Gateway"
 
-  # Custom suffix is optional
-  custom_suffix      = "${var.environment}-logging"
-
   # Prevent destroying this role as it might be used by other resources
   lifecycle {
     prevent_destroy = true
