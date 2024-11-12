@@ -160,7 +160,7 @@ jobs:
           -var="environment=${{ env.ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
           aws_iam_service_linked_role.apigw \
-          "AWSServiceRoleForAPIGateway"
+          "arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway" || echo "Import failed, but continuing..."
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Plan CloudWatch Role

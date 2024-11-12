@@ -653,8 +653,10 @@ resource "aws_iam_service_linked_role" "apigw" {
       description,
       tags,
       custom_suffix,
-      # Ignore the entire resource if it exists
-      all
+      id,
+      unique_id,
+      path,
+      arn
     ]
     create_before_destroy = false
   }

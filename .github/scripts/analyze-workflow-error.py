@@ -13,19 +13,30 @@ def get_latest_run_logs():
         )
         run_id = json.loads(result.stdout)[0]['databaseId']
 
+        # Get name of the workflow
+        result = subprocess.run(
+            ['gh', 'run', 'view', str(run_id), '--json', 'workflowName'],
+            capture_output=True, text=True
+        )
+        wf_name = json.loads(result.stdout)['workflowName']
+
         # Get run logs
         result = subprocess.run(
             ['gh', 'run', 'view', str(run_id), '--log'],
             capture_output=True, text=True
         )
-        return result.stdout
+        
+        return {
+            "workflow_name": wf_name,
+            "logs": result.stdout
+        }
     except Exception as e:
         print(f"Error getting logs: {e}")
         return None
 
-def analyze_error(logs):
+def analyze_error(logs_data):
     """Analyze workflow logs for common errors"""
-    if not logs:
+    if not logs_data:
         return
 
     error_patterns = {
@@ -43,20 +54,21 @@ def analyze_error(logs):
         }
     }
 
+    logs = logs_data["logs"].split('\n')
+    
     for error_type, config in error_patterns.items():
-        if config["pattern"] in logs:
-            print(f"\nFound {error_type} error!")
-            print(f"Suggested solution: {config['solution']}")
-            print("Relevant log section:")
-            # Print the line containing the error and surrounding context
-            lines = logs.split('\n')
-            for i, line in enumerate(lines):
-                if config["pattern"] in line:
-                    context_start = max(0, i-2)
-                    context_end = min(len(lines), i+3)
-                    print('\n'.join(lines[context_start:context_end]))
+        print(f"Checking for {error_type} error in github workflow '{logs_data['workflow_name']}' logs...")
+        for i, line in enumerate(logs):
+            if config["pattern"] in line:
+                print(f"\nFound {error_type} error!")
+                print(f"Suggested solution: {config['solution']}")
+                print("Relevant log section:")
+                context_start = max(0, i-2)
+                context_end = min(len(logs), i+3)
+                print('\n'.join(logs[context_start:context_end]))
+                break
 
 if __name__ == "__main__":
-    logs = get_latest_run_logs()
-    if logs:
-        analyze_error(logs)
+    logs_data = get_latest_run_logs()
+    if logs_data:
+        analyze_error(logs_data)
