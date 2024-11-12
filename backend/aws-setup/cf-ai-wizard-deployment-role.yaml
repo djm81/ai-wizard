@@ -147,6 +147,8 @@ Resources:
               - iam:CreateServiceLinkedRole
               - iam:GetRole
               - iam:DeleteServiceLinkedRole
+              - iam:PutRolePolicy
+              - iam:DeleteRolePolicy
             Resource: 
               - 'arn:aws:iam::*:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway'
               - 'arn:aws:iam::*:role/aws-service-role/ops.apigateway.amazonaws.com/*'

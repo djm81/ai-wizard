@@ -581,6 +581,7 @@ resource "aws_apigatewayv2_stage" "lambda" {
 
   depends_on = [
     aws_iam_service_linked_role.apigw,
+    aws_iam_role_policy.api_gateway_cloudwatch_logs,
     aws_cloudwatch_log_group.api_gw
   ]
 }
@@ -680,6 +681,35 @@ resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
   provider   = aws.assume_role
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+# Add explicit CloudWatch logging policy for API Gateway
+resource "aws_iam_role_policy" "api_gateway_cloudwatch_logs" {
+  provider = aws.assume_role
+  name     = "api-gateway-cloudwatch-logs-${var.environment}"
+  role     = aws_iam_service_linked_role.apigw.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:PutLogEvents",
+          "logs:GetLogEvents",
+          "logs:FilterLogEvents"
+        ]
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}:*",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}"
+        ]
+      }
+    ]
+  })
 }
 
 # Outputs
