@@ -35,4 +35,5 @@ B9. Ensure the github backend pipeline in .github/workflows is updated according
 # Git version control specific rules (always apply after all other rules)
 V1. If .uncommitted_changes file does not exist in project root, create it.
 V2. Add a brief summary of the changes to the end of ".uncommitted_changes" file in project root, so we know what was changed.
-V3. Add a note in the conversation, once the ".uncommitted_changes" file has been updated, so we know it has been applied
+V3. Ensure that the first line of the ".uncommitted_changes" file is the title for the main changes from the file as it shows up in the commit message and github actions runs, etc. Update it to match the changes.
+V4. Add a note in the conversation, once the ".uncommitted_changes" file has been updated, so we know it has been applied

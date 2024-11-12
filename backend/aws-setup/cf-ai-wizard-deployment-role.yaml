@@ -244,6 +244,11 @@ Resources:
               - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/lambda/ai-wizard-backend-*-v2:*'
               - !Sub 'arn:aws:logs:${S3BucketRegion}:${TrustedAccount}:log-group:/aws/api_gw/ai-wizard-backend-*:*'
 
+          - Effect: Allow
+            Action:
+              - logs:CreateLogDelivery
+            Resource: '*'
+
   # Create the IAM role
   AIWizardDeploymentRole:
     Type: 'AWS::IAM::Role'
