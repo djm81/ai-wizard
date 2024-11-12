@@ -1,24 +1,28 @@
-Rules for code generation, testing and review:
+Rules for code generation, testing, review and version control:
 
 # General rules (apply always)
-1. Analyze the most likely root cause and source for each error step by step
-2. Propose fix, if not exactly clear, ask what is the expected behavior here
-3. Ensure, that we have no deprecated code, missing docstrings, unused imports, variables, parameters etc. which will lead to warnings or errors
-4. Fix all linting errors, where they occur, after you proposed updated code
-5. Finish every conversation with "AI Rules Applied", so I know you applied the rules.
-6. When working with resources, such as terraform, where tags are used, use the following naming convention: "Service" and "Name"
+G1. Analyze the most likely root cause and source for each error step by step
+G2. Propose fix, if not exactly clear, ask what is the expected behavior here
+G3. Ensure, that we have no deprecated code, missing docstrings, unused imports, variables, parameters etc. which will lead to warnings or errors
+G4. Fix all linting errors, where they occur, after you proposed updated code
+G5. Finish every conversation with "AI Rules Applied", so I know you applied the rules.
+G6. When working with resources, such as terraform, where tags are used, use the following naming convention: "Service" and "Name"
 
 # Frontend rules (apply when working with frontend code)
-1. We use firebase auth and expect a valid token, so eventually we need to mock some api calls if they would be fired towards firebase or google auth for token validation
-2. In frontend for testing we use "Bearer mock-token" as test-token, where "mock-token" is the value of the Bearer token, so we could use this validation value, if required
+F1. We use firebase auth and expect a valid token, so eventually we need to mock some api calls if they would be fired towards firebase or google auth for token validation
+F2. In frontend for testing we use "Bearer mock-token" as test-token, where "mock-token" is the value of the Bearer token, so we could use this validation value, if required
 
 # Backend rules (apply when working with backend code)
-1. Ensure that our api incl. authentication (and mocks) has matching values and endpoints as well as their basic implementation at least.
-2. We use pytest, so tests should be created using pytest fixtures and syntax.
-3. We use FastAPI, so we need to follow its patterns and syntax.
-4. We use SQLAlchemy, so we need to follow its patterns and syntax.
-5. We use Pytest, so we need to follow its patterns and syntax.
-6. Expect the api token from frontend to be async (javascript/typescript) and use "Bearer mock-token" as test-token, where "mock-token" is the value of the Bearer token, so we could use this validation value, if required
-7. As we use Firebase Auth, we need to mock the auth validation, so we need to mock the firebase auth api and admin sdk api calls, if used in our api
-8. In test mode, we have no real database, so we need to use the in-memory database, which is already set up in conftest.py
+B1. Ensure that our api incl. authentication (and mocks) has matching values and endpoints as well as their basic implementation at least.
+B2. We use pytest, so tests should be created using pytest fixtures and syntax.
+B3. We use FastAPI, so we need to follow its patterns and syntax.
+B4. We use SQLAlchemy, so we need to follow its patterns and syntax.
+B5. We use Pytest, so we need to follow its patterns and syntax.
+B6. Expect the api token from frontend to be async (javascript/typescript) and use "Bearer mock-token" as test-token, where "mock-token" is the value of the Bearer token, so we could use this validation value, if required
+B7. As we use Firebase Auth, we need to mock the auth validation, so we need to mock the firebase auth api and admin sdk api calls, if used in our api
+B8. In test mode, we have no real database, so we need to use the in-memory database, which is already set up in conftest.py
 
+# Git version control specific rules (always apply after all other rules)
+V1. Add a brief summary of the changes to the end of ".github/scripts/.uncommitted_changes" file, so we know what was changed.
+V2. If the file does not exist, create it and add the brief summary of the changes from rule 1.
+V3. Add a note in the conversation, once the ".github/scripts/.uncommitted_changes" file has been updated, so we know it has been applied

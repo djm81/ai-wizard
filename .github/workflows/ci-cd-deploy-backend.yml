@@ -133,11 +133,30 @@ jobs:
           "/aws/lambda/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}-${{ env.ENVIRONMENT }}" || true
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
+    - name: Check API Gateway Service Role
+      id: check_apigw_role
+      run: |
+        if aws iam get-role --role-name "AWSServiceRoleForAPIGateway" 2>/dev/null; then
+          echo "API Gateway service role exists, will import"
+          echo "role_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "API Gateway service role does not exist"
+          echo "role_exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Import API Gateway Service Role if exists
+      if: steps.check_apigw_role.outputs.role_exists == 'true'
+      run: |
+        terraform import \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          aws_iam_service_linked_role.apigw arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
     - name: Terraform Plan CloudWatch Role
       id: terraform_plan_cloudwatch
       run: |
         terraform plan \
-          -target=aws_iam_service_linked_role.apigw \
           -target=aws_cloudwatch_log_group.api_gw \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \

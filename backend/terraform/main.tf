@@ -613,9 +613,13 @@ resource "aws_iam_service_linked_role" "apigw" {
   aws_service_name   = "ops.apigateway.amazonaws.com"
   description        = "Service-linked role for API Gateway"
 
-  # Prevent destroying this role as it might be used by other resources
+  # Add a lifecycle block to handle pre-existing role
   lifecycle {
     prevent_destroy = true
+    # Ignore changes to description as it might be set by AWS
+    ignore_changes = [description]
+    # Ignore errors during creation if the role already exists
+    create_before_destroy = true
   }
 }
 
