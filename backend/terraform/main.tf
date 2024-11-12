@@ -581,7 +581,7 @@ resource "aws_apigatewayv2_stage" "lambda" {
 
   depends_on = [
     aws_iam_service_linked_role.apigw,
-    aws_iam_role_policy.api_gateway_cloudwatch_logs,
+    aws_api_gateway_account.main,
     aws_cloudwatch_log_group.api_gw
   ]
 }
@@ -683,12 +683,41 @@ resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
 }
 
-# Add explicit CloudWatch logging policy for API Gateway
-resource "aws_iam_role_policy" "api_gateway_cloudwatch_logs" {
+# Update API Gateway account settings to enable CloudWatch logging
+resource "aws_api_gateway_account" "main" {
   provider = aws.assume_role
-  name     = "api-gateway-cloudwatch-logs-${var.environment}"
-  # Use role name instead of ARN
-  role     = "AWSServiceRoleForAPIGateway"
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
+}
+
+# Create a dedicated role for API Gateway CloudWatch logging
+resource "aws_iam_role" "api_gateway_cloudwatch" {
+  provider = aws.assume_role
+  name     = "api-gateway-cloudwatch-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(local.common_tags, {
+    Name    = "api-gateway-cloudwatch-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+}
+
+# Attach CloudWatch policy to the dedicated role
+resource "aws_iam_role_policy" "api_gateway_cloudwatch" {
+  provider = aws.assume_role
+  name     = "api-gateway-cloudwatch-policy-${var.environment}"
+  role     = aws_iam_role.api_gateway_cloudwatch.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -711,10 +740,6 @@ resource "aws_iam_role_policy" "api_gateway_cloudwatch_logs" {
       }
     ]
   })
-
-  depends_on = [
-    aws_iam_service_linked_role.apigw
-  ]
 }
 
 # Outputs

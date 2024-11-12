@@ -200,6 +200,7 @@ Resources:
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis/*'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apikeys/*'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/usageplans/*'
+              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/account'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/account/*'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/v2/*'
               - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/v2/apis/*'
