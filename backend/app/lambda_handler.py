@@ -10,7 +10,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 
-# Create Mangum handler for AWS Lambda with explicit name
+# Create Mangum handler for AWS Lambda
 mangum_handler = Mangum(app)
 
 def log_request_details(event):
