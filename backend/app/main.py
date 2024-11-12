@@ -1,25 +1,73 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.router import api_router
+from app.api.router import router
 from app.core.config import settings
+import logging
+import time
 
-app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
+# Configure logging
+logger = logging.getLogger(__name__)
 
-# Set up CORS
+app = FastAPI(title="AI Wizard API")
+
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=[settings.ALLOWED_ORIGINS] if settings.ALLOWED_ORIGINS != "*" else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include API router
-app.include_router(api_router, prefix="/api")
+# Add logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log request and response details"""
+    start_time = time.time()
+    
+    # Log request details
+    logger.info(f"Request started: {request.method} {request.url}")
+    logger.debug(f"Headers: {dict(request.headers)}")
+    
+    try:
+        response = await call_next(request)
+        
+        # Calculate request processing time
+        process_time = time.time() - start_time
+        
+        # Log response details
+        logger.info(
+            f"Request completed: {request.method} {request.url} "
+            f"- Status: {response.status_code} "
+            f"- Duration: {process_time:.3f}s"
+        )
+        
+        return response
+    except Exception as e:
+        logger.error(
+            f"Request failed: {request.method} {request.url} "
+            f"- Error: {str(e)}"
+        )
+        raise
+
+# Include routers
+app.include_router(router, prefix="/api")
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the AI Assistant API"}
+    logger.info("Root endpoint accessed")
+    return {"message": "Welcome to the AI Wizard API"}
+
+@app.get("/test-auth")
+async def test_auth(request: Request):
+    """Test endpoint to verify authorization header handling"""
+    auth_header = request.headers.get('Authorization', '')
+    logger.info(f"Received Authorization header: {auth_header}")
+    return {
+        "message": "Auth test endpoint",
+        "auth_header": auth_header,
+        "auth_scheme": auth_header.split()[0] if ' ' in auth_header else 'No scheme'
+    }
 
 if __name__ == "__main__":
     import uvicorn

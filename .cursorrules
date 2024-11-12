@@ -1,0 +1,40 @@
+Rules for code generation, testing, review and version control:
+
+# General rules (apply always)
+G1. Analyze the most likely root cause and source for each error step by step
+G2. Propose fix, if not exactly clear, ask what is the expected behavior here
+G3. Ensure, that we have no deprecated code, missing docstrings, unused imports, variables, parameters etc. which will lead to warnings or errors
+G4. Fix all linting errors, where they occur, after you proposed updated code
+G5. Finish every conversation with "AI Rules Applied", so I know you applied the rules.
+G6. When working with resources, such as terraform, where tags are used, use the following naming convention: "Service" and "Name"
+G7. After proposing changes, review the README.md file in the root folder and ensure, that it is updated accordingly to reflect the changes from a developer perspective when first time setting up the project by local checkout from github and running the pipelines and/or locally setting up a docker container with backend code, if not deploying the code to AWS, so we have all necessary information in one place.
+
+# Terraform rules (applies to .github/backend/terraform and .github/workflows)
+T1. When adding or modyfing terraform code, double check the code, so we do not create any unexpected drift in our infrastructure
+T2. Check for duplicate resources, which would lead to errors
+T3. When creating new resources, add the required tags, so we can find them later, especially the Service and Name tags as required by infracost
+T4. After modifying terraform code, validate the pipelines in .github/workflows folder, to ensure we have all dependencies in place.
+T5. Ensure for all terraform statements in pipelines in.github/workflows folder, that we use the variables from .tfvars file, so we can manage our infrastructure in one place. Also ensure, that all required variables are added to each terraform statement, where applicable, so the pipeline won't wait for user input due to missing variable assignment.
+T6. After modifying terraform code, run "terraform validate" to check for errors and warnings and based on output, improve your code and apply necessary changes.
+
+# Frontend rules (applies to .github/frontend and .github/workflows)
+F1. We use firebase auth and expect a valid token, so eventually we need to mock some api calls if they would be fired towards firebase or google auth for token validation
+F2. In frontend for testing we use "Bearer mock-token" as test-token, where "mock-token" is the value of the Bearer token, so we could use this validation value, if required
+F3. Ensure the github frontend pipeline in .github/workflows is updated accordingly, when frontend code is changed
+
+# Backend rules (applies to .github/backend and .github/workflows)
+B1. Ensure that our api incl. authentication (and mocks) has matching values and endpoints as well as their basic implementation at least.
+B2. We use pytest, so tests should be created using pytest fixtures and syntax.
+B3. We use FastAPI, so we need to follow its patterns and syntax.
+B4. We use SQLAlchemy, so we need to follow its patterns and syntax.
+B5. We use Pytest, so we need to follow its patterns and syntax.
+B6. Expect the api token from frontend to be async (javascript/typescript) and use "Bearer mock-token" as test-token, where "mock-token" is the value of the Bearer token, so we could use this validation value, if required
+B7. As we use Firebase Auth, we need to mock the auth validation, so we need to mock the firebase auth api and admin sdk api calls, if used in our api
+B8. In test mode, we have no real database, so we need to use the in-memory database, which is already set up in conftest.py
+B9. Ensure the github backend pipeline in .github/workflows is updated accordingly, when backend code is changed
+
+# Git version control specific rules (always apply after all other rules)
+V1. If .uncommitted_changes file does not exist in project root, create it.
+V2. Add a brief summary of the changes to the end of ".uncommitted_changes" file in project root, so we know what was changed.
+V3. Ensure that the first line of the ".uncommitted_changes" file is the title for the main changes from the file as it shows up in the commit message and github actions runs, etc. Update it to match the changes.
+V4. Add a note in the conversation, once the ".uncommitted_changes" file has been updated, so we know it has been applied

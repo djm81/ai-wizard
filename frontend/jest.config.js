@@ -1,20 +1,21 @@
-const path = require('path');
-
+/** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+  setupFilesAfterEnv: ['<rootDir>/src/jest.setup.ts'],
   moduleNameMapper: {
     '\\.(css|less|sass|scss)$': 'identity-obj-proxy',
-    '^firebase/auth$': '<rootDir>/src/__mocks__/firebase/auth.ts',
-    '^axios$': 'axios/dist/node/axios.cjs',
-    '^punycode$': path.resolve(__dirname, 'node_modules/punycode/punycode.js'),
+    '^auth/(.*)$': '<rootDir>/src/auth/$1',
+    '^config$': '<rootDir>/src/__mocks__/env',
+    '^axios$': require.resolve('axios')
   },
+  moduleDirectories: ['node_modules', 'src'],
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+    '^.+\\.(ts|tsx)$': ['ts-jest', { 
+      tsconfig: 'tsconfig.jest.json'
+    }]
   },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  transformIgnorePatterns: [
-    '/node_modules/(?!(axios)/)',
-  ],
+  testEnvironmentOptions: {
+    customExportConditions: ['node', 'node-addons']
+  }
 };

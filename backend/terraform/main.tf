@@ -36,21 +36,6 @@ locals {
   }
 }
 
-# S3 bucket for Zappa deployments
-resource "aws_s3_bucket" "zappa_deployments" {
-  provider = aws.assume_role
-  bucket   = "${var.zappa_deployments_bucket_name}-${var.environment}"
-
-  tags = merge(local.common_tags, {
-    Name = "${var.zappa_deployments_bucket_name}-${var.environment}"
-    Service = "ai-wizard-backend"
-  })
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
 # DynamoDB table
 resource "aws_dynamodb_table" "ai_wizard" {
   provider         = aws.assume_role
@@ -75,7 +60,7 @@ resource "aws_dynamodb_table" "ai_wizard" {
   }
 }
 
-# IAM role for Lambda (to be used by Zappa)
+# IAM role for Lambda
 resource "aws_iam_role" "lambda_exec" {
   provider = aws.assume_role
   name     = "ai-wizard-lambda-exec-role-${var.environment}"
@@ -95,6 +80,56 @@ resource "aws_iam_role" "lambda_exec" {
     Name = "ai-wizard-lambda-exec-role-${var.environment}"
     Service = "ai-wizard-backend"
   })
+}
+
+# Add explicit CloudWatch Logs policy for Lambda
+resource "aws_iam_role_policy" "lambda_cloudwatch" {
+  provider = aws.assume_role
+  name     = "lambda-cloudwatch-policy-${var.environment}"
+  role     = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}:*",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}"
+        ]
+      }
+    ]
+  })
+}
+
+# Create or import CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "lambda_logs" {
+  provider          = aws.assume_role
+  name              = "/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}"
+  retention_in_days = 14
+
+  tags = merge(local.common_tags, {
+    Name    = "/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+
+  lifecycle {
+    prevent_destroy = false
+    ignore_changes = [
+      tags,
+      name,
+      retention_in_days,
+      # Add kms_key_id if you're using encryption
+      kms_key_id
+    ]
+  }
 }
 
 # IAM policy for Lambda to access DynamoDB
@@ -141,35 +176,16 @@ resource "aws_s3_bucket_policy" "frontend" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowCloudFrontServicePrincipal"
+        Sid       = "AllowCloudFrontOAI"
         Effect    = "Allow"
         Principal = {
-          Service = "cloudfront.amazonaws.com"
+          AWS = aws_cloudfront_origin_access_identity.frontend.iam_arn
         }
-        Action    = "s3:GetObject"
-        Resource  = "${aws_s3_bucket.frontend.arn}/*"
-        Condition = {
-          StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.frontend.arn
-          }
-        }
+        Action   = "s3:GetObject"
+        Resource = "${aws_s3_bucket.frontend.arn}/*"
       }
     ]
   })
-}
-
-# S3 bucket website configuration
-resource "aws_s3_bucket_website_configuration" "frontend" {
-  provider = aws.assume_role
-  bucket   = aws_s3_bucket.frontend.id
-
-  index_document {
-    suffix = "index.html"
-  }
-
-  error_document {
-    key = "index.html"
-  }
 }
 
 resource "aws_acm_certificate" "frontend" {
@@ -225,7 +241,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   origin {
     domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id   = "S3-${aws_s3_bucket.frontend.id}"
-
+    
     s3_origin_config {
       origin_access_identity = aws_cloudfront_origin_access_identity.frontend.cloudfront_access_identity_path
     }
@@ -272,6 +288,18 @@ resource "aws_cloudfront_distribution" "frontend" {
     Name = "ai-wizard-frontend-cdn-${var.environment}"
     Service = "ai-wizard-frontend"
   })
+
+  custom_error_response {
+    error_code         = 403
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+
+  custom_error_response {
+    error_code         = 404
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
 }
 
 # Route 53 record for frontend
@@ -288,6 +316,415 @@ resource "aws_route53_record" "frontend" {
   }
 }
 
+# Lambda Function
+resource "aws_lambda_function" "api_v2" {
+  provider         = aws.assume_role
+  filename         = "${path.module}/lambda/lambda_package.zip"
+  function_name    = "${var.lambda_function_name_prefix}-${var.environment}-v2"
+  role            = aws_iam_role.lambda_exec.arn
+  handler         = "app.lambda_handler.mangum_handler"
+  runtime         = "python3.12"
+  source_code_hash = var.lambda_source_code_hash
+  publish         = true  # Enable versioning
+
+  environment {
+    variables = {
+      STAGE = var.environment
+      DATABASE_URL = var.database_url
+      ALLOWED_ORIGINS = "https://${var.domain_name}"
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name    = "${var.lambda_function_name_prefix}-${var.environment}-v2"
+    Service = "ai-wizard-backend"
+  })
+
+  lifecycle {
+    # ignore_changes = [
+    #   # Ignore changes to tags, etc
+    #   tags,
+    #   # Don't recreate on code updates
+    #   filename,
+    #   # Allow updates through code hash
+    #   source_code_hash,
+    # ]
+    create_before_destroy = true
+  }
+
+  depends_on = [
+    aws_cloudwatch_log_group.lambda_logs
+  ]
+}
+
+# Add Lambda alias for stable deployments
+resource "aws_lambda_alias" "api_alias_v2" {
+  provider         = aws.assume_role
+  name             = "${var.environment}-v2"
+  description      = "Alias for ${var.environment} environment (v2)"
+  function_name    = aws_lambda_function.api_v2.function_name
+  function_version = aws_lambda_function.api_v2.version
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# API Gateway Custom Domain Certificate (in the same region as API Gateway)
+resource "aws_acm_certificate" "backend_api" {
+  provider          = aws.assume_role
+  domain_name       = "api.${var.domain_name}"
+  validation_method = "DNS"
+
+  tags = merge(local.common_tags, {
+    Name    = "ai-wizard-backend-api-cert-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Route 53 record for API certificate validation
+resource "aws_route53_record" "backend_api_cert_validation" {
+  provider = aws.assume_role
+  for_each = {
+    for dvo in aws_acm_certificate.backend_api.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = var.route53_hosted_zone_id
+}
+
+# Certificate validation
+resource "aws_acm_certificate_validation" "backend_api" {
+  provider                = aws.assume_role
+  certificate_arn         = aws_acm_certificate.backend_api.arn
+  validation_record_fqdns = [for record in aws_route53_record.backend_api_cert_validation : record.fqdn]
+}
+
+resource "aws_apigatewayv2_api" "api" {
+  provider        = aws.assume_role
+  name            = "${var.lambda_function_name_prefix}-${var.environment}"
+  protocol_type   = "HTTP"
+
+  cors_configuration {
+    allow_origins = [var.domain_name != "" ? "https://${var.domain_name}" : "*"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
+    allow_headers = [
+      "Content-Type",
+      "Authorization",
+      "X-Amz-Date",
+      "X-Api-Key",
+      "X-Amz-Security-Token",
+      "X-Requested-With"
+    ]
+    expose_headers = [
+      "Content-Type",
+      "Authorization"
+    ]
+    max_age = 300
+    allow_credentials = true
+  }
+
+  tags = merge(local.common_tags, {
+    Name    = "${var.lambda_function_name_prefix}-api-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+}
+
+resource "aws_apigatewayv2_integration" "lambda" {
+  provider          = aws.assume_role
+  api_id            = aws_apigatewayv2_api.api.id
+  integration_type  = "AWS_PROXY"
+
+  integration_uri    = aws_lambda_alias.api_alias_v2.invoke_arn
+  integration_method = "POST"
+}
+
+# Add a catch-all route
+resource "aws_apigatewayv2_route" "any" {
+  provider  = aws.assume_role
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "ANY /{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+# Add explicit root route
+resource "aws_apigatewayv2_route" "root" {
+  provider  = aws.assume_role
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "GET /"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+# Also verify the Lambda execution role has necessary permissions
+resource "aws_iam_role_policy" "lambda_execution" {
+  provider = aws.assume_role
+  name     = "lambda-execution-policy-${var.environment}"
+  role     = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:CreateLogDelivery",
+          "logs:DeleteLogDelivery",
+          "logs:DescribeLogDelivery",
+          "logs:ListLogDeliveries",
+          "logs:PutResourcePolicy",
+          "logs:UpdateLogDelivery",
+          "lambda:InvokeFunction"
+        ]
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}:*",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}:*",
+          "${aws_lambda_function.api_v2.arn}:*"
+        ]
+      }
+    ]
+  })
+}
+
+# Add IAM policy for API Gateway logging with expanded permissions
+resource "aws_iam_role_policy" "api_gateway_logging" {
+  provider = aws.assume_role
+  name     = "api-gateway-logging-policy-${var.environment}"
+  role     = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogDelivery",
+          "logs:DeleteLogDelivery",
+          "logs:DescribeLogDelivery",
+          "logs:ListLogDeliveries",
+          "logs:PutResourcePolicy",
+          "logs:UpdateLogDelivery",
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:GetLogDelivery",
+          "logs:GetLogRecord",
+          "logs:GetLogGroupFields",
+          "logs:GetQueryResults"
+        ]
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}:*",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:*"
+        ]
+      }
+    ]
+  })
+}
+
+# Add stage configuration
+resource "aws_apigatewayv2_stage" "lambda" {
+  provider = aws.assume_role
+  api_id = aws_apigatewayv2_api.api.id
+  name   = var.environment
+  auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gw.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip            = "$context.identity.sourceIp"
+      requestTime   = "$context.requestTime"
+      httpMethod    = "$context.httpMethod"
+      routeKey      = "$context.routeKey"
+      status        = "$context.status"
+      protocol      = "$context.protocol"
+      responseLength = "$context.responseLength"
+      path          = "$context.path"
+      authorization = "$context.authorizer.error"
+    })
+  }
+
+  default_route_settings {
+    detailed_metrics_enabled = true
+    throttling_burst_limit  = 100
+    throttling_rate_limit   = 50
+  }
+
+  # Add stage variables
+  stage_variables = {
+    lambdaAlias = var.environment
+  }
+
+  tags = merge(local.common_tags, {
+    Name    = "${var.lambda_function_name_prefix}-api-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+
+  depends_on = [
+    aws_iam_service_linked_role.apigw,
+    aws_api_gateway_account.main,
+    aws_cloudwatch_log_group.api_gw
+  ]
+}
+
+# Add CloudWatch log group for API Gateway
+resource "aws_cloudwatch_log_group" "api_gw" {
+  provider          = aws.assume_role
+  name              = "/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}"
+  retention_in_days = 14
+
+  tags = merge(local.common_tags, {
+    Name    = "/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+
+  lifecycle {
+    prevent_destroy = false
+    ignore_changes = [
+      tags,
+      name,
+      retention_in_days,
+      # Add kms_key_id if you're using encryption
+      kms_key_id
+    ]
+  }
+}
+
+# Update Lambda permission for API Gateway v2
+resource "aws_lambda_permission" "api_gw" {
+  provider      = aws.assume_role
+  statement_id  = "AllowExecutionFromAPIGatewayV2"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api_v2.function_name
+  qualifier     = aws_lambda_alias.api_alias_v2.name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
+}
+
+# Add HTTP API domain name
+resource "aws_apigatewayv2_domain_name" "api" {
+  provider    = aws.assume_role
+  domain_name = "api.${var.domain_name}"
+
+  domain_name_configuration {
+    certificate_arn = aws_acm_certificate.backend_api.arn
+    endpoint_type   = "REGIONAL"
+    security_policy = "TLS_1_2"
+  }
+}
+
+# Add API mapping
+resource "aws_apigatewayv2_api_mapping" "api" {
+  provider    = aws.assume_role
+  api_id      = aws_apigatewayv2_api.api.id
+  domain_name = aws_apigatewayv2_domain_name.api.id
+  stage       = aws_apigatewayv2_stage.lambda.id
+}
+
+# Update Route53 record for API
+resource "aws_route53_record" "backend_api" {
+  provider = aws.assume_role
+  name     = aws_apigatewayv2_domain_name.api.domain_name
+  type     = "A"
+  zone_id  = var.route53_hosted_zone_id
+
+  alias {
+    name                   = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].target_domain_name
+    zone_id                = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+# Create service-linked role for API Gateway logging
+resource "aws_iam_service_linked_role" "apigw" {
+  provider           = aws.assume_role
+  aws_service_name   = "ops.apigateway.amazonaws.com"
+  description        = "Service-linked role for API Gateway"
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes = [
+      description,
+      tags,
+      custom_suffix,
+      id,
+      unique_id,
+      path,
+      arn
+    ]
+    create_before_destroy = false
+  }
+}
+
+# Add explicit policy attachment for API Gateway logging
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
+  provider   = aws.assume_role
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+# Update API Gateway account settings to enable CloudWatch logging
+resource "aws_api_gateway_account" "main" {
+  provider = aws.assume_role
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
+
+  depends_on = [
+    aws_iam_role.api_gateway_cloudwatch,
+    aws_iam_role_policy_attachment.api_gateway_cloudwatch_managed
+  ]
+}
+
+# Create a dedicated role for API Gateway CloudWatch logging
+resource "aws_iam_role" "api_gateway_cloudwatch" {
+  provider = aws.assume_role
+  name     = "api-gateway-cloudwatch-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(local.common_tags, {
+    Name    = "api-gateway-cloudwatch-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+}
+
+# Attach AWS managed policy for API Gateway CloudWatch permissions
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_managed" {
+  provider   = aws.assume_role
+  role       = aws_iam_role.api_gateway_cloudwatch.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
 # Outputs
 output "dynamodb_table_name" {
   value = aws_dynamodb_table.ai_wizard.name
@@ -295,14 +732,6 @@ output "dynamodb_table_name" {
 
 output "lambda_role_arn" {
   value = aws_iam_role.lambda_exec.arn
-}
-
-output "frontend_bucket_website_endpoint" {
-  value = aws_s3_bucket_website_configuration.frontend.website_endpoint
-}
-
-output "zappa_deployment_bucket" {
-  value = aws_s3_bucket.zappa_deployments.id
 }
 
 output "cloudfront_distribution_domain" {
@@ -313,99 +742,32 @@ output "website_url" {
   value = "https://${var.domain_name}"
 }
 
-# API Gateway
-resource "aws_api_gateway_rest_api" "ai_wizard" {
-  provider    = aws.assume_role
-  name        = "ai-wizard-backend-api-${var.environment}"
-  description = "AI Wizard Backend API (${var.environment})"
-
-  tags = merge(local.common_tags, {
-    Name = "ai-wizard-backend-api-${var.environment}"
-    Service = "ai-wizard-backend"
-  })
+output "domain_name" {
+  value = var.domain_name
 }
 
-# Lambda Function
-resource "aws_lambda_function" "ai_wizard" {
-  provider         = aws.assume_role
-  filename         = "${path.module}/lambda/lambda_function.zip"
-  function_name    = "${var.lambda_function_name_prefix}-${var.environment}"
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "lambda_handler.handler"
-  runtime          = "python3.12"
-  source_code_hash = var.lambda_source_code_hash
-
-  environment {
-    variables = {
-      DATABASE_URL = var.database_url
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name    = "${var.lambda_function_name_prefix}-${var.environment}"
-    Service = "ai-wizard-backend"
-  })
-
-  lifecycle {
-    ignore_changes = [
-      source_code_hash,
-      filename,
-      function_name
-    ]
-  }
+output "api_domain" {
+  value = aws_apigatewayv2_domain_name.api.domain_name
 }
 
-# API Gateway Integration
-resource "aws_api_gateway_resource" "proxy" {
-  provider    = aws.assume_role
-  rest_api_id = aws_api_gateway_rest_api.ai_wizard.id
-  parent_id   = aws_api_gateway_rest_api.ai_wizard.root_resource_id
-  path_part   = "{proxy+}"
-}
-
-resource "aws_api_gateway_method" "proxy" {
-  provider      = aws.assume_role
-  rest_api_id   = aws_api_gateway_rest_api.ai_wizard.id
-  resource_id   = aws_api_gateway_resource.proxy.id
-  http_method   = "ANY"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "lambda" {
-  provider                = aws.assume_role
-  rest_api_id             = aws_api_gateway_rest_api.ai_wizard.id
-  resource_id             = aws_api_gateway_method.proxy.resource_id
-  http_method             = aws_api_gateway_method.proxy.http_method
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.ai_wizard.invoke_arn
-}
-
-# Lambda Permission for API Gateway
-resource "aws_lambda_permission" "apigw" {
-  provider      = aws.assume_role
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.ai_wizard.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.ai_wizard.execution_arn}/*/*"
-}
-
-# API Gateway Deployment
-resource "aws_api_gateway_deployment" "ai_wizard" {
-  provider  = aws.assume_role
-  depends_on = [aws_api_gateway_integration.lambda]
-
-  rest_api_id = aws_api_gateway_rest_api.ai_wizard.id
-  stage_name  = "${var.environment}"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Output the API Gateway URL
 output "api_gateway_url" {
-  value = aws_api_gateway_deployment.ai_wizard.invoke_url
+  description = "API Gateway invoke URL"
+  value       = aws_apigatewayv2_api.api.api_endpoint
+}
+
+output "api_gateway_stage_url" {
+  description = "API Gateway stage invoke URL"
+  value       = "${aws_apigatewayv2_api.api.api_endpoint}/${var.environment}"
+}
+
+# Add missing output for Lambda function
+output "lambda_function_name" {
+  description = "Name of the Lambda function"
+  value       = aws_lambda_function.api_v2.function_name
+}
+
+output "lambda_function_arn" {
+  description = "ARN of the Lambda function"
+  value       = aws_lambda_function.api_v2.arn
 }
 

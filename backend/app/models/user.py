@@ -1,21 +1,40 @@
+from __future__ import annotations
 from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from app.models.base import Base
-from app.models.project import Project
-import datetime
+from datetime import datetime
+from typing import TYPE_CHECKING, List
+
+if TYPE_CHECKING:
+    from app.models.project import Project
+    from app.models.ai_interaction import AIInteraction
+    from app.models.user_profile import UserProfile
 
 class User(Base):
+    """User model for storing user related details"""
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    full_name = Column(String)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+    full_name: Mapped[str] = mapped_column(String)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    is_superuser: Mapped[bool] = mapped_column(default=False)
 
-    profile = relationship("UserProfile", back_populates="user", uselist=False)
-    projects = relationship("Project", back_populates="user")
-    interactions = relationship("AIInteraction", back_populates="user")
-    projects = relationship("Project", back_populates="user")
+    # Relationships with proper type hints
+    projects: Mapped[List[Project]] = relationship(
+        "Project", 
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    ai_interactions: Mapped[List[AIInteraction]] = relationship(
+        "AIInteraction", 
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    profile: Mapped[UserProfile | None] = relationship(
+        "UserProfile", 
+        back_populates="user", 
+        uselist=False,
+        cascade="all, delete-orphan"
+    )

@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Projects from '../pages/Projects';
 import { useProjects } from '../api';
@@ -15,10 +15,15 @@ describe('Projects component', () => {
   ];
 
   beforeEach(() => {
+    jest.clearAllMocks();
     (useProjects as jest.Mock).mockReturnValue({
       getProjects: jest.fn().mockResolvedValue(mockProjects),
       createProject: jest.fn().mockResolvedValue({ id: 3, name: 'New Project', description: '' }),
     });
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
   });
 
   test('renders projects list', async () => {

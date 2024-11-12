@@ -2,7 +2,6 @@
 node_modules/
 npm-debug.log
 yarn-error.log
-package-lock.json
 yarn.lock
 
 # Python
@@ -31,6 +30,8 @@ build/
 *.sublime-project
 *.sublime-workspace
 *.local
+*.local.sh
+.uncommitted_changes
 
 # OS generated files
 .DS_Store
@@ -58,9 +59,6 @@ terraform.tfstate.backup
 .terraform/
 .terraform.lock.hcl
 */terraform/tfplan*
-
-# Zappa
-*/zappa_settings.json
 
 # Lambda
 lambda_function.zip

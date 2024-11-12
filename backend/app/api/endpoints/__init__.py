@@ -1,1 +1,1 @@
-from . import users, projects, ai_interactions
+from . import users, projects, ai

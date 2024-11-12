@@ -1,27 +1,34 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { AuthProvider } from '../contexts/AuthContext';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 
 // Mock the AuthContext
 jest.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: null,
-    signIn: jest.fn(),
-    signOut: jest.fn(),
-    loading: false,
-  }),
-  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: jest.fn(),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
 }));
 
 describe('Header component', () => {
+  const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   test('renders correctly when user is not logged in', () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      loading: false,
+      signIn: jest.fn(),
+      signOut: jest.fn(),
+      getAuthToken: jest.fn()
+    });
+
     render(
       <Router>
-        <AuthProvider>
-          <Header />
-        </AuthProvider>
+        <Header />
       </Router>
     );
 
@@ -34,18 +41,22 @@ describe('Header component', () => {
   });
 
   test('renders correctly when user is logged in', () => {
-    jest.spyOn(require('../contexts/AuthContext'), 'useAuth').mockImplementation(() => ({
-      user: { displayName: 'Test User', email: 'test@example.com' },
+    mockUseAuth.mockReturnValue({
+      user: {
+        displayName: 'Test User',
+        email: 'test@example.com',
+        photoURL: null,
+        uid: 'test-uid'
+      },
+      loading: false,
       signIn: jest.fn(),
       signOut: jest.fn(),
-      loading: false,
-    }));
+      getAuthToken: jest.fn()
+    });
 
     render(
       <Router>
-        <AuthProvider>
-          <Header />
-        </AuthProvider>
+        <Header />
       </Router>
     );
 

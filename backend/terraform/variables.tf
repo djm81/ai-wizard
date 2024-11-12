@@ -9,57 +9,47 @@ variable "aws_region" {
 }
 
 variable "domain_name" {
-  description = "The domain name for the application"
+  description = "The domain name for the application (e.g., dev.ai-wizard.apps.noldmedia.com)"
   type        = string
 }
 
 variable "route53_hosted_zone_id" {
-  description = "The Route53 Hosted Zone ID"
+  description = "The Route53 Hosted Zone ID for DNS management"
   type        = string
 }
 
 variable "environment" {
-  description = "The deployment environment (e.g., dev, test, prod)"
+  description = "The deployment environment (dev, test, or prod)"
   type        = string
-}
-
-# New variables for Zappa and DynamoDB
-variable "zappa_deployments_bucket_name" {
-  description = "The name of the S3 bucket for Zappa deployments"
-  type        = string
+  validation {
+    condition     = contains(["dev", "test", "prod"], var.environment)
+    error_message = "Environment must be one of: dev, test, prod."
+  }
 }
 
 variable "dynamodb_table_name" {
-  description = "The name of the DynamoDB table"
+  description = "The name prefix of the DynamoDB table (will be suffixed with environment)"
   type        = string
 }
 
 variable "lambda_source_code_hash" {
-  description = "Base64-encoded SHA256 hash of the Lambda function source code"
+  description = "Base64-encoded SHA256 hash of the Lambda function source code package"
   type        = string
 }
 
 variable "frontend_bucket_name" {
-  description = "The name of the S3 bucket for frontend hosting"
+  description = "The name prefix of the S3 bucket for frontend hosting (will be suffixed with environment)"
   type        = string
 }
 
 variable "database_url" {
-  description = "Database URL"
+  description = "The PostgreSQL database connection URL"
   type        = string
   sensitive   = true
 }
 
-# Add any other variables you might need
-
-variable "stages" {
-  description = "List of stages to deploy"
-  type        = list(string)
-  default     = ["dev", "test", "prod"]
-}
-
 variable "lambda_function_name_prefix" {
-  description = "Prefix for Lambda function names"
+  description = "Prefix for Lambda function names (will be suffixed with environment)"
   type        = string
   default     = "ai-wizard-backend"
 }

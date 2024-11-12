@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from '../App';
-import { AuthProvider } from '../contexts/AuthContext';
+// import { AuthProvider } from '../contexts/AuthContext';
 
 // Mock the AuthContext
 jest.mock('../contexts/AuthContext', () => ({
@@ -19,6 +19,15 @@ jest.mock('../pages/Projects', () => () => <div data-testid="mock-projects">Proj
 jest.mock('../pages/AIInteractions', () => () => <div data-testid="mock-ai-interactions">AI Interactions</div>);
 
 describe('App component', () => {
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
   test('renders without crashing', () => {
     render(<App />);
     expect(screen.getByTestId('mock-header')).toBeInTheDocument();

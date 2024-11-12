@@ -1,0 +1,21 @@
+# AWS Account Configuration
+aws_account_id                  = "123456789012"
+aws_region                      = "eu-west-1"
+
+# Domain Configuration
+domain_name                     = "dev.ai-wizard.apps.noldmedia.com"
+route53_hosted_zone_id         = "Z0123456789ABCDEF"
+
+# Resource Naming
+frontend_bucket_name            = "ai-wizard-frontend"
+dynamodb_table_name             = "ai-wizard-table"
+lambda_function_name_prefix     = "ai-wizard-backend"
+
+# Database Configuration
+database_url                    = "postgresql://user:pass@host:5432/dbname"
+
+# Environment
+environment                     = "dev"
+
+# This will be set by the CI/CD pipeline
+lambda_source_code_hash         = "base64_encoded_hash" 

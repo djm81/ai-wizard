@@ -1,20 +1,29 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
-from sqlalchemy.orm import relationship
+from __future__ import annotations
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from app.models.base import Base
-import datetime
+from typing import TYPE_CHECKING, List
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.ai_interaction import AIInteraction
 
 class Project(Base):
+    """Project model for storing project related details"""
     __tablename__ = "projects"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    name = Column(String, nullable=False)
-    description = Column(String)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str | None] = mapped_column(String)
 
-    user = relationship("User", back_populates="projects")
-    ai_interactions = relationship("AIInteraction", back_populates="project")
-
-# Remove this line as it's not needed
-# from app.models.ai_interaction import AIInteraction
+    # Relationships with proper type hints
+    user: Mapped[User] = relationship(
+        "User", 
+        back_populates="projects"
+    )
+    ai_interactions: Mapped[List[AIInteraction]] = relationship(
+        "AIInteraction", 
+        back_populates="project",
+        cascade="all, delete-orphan"
+    )

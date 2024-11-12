@@ -1,0 +1,18 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+      "module": "ES2022",
+      "moduleResolution": "node",
+      "jsx": "react-jsx",
+      "esModuleInterop": true,
+      "allowSyntheticDefaultImports": true,
+      "isolatedModules": true,
+      "types": ["jest", "node", "@testing-library/jest-dom"],
+      "paths": {
+        "config": ["config.tsx"],
+        "auth/*": ["auth/*"],
+        "jest.setup": ["jest.setup.ts"]
+      }
+    },
+    "include": ["src", "src/globals.d.ts", "src/jest.setup.ts"]
+  }

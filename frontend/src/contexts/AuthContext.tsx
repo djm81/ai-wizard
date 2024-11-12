@@ -1,44 +1,65 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { User, initializeGoogleAuth, signInWithGoogle, signOut, getIdToken } from '../auth/fedcmAuth';
+import { initializeGoogleAuth, signInWithGoogle, signOut as firebaseSignOut, getIdToken, User } from 'auth/fedcmAuth';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
+  loading: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
-  loading: boolean;
   getAuthToken: () => Promise<string | null>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  signIn: async () => {},
+  signOut: async () => {},
+  loading: true,
+  getAuthToken: async () => null
+});
 
 export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        const user: User = {
-          displayName: firebaseUser.displayName,
-          email: firebaseUser.email,
-          photoURL: firebaseUser.photoURL,
-          uid: firebaseUser.uid
-        };
-        setUser(user);
-      } else {
-        setUser(null);
+    let unsubscribe = () => {};
+    
+    const initAuth = async () => {
+      try {
+        await initializeGoogleAuth();
+        const auth = getAuth();
+        
+        if (auth) {
+          unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+            if (firebaseUser) {
+              setUser({
+                displayName: firebaseUser.displayName,
+                email: firebaseUser.email,
+                photoURL: firebaseUser.photoURL,
+                uid: firebaseUser.uid
+              });
+            } else {
+              setUser(null);
+            }
+            setLoading(false);
+          });
+        } else {
+          console.error('Auth instance is undefined');
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
 
-    initializeGoogleAuth().catch((error: Error) => {
-      console.error('Failed to initialize Google Auth:', error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    initAuth();
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const signIn = async () => {
@@ -47,19 +68,21 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
       setUser(user);
     } catch (error) {
       console.error('Error signing in:', error);
+      throw error;
     }
   };
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      await firebaseSignOut();
       setUser(null);
     } catch (error) {
       console.error('Error signing out:', error);
+      throw error;
     }
   };
 
-  const getAuthToken = async () => {
+  const getAuthToken = async (): Promise<string | null> => {
     return getIdToken();
   };
 
@@ -74,9 +97,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

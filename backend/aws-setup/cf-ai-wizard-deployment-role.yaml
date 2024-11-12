@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'IAM role for AI Wizard Terraform deployment with managed policies'
+Description: 'IAM role for AI Wizard Terraform deployment using AWS managed policies'
 
 Parameters:
   TrustedAccount:
@@ -13,152 +13,6 @@ Parameters:
     Description: The region of the S3 bucket
 
 Resources:
-  # Create the new managed policy for Zappa and serverless resources
-  AIWizardServerlessManagedPolicy:
-    Type: 'AWS::IAM::ManagedPolicy'
-    Properties:
-      ManagedPolicyName: AIWizardServerlessManagedPolicy
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Action:
-              - 's3:CreateBucket'
-              - 's3:DeleteBucket'
-              - 's3:PutObject'
-              - 's3:Describe*'
-              - 's3:Get*'
-              - 's3:List*'
-              - 's3:DeleteObject'
-              - 's3:DeleteBucketPolicy'
-              - 's3:DeleteBucketWebsite'
-              - 's3:PutBucketPolicy'
-              - 's3:PutBucketTagging'
-              - 's3:PutBucketWebsite'
-              - 's3:PutBucketPublicAccessBlock'
-              - 's3:HeadBucket'
-            Resource: 
-              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}'
-              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}/*'
-              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}-*'
-              - !Sub 'arn:aws:s3:::ai-wizard-zappa-deployments-${TrustedAccount}-${S3BucketRegion}-*/*'
-              - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}'
-              - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}/*'
-              - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}-*'
-              - !Sub 'arn:aws:s3:::ai-wizard-frontend-${TrustedAccount}-${S3BucketRegion}-*/*'
-          - Effect: Allow
-            Action:
-              - 'dynamodb:CreateTable'
-              - 'dynamodb:DeleteTable'
-              - 'dynamodb:Describe*'
-              - 'dynamodb:Get*'
-              - 'dynamodb:List*'
-              - 'dynamodb:PutItem'
-              - 'dynamodb:UpdateItem'
-              - 'dynamodb:DeleteItem'
-              - 'dynamodb:Query'
-              - 'dynamodb:Scan'
-              - 'dynamodb:TagResource'
-              - 'dynamodb:UntagResource'
-            Resource: 
-              - !Sub 'arn:aws:dynamodb:${S3BucketRegion}:${TrustedAccount}:table/ai-wizard-table'
-              - !Sub 'arn:aws:dynamodb:${S3BucketRegion}:${TrustedAccount}:table/ai-wizard-backend-table-*'
-          - Effect: Allow
-            Action:
-              - 'lambda:CreateFunction'
-              - 'lambda:DeleteFunction'
-              - 'lambda:Describe*'
-              - 'lambda:Get*'
-              - 'lambda:List*'
-              - 'lambda:InvokeFunction'
-              - 'lambda:UpdateFunctionCode'
-              - 'lambda:UpdateFunctionConfiguration'
-              - 'lambda:TagResource'
-              - 'lambda:UntagResource'
-              - 'lambda:AddPermission'
-            Resource: 
-              - !Sub 'arn:aws:lambda:${S3BucketRegion}:${TrustedAccount}:function:ai-wizard-backend-*'
-          - Effect: Allow
-            Action:
-              - 'cloudfront:CreateDistribution'
-              - 'cloudfront:CreateCloudFrontOriginAccessIdentity'
-              - 'cloudfront:DeleteCloudFrontOriginAccessIdentity'
-              - 'cloudfront:UpdateCloudFrontOriginAccessIdentity'
-              - 'cloudfront:Describe*'
-              - 'cloudfront:Get*'
-              - 'cloudfront:List*'
-              - 'cloudfront:UpdateDistribution'
-              - 'cloudfront:DeleteDistribution'
-              - 'cloudfront:TagResource'
-              - 'cloudfront:UntagResource'
-            Resource: '*'
-          - Effect: Allow
-            Action:
-              - 'route53:ChangeResourceRecordSets'
-            Resource: !Sub 'arn:aws:route53:::hostedzone/${Route53ZoneId}'
-          - Effect: Allow
-            Action:
-              - 'route53:Describe*'
-              - 'route53:Get*'
-              - 'route53:List*'
-            Resource: '*'
-          - Effect: Allow
-            Action:
-              - 'acm:RequestCertificate'
-              - 'acm:Describe*'
-              - 'acm:Get*'
-              - 'acm:List*'
-              - 'acm:DeleteCertificate'
-              - 'acm:AddTagsToCertificate'
-              - 'acm:RemoveTagsFromCertificate'
-            Resource: '*'
-          - Effect: Allow
-            Action:
-              - 'apigateway:Create*'
-              - 'apigateway:Delete*'
-              - 'apigateway:Get*'
-              - 'apigateway:Put*'
-              - 'apigateway:Test*'
-              - 'apigateway:Update*'
-              - 'apigateway:TagResource'
-              - 'apigateway:UntagResource'
-              - 'apigateway:PUT'
-              - 'apigateway:POST'
-              - 'apigateway:GET'
-              - 'apigateway:DELETE'
-              - 'apigateway:PATCH'
-              - 'apigateway:OPTIONS'
-              - 'apigateway:HEAD'
-            Resource: 
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/restapis/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apis'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/apis/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/stages/*'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags'
-              - !Sub 'arn:aws:apigateway:${S3BucketRegion}::/tags/*'
-          - Effect: Allow
-            Action:
-              - 'iam:CreateRole'
-              - 'iam:DeleteRole'
-              - 'iam:AttachRolePolicy'
-              - 'iam:DetachRolePolicy'
-              - 'iam:Describe*'
-              - 'iam:Get*'
-              - 'iam:List*'
-              - 'iam:PassRole'
-              - 'iam:TagRole'
-              - 'iam:UntagRole'
-            Resource: 
-              - !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role'
-              - !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role-*'
-          - Effect: Allow
-            Action: 
-              - 'sts:AssumeRole'
-              - 'sts:TagSession'
-            Resource: !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
-
   # Create the IAM role
   AIWizardDeploymentRole:
     Type: 'AWS::IAM::Role'
@@ -172,11 +26,60 @@ Resources:
               AWS: 
                 - !Sub 'arn:aws:iam::${TrustedAccount}:root'
                 - !Sub 'arn:aws:iam::${TrustedAccount}:user/aws-deploy'
+                - !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
             Action: 
               - 'sts:AssumeRole'
               - 'sts:TagSession'
       ManagedPolicyArns:
-        - !Ref AIWizardServerlessManagedPolicy
+        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+
+  # Custom policy now includes KMS and any missing permissions
+  AIWizardCustomPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: AIWizardCustomPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # Allow managing assumed role sessions
+          - Effect: Allow
+            Action:
+              - 'sts:AssumeRole'
+              - 'sts:TagSession'
+              - 'sts:GetCallerIdentity'
+              - 'sts:GetSessionToken'
+              - 'sts:GetFederationToken'
+            Resource: 
+              - !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
+              - !Sub 'arn:aws:iam::${TrustedAccount}:role/assumed-role/AIWizardDeploymentRole/*'
+          
+          # Allow creating service-linked roles
+          - Effect: Allow
+            Action:
+              - 'iam:CreateServiceLinkedRole'
+              - 'iam:DeleteServiceLinkedRole'
+              - 'iam:GetServiceLinkedRoleDeletionStatus'
+            Resource: 
+              - !Sub 'arn:aws:iam::${TrustedAccount}:role/aws-service-role/*'
+              - !Sub 'arn:aws:iam::${TrustedAccount}:role/aws-service-role/ops.apigateway.amazonaws.com/*'
+
+          # Allow KMS operations for CloudWatch Logs
+          - Effect: Allow
+            Action:
+              - 'kms:CreateKey'
+              - 'kms:CreateAlias'
+              - 'kms:DeleteAlias'
+              - 'kms:Describe*'
+              - 'kms:List*'
+              - 'kms:PutKeyPolicy'
+              - 'kms:UpdateAlias'
+            Resource: '*'
+
+          # Add any missing ACM permissions not covered by Route53 and CloudFront
+          - Effect: Allow
+            Action:
+              - 'acm:*'
+            Resource: '*'
 
 Outputs:
   RoleARN:
