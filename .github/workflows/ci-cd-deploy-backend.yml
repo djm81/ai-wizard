@@ -218,6 +218,7 @@ jobs:
           -target=aws_iam_role_policy.api_gateway_logging \
           -target=aws_iam_role_policy_attachment.api_gateway_cloudwatch \
           -target=aws_cloudwatch_log_group.api_gw \
+          -target=aws_iam_service_linked_role.apigw \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
@@ -241,6 +242,37 @@ jobs:
       run: |
         echo "Waiting for IAM role changes to propagate..."
         sleep 45
+
+    - name: Terraform Plan Final
+      id: terraform_plan_final
+      run: |
+        # Create a new plan after IAM changes have been applied
+        terraform plan \
+          -target=aws_lambda_function.api_v2 \
+          -target=aws_lambda_alias.api_alias_v2 \
+          -target=aws_apigatewayv2_api.api \
+          -target=aws_apigatewayv2_integration.lambda \
+          -target=aws_apigatewayv2_stage.lambda \
+          -target=aws_apigatewayv2_domain_name.api \
+          -target=aws_apigatewayv2_api_mapping.api \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="domain_name=${{ env.DOMAIN_NAME }}" \
+          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
+          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
+          -var="environment=${{ env.ENVIRONMENT }}" \
+          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
+          -out=tfplan-final-${{ env.ENVIRONMENT }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Terraform Apply Final
+      id: terraform_apply_final
+      run: |
+        terraform apply -auto-approve tfplan-final-${{ env.ENVIRONMENT }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
   deploy:
     needs: [should_run, plan_and_estimate]
