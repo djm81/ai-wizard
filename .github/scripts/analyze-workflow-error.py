@@ -66,7 +66,7 @@ def analyze_error(logs_data):
                 context_start = max(0, i-2)
                 context_end = min(len(logs), i+3)
                 print('\n'.join(logs[context_start:context_end]))
-                break
+                # break
 
 if __name__ == "__main__":
     logs_data = get_latest_run_logs()

@@ -502,7 +502,7 @@ resource "aws_iam_role_policy" "lambda_execution" {
   })
 }
 
-# Add IAM policy for API Gateway logging
+# Add IAM policy for API Gateway logging with expanded permissions
 resource "aws_iam_role_policy" "api_gateway_logging" {
   provider = aws.assume_role
   name     = "api-gateway-logging-policy-${var.environment}"
@@ -519,9 +519,22 @@ resource "aws_iam_role_policy" "api_gateway_logging" {
           "logs:DescribeLogDelivery",
           "logs:ListLogDeliveries",
           "logs:PutResourcePolicy",
-          "logs:UpdateLogDelivery"
+          "logs:UpdateLogDelivery",
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:GetLogDelivery",
+          "logs:GetLogRecord",
+          "logs:GetLogGroupFields",
+          "logs:GetQueryResults"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}:*",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:*"
+        ]
       }
     ]
   })
@@ -660,6 +673,13 @@ resource "aws_iam_service_linked_role" "apigw" {
     ]
     create_before_destroy = false
   }
+}
+
+# Add explicit policy attachment for API Gateway logging
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
+  provider   = aws.assume_role
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
 }
 
 # Outputs
