@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # Navigate to the root of the repository
-cd ../../
+ls -la
 
-if [ ! -f ".github/scripts/.uncommitted_changes" ]; then
-  echo "No .github/scripts/.uncommitted_changes file found!"
+if [ ! -f "./.uncommitted_changes" ]; then
+  echo "No .uncommitted_changes file found in project root!"
   exit 1
 fi
 
-changes=$(cat ".github/scripts/.uncommitted_changes")
-echo "Change log from .github/scripts/.uncommitted_changes:"
+changes=$(cat ".uncommitted_changes")
+echo "Change log from .uncommitted_changes:"
 echo "$changes"
 
 changed_files=$(git diff --name-only)
@@ -28,4 +28,4 @@ echo "Pushing changes to remote repository..."
 git push
 
 echo "Removing uncommitted changes file..."
-rm .github/scripts/.uncommitted_changes
+echo "" > .uncommitted_changes

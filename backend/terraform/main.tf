@@ -483,12 +483,44 @@ resource "aws_iam_role_policy" "lambda_execution" {
           "logs:PutLogEvents",
           "logs:DescribeLogGroups",
           "logs:DescribeLogStreams",
+          "logs:CreateLogDelivery",
+          "logs:DeleteLogDelivery",
+          "logs:DescribeLogDelivery",
+          "logs:ListLogDeliveries",
+          "logs:PutResourcePolicy",
+          "logs:UpdateLogDelivery",
           "lambda:InvokeFunction"
         ]
         Resource = [
           "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}:*",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}:*",
           "${aws_lambda_function.api_v2.arn}:*"
         ]
+      }
+    ]
+  })
+}
+
+# Add IAM policy for API Gateway logging
+resource "aws_iam_role_policy" "api_gateway_logging" {
+  provider = aws.assume_role
+  name     = "api-gateway-logging-policy-${var.environment}"
+  role     = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogDelivery",
+          "logs:DeleteLogDelivery",
+          "logs:DescribeLogDelivery",
+          "logs:ListLogDeliveries",
+          "logs:PutResourcePolicy",
+          "logs:UpdateLogDelivery"
+        ]
+        Resource = "*"
       }
     ]
   })
