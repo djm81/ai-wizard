@@ -181,7 +181,9 @@ jobs:
           --target=build \
           --implementation cp \
           --python-version 3.12 \
-          --only-binary=:all: --platform manylinux2014_x86_64 \
+          --only-binary=:all: \
+          --platform manylinux2014_x86_64 \
+          --upgrade pydantic \
           -r requirements.txt
         
         # Remove unnecessary files to reduce package size
@@ -191,7 +193,7 @@ jobs:
         find . -type f -name "*.pyc" -delete
         find . -type f -name "*.pyo" -delete
         find . -type f -name "*.pyd" -delete
-        find . -type d -name "*.dist-info" -exec rm -rf {} +
+        find . -type d -name "*.dist-info" ! -path "*email-validator*" -exec rm -rf {} +
         find . -type d -name "*.egg-info" -exec rm -rf {} +
         
         # Create deployment package
