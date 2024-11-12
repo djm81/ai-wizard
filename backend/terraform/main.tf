@@ -687,6 +687,10 @@ resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
 resource "aws_api_gateway_account" "main" {
   provider = aws.assume_role
   cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
+
+  depends_on = [
+    aws_iam_role_policy.api_gateway_cloudwatch
+  ]
 }
 
 # Create a dedicated role for API Gateway CloudWatch logging
@@ -701,7 +705,10 @@ resource "aws_iam_role" "api_gateway_cloudwatch" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "apigateway.amazonaws.com"
+          Service = [
+            "apigateway.amazonaws.com",
+            "ops.apigateway.amazonaws.com"
+          ]
         }
       }
     ]
@@ -731,11 +738,13 @@ resource "aws_iam_role_policy" "api_gateway_cloudwatch" {
           "logs:DescribeLogStreams",
           "logs:PutLogEvents",
           "logs:GetLogEvents",
-          "logs:FilterLogEvents"
+          "logs:FilterLogEvents",
+          "logs:PutRetentionPolicy"
         ]
         Resource = [
           "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}:*",
-          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}"
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/*"
         ]
       }
     ]
