@@ -687,7 +687,8 @@ resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
 resource "aws_iam_role_policy" "api_gateway_cloudwatch_logs" {
   provider = aws.assume_role
   name     = "api-gateway-cloudwatch-logs-${var.environment}"
-  role     = aws_iam_service_linked_role.apigw.id
+  # Use role name instead of ARN
+  role     = "AWSServiceRoleForAPIGateway"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -710,6 +711,10 @@ resource "aws_iam_role_policy" "api_gateway_cloudwatch_logs" {
       }
     ]
   })
+
+  depends_on = [
+    aws_iam_service_linked_role.apigw
+  ]
 }
 
 # Outputs
