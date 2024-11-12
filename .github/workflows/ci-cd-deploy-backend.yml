@@ -312,10 +312,34 @@ jobs:
         echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
 
-    # First apply API Gateway service role
-    - name: Plan API Gateway Service Role
-      id: plan_apigw_role
+    # First apply CloudWatch Log Group
+    - name: Plan and Apply CloudWatch Log Group
+      id: apply_cloudwatch_log_group
       run: |
+        # Create new plan for CloudWatch Log Group
+        terraform plan \
+          -target=aws_cloudwatch_log_group.lambda_logs \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="domain_name=${{ env.DOMAIN_NAME }}" \
+          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
+          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
+          -var="environment=${{ env.ENVIRONMENT }}" \
+          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
+          -out=tfplan-cloudwatch-new-${{ env.ENVIRONMENT }}
+
+        # Apply CloudWatch Log Group
+        terraform apply -auto-approve tfplan-cloudwatch-new-${{ env.ENVIRONMENT }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    # Then handle API Gateway service role
+    - name: Plan and Apply API Gateway Service Role
+      id: apply_apigw_role
+      run: |
+        # Create new plan for API Gateway Service Role
         terraform plan \
           -target=aws_iam_service_linked_role.apigw \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
@@ -329,11 +353,8 @@ jobs:
           -var="environment=${{ env.ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
           -out=tfplan-apigw-role-new-${{ env.ENVIRONMENT }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Apply API Gateway Service Role
-      id: apply_apigw_role
-      run: |
+        # Apply API Gateway Service Role
         APPLY_OUTPUT=$(terraform apply -auto-approve tfplan-apigw-role-new-${{ env.ENVIRONMENT }} 2>&1)
         echo "$APPLY_OUTPUT"
         if echo "$APPLY_OUTPUT" | grep -q "Apply complete! Resources: [1-9]"; then
@@ -348,23 +369,12 @@ jobs:
       run: |
         echo "Changes were made to API Gateway service role. Waiting for propagation..."
         sleep 60
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    # Then apply CloudWatch and IAM resources
-    - name: Terraform Apply CloudWatch Role
-      id: terraform_apply_cloudwatch
-      run: |        
-        terraform apply -auto-approve tfplan-cloudwatch-${{ env.ENVIRONMENT }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
-
-    - name: Wait for CloudWatch Role Propagation
+    # Then handle IAM and Logging resources
+    - name: Plan and Apply IAM and Logging
+      id: apply_iam_logging
       run: |
-        echo "Waiting for CloudWatch role to propagate..."
-        sleep 30
-
-    - name: Plan IAM and Logging After CloudWatch
-      id: plan_iam_logging
-      run: |
+        # Create new plan for IAM and Logging
         terraform plan \
           -target=aws_iam_role_policy.api_gateway_logging \
           -target=aws_iam_role_policy_attachment.api_gateway_cloudwatch \
@@ -380,11 +390,8 @@ jobs:
           -var="environment=${{ env.ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
           -out=tfplan-iam-logging-new-${{ env.ENVIRONMENT }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Apply IAM and Logging
-      id: apply_iam_logging
-      run: |
+        # Apply IAM and Logging
         APPLY_OUTPUT=$(terraform apply -auto-approve tfplan-iam-logging-new-${{ env.ENVIRONMENT }} 2>&1)
         echo "$APPLY_OUTPUT"
         if echo "$APPLY_OUTPUT" | grep -q "Apply complete! Resources: [1-9]"; then
@@ -399,12 +406,12 @@ jobs:
       run: |
         echo "Changes were made to IAM roles/policies. Waiting for propagation..."
         sleep 45
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    # Finally apply Lambda and API Gateway resources
-    - name: Plan Lambda and API Gateway Resources
-      id: plan_lambda_api
+    # Finally handle Lambda and API Gateway resources
+    - name: Plan and Apply Lambda and API Gateway Resources
+      id: apply_lambda_api
       run: |
+        # Create new plan for Lambda and API Gateway
         terraform plan \
           -target=aws_lambda_function.api_v2 \
           -target=aws_lambda_alias.api_alias_v2 \
@@ -424,11 +431,8 @@ jobs:
           -var="environment=${{ env.ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
           -out=tfplan-lambda-api-new-${{ env.ENVIRONMENT }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Apply Lambda and API Gateway Resources
-      id: apply_lambda_api
-      run: |
+        # Apply Lambda and API Gateway
         terraform apply -auto-approve tfplan-lambda-api-new-${{ env.ENVIRONMENT }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 

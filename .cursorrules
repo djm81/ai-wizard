@@ -7,6 +7,7 @@ G3. Ensure, that we have no deprecated code, missing docstrings, unused imports,
 G4. Fix all linting errors, where they occur, after you proposed updated code
 G5. Finish every conversation with "AI Rules Applied", so I know you applied the rules.
 G6. When working with resources, such as terraform, where tags are used, use the following naming convention: "Service" and "Name"
+G7. After proposing changes, review the README.md file in the root folder and ensure, that it is updated accordingly to reflect the changes from a developer perspective when first time setting up the project by local checkout from github and running the pipelines and/or locally setting up a docker container with backend code, if not deploying the code to AWS, so we have all necessary information in one place.
 
 # Terraform rules (applies to .github/backend/terraform and .github/workflows)
 T1. When adding or modyfing terraform code, double check the code, so we do not create any unexpected drift in our infrastructure
