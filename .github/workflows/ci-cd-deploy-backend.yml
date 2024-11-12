@@ -311,7 +311,46 @@ jobs:
         HASH=$(openssl dgst -sha256 -binary lambda_package.zip | openssl base64)
         echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
-  
+
+    # First apply API Gateway service role
+    - name: Plan API Gateway Service Role
+      id: plan_apigw_role
+      run: |
+        terraform plan \
+          -target=aws_iam_service_linked_role.apigw \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="domain_name=${{ env.DOMAIN_NAME }}" \
+          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
+          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
+          -var="environment=${{ env.ENVIRONMENT }}" \
+          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
+          -out=tfplan-apigw-role-new-${{ env.ENVIRONMENT }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Apply API Gateway Service Role
+      id: apply_apigw_role
+      run: |
+        APPLY_OUTPUT=$(terraform apply -auto-approve tfplan-apigw-role-new-${{ env.ENVIRONMENT }} 2>&1)
+        echo "$APPLY_OUTPUT"
+        if echo "$APPLY_OUTPUT" | grep -q "Apply complete! Resources: [1-9]"; then
+          echo "changes_made=true" >> $GITHUB_OUTPUT
+        else
+          echo "changes_made=false" >> $GITHUB_OUTPUT
+        fi
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Wait for API Gateway Role Propagation
+      if: steps.apply_apigw_role.outputs.changes_made == 'true'
+      run: |
+        echo "Changes were made to API Gateway service role. Waiting for propagation..."
+        sleep 60
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    # Then apply CloudWatch and IAM resources
     - name: Terraform Apply CloudWatch Role
       id: terraform_apply_cloudwatch
       run: |        
@@ -330,7 +369,6 @@ jobs:
           -target=aws_iam_role_policy.api_gateway_logging \
           -target=aws_iam_role_policy_attachment.api_gateway_cloudwatch \
           -target=aws_cloudwatch_log_group.api_gw \
-          -target=aws_iam_service_linked_role.apigw \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
@@ -344,13 +382,11 @@ jobs:
           -out=tfplan-iam-logging-new-${{ env.ENVIRONMENT }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Terraform Apply IAM and Logging
-      id: terraform_apply_iam_logging
+    - name: Apply IAM and Logging
+      id: apply_iam_logging
       run: |
-        # Capture the apply output to check if there were changes
         APPLY_OUTPUT=$(terraform apply -auto-approve tfplan-iam-logging-new-${{ env.ENVIRONMENT }} 2>&1)
         echo "$APPLY_OUTPUT"
-        # Check if there were any changes
         if echo "$APPLY_OUTPUT" | grep -q "Apply complete! Resources: [1-9]"; then
           echo "changes_made=true" >> $GITHUB_OUTPUT
         else
@@ -359,14 +395,15 @@ jobs:
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Wait for IAM Role Propagation
-      if: steps.terraform_apply_iam_logging.outputs.changes_made == 'true'
+      if: steps.apply_iam_logging.outputs.changes_made == 'true'
       run: |
         echo "Changes were made to IAM roles/policies. Waiting for propagation..."
         sleep 45
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Plan Remaining Resources After IAM
-      id: plan_remaining
+    # Finally apply Lambda and API Gateway resources
+    - name: Plan Lambda and API Gateway Resources
+      id: plan_lambda_api
       run: |
         terraform plan \
           -target=aws_lambda_function.api_v2 \
@@ -386,13 +423,13 @@ jobs:
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
           -var="environment=${{ env.ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
-          -out=tfplan-final-new-${{ env.ENVIRONMENT }}
+          -out=tfplan-lambda-api-new-${{ env.ENVIRONMENT }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
-    - name: Terraform Apply Final
-      id: terraform_apply_final
+    - name: Apply Lambda and API Gateway Resources
+      id: apply_lambda_api
       run: |
-        terraform apply -auto-approve tfplan-final-new-${{ env.ENVIRONMENT }}
+        terraform apply -auto-approve tfplan-lambda-api-new-${{ env.ENVIRONMENT }}
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Output Application URL
