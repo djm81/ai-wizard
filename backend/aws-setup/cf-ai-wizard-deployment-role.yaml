@@ -26,21 +26,12 @@ Resources:
               AWS: 
                 - !Sub 'arn:aws:iam::${TrustedAccount}:root'
                 - !Sub 'arn:aws:iam::${TrustedAccount}:user/aws-deploy'
+                - !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
             Action: 
               - 'sts:AssumeRole'
               - 'sts:TagSession'
       ManagedPolicyArns:
-        # Core AWS Services (most comprehensive policies)
-        - 'arn:aws:iam::aws:policy/IAMFullAccess'  # Covers IAM, STS, and service-linked roles
-        - 'arn:aws:iam::aws:policy/AWSCloudFormationFullAccess'  # For stack management
-        - 'arn:aws:iam::aws:policy/AmazonAPIGatewayAdministrator'  # API Gateway + some CloudWatch
-        - 'arn:aws:iam::aws:policy/AWSLambda_FullAccess'  # Lambda + some CloudWatch
-        - 'arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess'
-        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
-        - 'arn:aws:iam::aws:policy/AmazonRoute53FullAccess'  # Includes some ACM operations
-        - 'arn:aws:iam::aws:policy/CloudFrontFullAccess'  # Includes some ACM operations
-        # Combined policies for remaining needs
-        - 'arn:aws:iam::aws:policy/CloudWatchFullAccess'  # Covers all CloudWatch needs
+        - 'arn:aws:iam::aws:policy/AdministratorAccess'
 
   # Custom policy now includes KMS and any missing permissions
   AIWizardCustomPolicy:

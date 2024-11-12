@@ -689,7 +689,8 @@ resource "aws_api_gateway_account" "main" {
   cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
 
   depends_on = [
-    aws_iam_role_policy.api_gateway_cloudwatch
+    aws_iam_role.api_gateway_cloudwatch,
+    aws_iam_role_policy_attachment.api_gateway_cloudwatch_managed
   ]
 }
 
@@ -705,10 +706,7 @@ resource "aws_iam_role" "api_gateway_cloudwatch" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = [
-            "apigateway.amazonaws.com",
-            "ops.apigateway.amazonaws.com"
-          ]
+          Service = "apigateway.amazonaws.com"
         }
       }
     ]
@@ -720,35 +718,11 @@ resource "aws_iam_role" "api_gateway_cloudwatch" {
   })
 }
 
-# Attach CloudWatch policy to the dedicated role
-resource "aws_iam_role_policy" "api_gateway_cloudwatch" {
-  provider = aws.assume_role
-  name     = "api-gateway-cloudwatch-policy-${var.environment}"
-  role     = aws_iam_role.api_gateway_cloudwatch.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams",
-          "logs:PutLogEvents",
-          "logs:GetLogEvents",
-          "logs:FilterLogEvents",
-          "logs:PutRetentionPolicy"
-        ]
-        Resource = [
-          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}:*",
-          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/${var.lambda_function_name_prefix}-${var.environment}",
-          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/api_gw/*"
-        ]
-      }
-    ]
-  })
+# Attach AWS managed policy for API Gateway CloudWatch permissions
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_managed" {
+  provider   = aws.assume_role
+  role       = aws_iam_role.api_gateway_cloudwatch.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
 }
 
 # Outputs
