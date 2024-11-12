@@ -188,14 +188,30 @@ jobs:
         
         # Remove unnecessary files to reduce package size
         cd build
+        
+        # Save email-validator dist-info before cleanup
+        EMAIL_VALIDATOR_DIST=$(find . -type d -name "email_validator*.dist-info")
+        if [ -n "$EMAIL_VALIDATOR_DIST" ]; then
+          echo "Found email-validator dist-info: $EMAIL_VALIDATOR_DIST"
+          mkdir -p temp_save
+          cp -r "$EMAIL_VALIDATOR_DIST" temp_save/
+        fi
+        
+        # Clean up
         find . -type d -name "tests" -exec rm -rf {} +
         find . -type d -name "__pycache__" -exec rm -rf {} +
         find . -type f -name "*.pyc" -delete
         find . -type f -name "*.pyo" -delete
         find . -type f -name "*.pyd" -delete
-        # Preserve email-validator dist-info while cleaning others
-        find . -type d -name "*.dist-info" ! -name "email_validator*.dist-info" -exec rm -rf {} +
+        find . -type d -name "*.dist-info" -exec rm -rf {} +
         find . -type d -name "*.egg-info" -exec rm -rf {} +
+        
+        # Restore email-validator dist-info
+        if [ -n "$EMAIL_VALIDATOR_DIST" ]; then
+          echo "Restoring email-validator dist-info"
+          cp -r temp_save/* .
+          rm -rf temp_save
+        fi
         
         # Create deployment package
         zip -r9 ../lambda_package.zip .
@@ -207,8 +223,10 @@ jobs:
         # Move package to terraform lambda directory
         mv lambda_package.zip terraform/lambda/
         
-        # Show package size
+        # Show package size and contents
         ls -lh terraform/lambda/lambda_package.zip
+        echo "Lambda package contents:"
+        unzip -l terraform/lambda/lambda_package.zip | grep -i "email_validator"
 
     - name: Calculate Lambda package hash
       id: lambda_package_hash
