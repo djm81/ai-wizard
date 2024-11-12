@@ -146,6 +146,7 @@ jobs:
 
     - name: Import API Gateway Service Role if exists
       if: steps.check_apigw_role.outputs.role_exists == 'true'
+      continue-on-error: true
       run: |
         terraform import \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
@@ -158,7 +159,8 @@ jobs:
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
           -var="environment=${{ env.ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
-          aws_iam_service_linked_role.apigw arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway
+          aws_iam_service_linked_role.apigw \
+          "AWSServiceRoleForAPIGateway"
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Plan CloudWatch Role

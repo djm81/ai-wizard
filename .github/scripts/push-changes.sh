@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Navigate to the root of the repository
-ls -la
-
 if [ ! -f "./.uncommitted_changes" ]; then
   echo "No .uncommitted_changes file found in project root!"
   exit 1

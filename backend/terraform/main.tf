@@ -125,8 +125,9 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
     ignore_changes = [
       tags,
       name,
-      # Also ignore retention policy changes to prevent conflicts
-      retention_in_days
+      retention_in_days,
+      # Add kms_key_id if you're using encryption
+      kms_key_id
     ]
   }
 }
@@ -587,8 +588,9 @@ resource "aws_cloudwatch_log_group" "api_gw" {
     ignore_changes = [
       tags,
       name,
-      # Also ignore retention policy changes to prevent conflicts
-      retention_in_days
+      retention_in_days,
+      # Add kms_key_id if you're using encryption
+      kms_key_id
     ]
   }
 }
@@ -645,13 +647,16 @@ resource "aws_iam_service_linked_role" "apigw" {
   aws_service_name   = "ops.apigateway.amazonaws.com"
   description        = "Service-linked role for API Gateway"
 
-  # Add a lifecycle block to handle pre-existing role
   lifecycle {
     prevent_destroy = true
-    # Ignore changes to description as it might be set by AWS
-    ignore_changes = [description]
-    # Ignore errors during creation if the role already exists
-    create_before_destroy = true
+    ignore_changes = [
+      description,
+      tags,
+      custom_suffix,
+      # Ignore the entire resource if it exists
+      all
+    ]
+    create_before_destroy = false
   }
 }
 
