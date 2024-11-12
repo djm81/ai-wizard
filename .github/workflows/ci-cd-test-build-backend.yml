@@ -193,7 +193,8 @@ jobs:
         find . -type f -name "*.pyc" -delete
         find . -type f -name "*.pyo" -delete
         find . -type f -name "*.pyd" -delete
-        find . -type d -name "*.dist-info" ! -path "*email-validator*" -exec rm -rf {} +
+        # Preserve email-validator dist-info while cleaning others
+        find . -type d -name "*.dist-info" ! -name "email_validator*.dist-info" -exec rm -rf {} +
         find . -type d -name "*.egg-info" -exec rm -rf {} +
         
         # Create deployment package
