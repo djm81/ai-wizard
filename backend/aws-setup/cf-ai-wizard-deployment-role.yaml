@@ -137,6 +137,7 @@ Resources:
               - 'iam:UntagRole'
               - 'iam:PutRolePolicy'
               - 'iam:DeleteRolePolicy'
+              - 'iam:UpdateAssumeRolePolicy'
             Resource: 
               - !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role'
               - !Sub 'arn:aws:iam::${TrustedAccount}:role/ai-wizard-lambda-exec-role-*'
