@@ -188,30 +188,16 @@ jobs:
         
         # Remove unnecessary files to reduce package size
         cd build
-        
-        # Save email-validator dist-info before cleanup
-        EMAIL_VALIDATOR_DIST=$(find . -type d -name "email_validator*.dist-info")
-        if [ -n "$EMAIL_VALIDATOR_DIST" ]; then
-          echo "Found email-validator dist-info: $EMAIL_VALIDATOR_DIST"
-          mkdir -p temp_save
-          cp -r "$EMAIL_VALIDATOR_DIST" temp_save/
-        fi
-        
+                
         # Clean up
         find . -type d -name "tests" -exec rm -rf {} +
         find . -type d -name "__pycache__" -exec rm -rf {} +
         find . -type f -name "*.pyc" -delete
         find . -type f -name "*.pyo" -delete
         find . -type f -name "*.pyd" -delete
-        find . -type d -name "*.dist-info" -exec rm -rf {} +
+        # Preserve email-validator dist-info while cleaning others
+        find . -type d -name "*.dist-info" ! -name "email_validator*.dist-info" -exec rm -rf {} +
         find . -type d -name "*.egg-info" -exec rm -rf {} +
-        
-        # Restore email-validator dist-info
-        if [ -n "$EMAIL_VALIDATOR_DIST" ]; then
-          echo "Restoring email-validator dist-info"
-          cp -r temp_save/* .
-          rm -rf temp_save
-        fi
         
         # Create deployment package
         zip -r9 ../lambda_package.zip .
