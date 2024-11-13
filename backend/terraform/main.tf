@@ -725,6 +725,20 @@ resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_managed" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
 }
 
+# Add Route53 record for API Gateway custom domain
+resource "aws_route53_record" "api" {
+  provider = aws.assume_role
+  name     = "api.${var.domain_name}"
+  type     = "A"
+  zone_id  = var.route53_hosted_zone_id
+
+  alias {
+    name                   = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].target_domain_name
+    zone_id                = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
 # Outputs
 output "dynamodb_table_name" {
   value = aws_dynamodb_table.ai_wizard.name
