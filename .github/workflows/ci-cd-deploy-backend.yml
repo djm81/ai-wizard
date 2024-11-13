@@ -236,6 +236,7 @@ jobs:
           -target=aws_apigatewayv2_stage.lambda \
           -target=aws_apigatewayv2_domain_name.api \
           -target=aws_apigatewayv2_api_mapping.api \
+          -target=aws_route53_record.api \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
@@ -420,6 +421,7 @@ jobs:
           -target=aws_apigatewayv2_stage.lambda \
           -target=aws_apigatewayv2_domain_name.api \
           -target=aws_apigatewayv2_api_mapping.api \
+          -target=aws_route53_record.api \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
