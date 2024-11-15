@@ -200,3 +200,34 @@ When modifying CI/CD pipelines:
    - Validate deployments
 
 Example workflow update pattern:
+
+## Firebase Admin SDK Mock Credentials in Tests
+
+### Error
+When trying to use mock Firebase Admin SDK credentials in tests, the error "Failed to initialize a certificate credential" occurs because the Firebase Admin SDK requires a specific format for the private key and other credentials.
+
+### Root Cause
+1. Mock credentials with invalid private key format cannot be parsed by Firebase Admin SDK
+2. Creating mock credentials is error-prone and requires exact format matching
+3. Multiple credential setup steps in CI/CD can lead to conflicts and overwrites
+
+### Solution
+1. Use actual Firebase Admin SDK credentials from repository secrets in tests
+2. Store Firebase credentials as a repository secret (FIREBASE_ADMINSDK_JSON)
+3. Apply the same credentials setup in both test and deployment pipelines
+
+### Prevention
+When working with Firebase Admin SDK in tests:
+1. Never create mock Firebase credentials - use real (test environment) credentials
+2. Store Firebase service account JSON as a repository secret
+3. Use the same credential setup process across all environments
+4. Keep credential setup in a single place in the pipeline
+5. Verify credential file creation before running tests
+
+Example pattern:
+```yaml
+name: Set up Firebase credentials
+run: |
+mkdir -p app/config
+echo '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
+```
