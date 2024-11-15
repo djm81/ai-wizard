@@ -2,9 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { useApi } from '../hooks/useApi';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { mockAuthUser } from '../__mocks__/auth';
 
-// Mock axios and auth
 jest.mock('axios');
 jest.mock('../contexts/AuthContext', () => ({
   useAuth: jest.fn()
@@ -20,29 +18,28 @@ describe('useApi hook', () => {
       getAuthToken: mockGetAuthToken
     });
     (axios as unknown as jest.Mock).mockResolvedValue({ data: 'mock-response' });
-    // Suppress console.error for tests
     console.error = jest.fn();
   });
 
   afterEach(() => {
-    // Restore console.error
     console.error = originalError;
-    jest.resetAllMocks();
   });
 
   test('apiCall sends request with authorization header', async () => {
     const { result } = renderHook(() => useApi());
     
-    // Ensure the mock token is available
     mockGetAuthToken.mockResolvedValueOnce('mock-token');
     
     const response = await result.current.apiCall('http://example.com/api');
 
     expect(axios).toHaveBeenCalledWith({
       url: 'http://example.com/api',
+      method: 'GET',
       headers: {
-        'Authorization': 'Bearer mock-token'
-      }
+        'Authorization': 'Bearer mock-token',
+        'Content-Type': 'application/json'
+      },
+      data: undefined
     });
     expect(response).toBe('mock-response');
   });
@@ -54,7 +51,6 @@ describe('useApi hook', () => {
     const { result } = renderHook(() => useApi());
     await expect(result.current.apiCall('http://example.com/api')).rejects.toThrow('API Error');
     
-    // Verify error was logged
     expect(console.error).toHaveBeenCalledWith('API call error:', mockError);
   });
 });

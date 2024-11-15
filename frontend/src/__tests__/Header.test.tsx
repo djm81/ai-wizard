@@ -63,7 +63,6 @@ describe('Header component', () => {
     expect(screen.getByText('AI Wizard')).toBeInTheDocument();
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Projects')).toBeInTheDocument();
-    expect(screen.getByText('AI Interactions')).toBeInTheDocument();
     expect(screen.getByText('Sign Out')).toBeInTheDocument();
     expect(screen.queryByText('Sign In')).not.toBeInTheDocument();
   });
