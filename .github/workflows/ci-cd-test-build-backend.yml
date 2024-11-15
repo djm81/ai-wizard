@@ -92,39 +92,21 @@ jobs:
       run: |
         # Create test environment file .env.test
         cat > .env.test << EOL
+        DATABASE_URL=sqlite:///:memory:
         SECRET_KEY=dummy_secret_key_for_testing
-        DYNAMODB_TABLE_NAME=ai-wizard-table-test
         OPENAI_API_KEY=dummy-api-key-for-testing
         OPENAI_MODEL=gpt-4-turbo-preview
         ALLOWED_ORIGINS=https://${{ env.DOMAIN_NAME }}
         EOL
         
-        # Create Firebase config directory and file
-        mkdir -p app/config
-        if [ ! -e "app/config/firebase-adminsdk.json" ]; then
-          echo "Creating Firebase config file 'app/config/firebase-adminsdk.json' ..."
-          echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
-        fi
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-
-    - name: Create test config
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: |
-        # Create test environment file
-        echo "DATABASE_URL=sqlite:///:memory:" > .env.test
-        echo "SECRET_KEY=dummy_secret_key_for_testing" >> .env.test
-        echo "OPENAI_API_KEY=dummy-api-key-for-testing" >> .env.test
-        echo "OPENAI_MODEL=gpt-4-turbo-preview" >> .env.test
-        echo "ALLOWED_ORIGINS=https://${{ env.DOMAIN_NAME }}" >> .env.test
-        
-        # Create Firebase config directory and file with all required fields
+        # Create Firebase config directory and file with proper test credentials
         mkdir -p app/config
         cat > app/config/firebase-adminsdk.json << EOL
         {
           "type": "service_account",
           "project_id": "test-project",
           "private_key_id": "dummy-key-id",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDJ7vwUjWHCkOx/\nn8UJK3YDu3BMHzp6u1yqz3w9j+BpqUtp3rTUhK0oUUYVxI4P6AF8GMW7MnPz7vqN\nCF8ZF05nVaQJ6nTKKPxj4r+bLmUCqFO7RGkPS1xN1E4YwYY6HzD/y6Iq8Vn8dEdm\nYNwZrUv8NuNGe6h+4y6S0KsZxBBJU9tqFZ2g3iakUhxnLw4osXQxVGWLLWfF0l3O\nIQc1qyGFgV3LYqeZQEJEZ1n9M1F7Qj7ROEWvjWVZhPqXjzSl6jY4+7z/WWoVUvwh\nVTwEVW3XW+0lIFcVfrRJ8uP+YhvGUP+GfGvhpyXQAGECgYEA8j1HZGGqwU/lxm3L\nH9QQIh8QNqH0LPLvYtF8kMxZFIjgVqBPv+0TL9YyGK9gcz4qQP9CXq3QZrPgt5HH\nHx8CgYEA1RVq7/2uiXhYjxkf7yLmzgvJyCYtWH6ZKGvnKLFd7G9Sd7j5lhqHN1Gu\nqFMOLlTJ1WSZtZ+WcZqF1gKHFBl1AIYu7BYZj8g=\n-----END PRIVATE KEY-----\n",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDK/6Ua8gsCeJJq\nWH0qOrpIKUV5hvNX+IzoyJv/O2YTiYjuAJdxV2UxqhzQOsAv6TTUR0Qj7Rp0Kqvz\nBQXTNxwHGl8qH4mxCfUKq5DyuaHvuX6TqZUZzIR0jO7rNvHZUBRNhZ3Qj0h7Pf5x\nL+QfMoR5fTtlQEkXmtqcjdwxVU1XsHXqg+FQgvpf5F0FZuAZuQhvqLQAUHs5P3tF\nPrMD1wZqZmw8EbhFhYyHsXjF9yfVzQA7PTxvzxXHMftYR+TRhl5NkRr0kHZeYaBg\nF4G0qhgfG/h6PD6pGP4GxlhejwQRJ+953F9FLvZzQjxWlQVR7wQCn8Z/2y4ERZ+N\nAgMBAAECggEBAJKyvFrXYV4bxiBVuZ4dz5HtHrhCxsGtEyDCyQoVj1UgzDf8JLhk\n2HHhPYbqV8eFTrQX2NsqCzIcPGWK2qYHNYB0YAMjccs2PJyWvw3jy3YxGxH2uHJ+\nLHEGLxl31HuF6oKZIxHUpxUcKwoPBQJz/sRy1nAqE+ntGUV3Jc/YVUhHVDT3OmQM\nKghH0kKA3TxRXzqOUh7h9rjUBqDQlj5PuTH7NvJoKnxpGtShWz+FAoIBAQD2XYSL\nL8JFGoA1xA9B7U8nHIJo2RpU6RvEoBdMFn3AZpkQe/J9YhvJZ2uF3D+wfGGJL4jK\nQ8RlXULl5BJwCVHX\n-----END PRIVATE KEY-----\n",
           "client_email": "firebase-adminsdk-test@test-project.iam.gserviceaccount.com",
           "client_id": "123456789",
           "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -134,13 +116,14 @@ jobs:
           "universe_domain": "googleapis.com"
         }
         EOL
+      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Run tests
       id: run_tests
       env:
         PYTHONPATH: ${{ env.WORKING_DIRECTORY }}
+        DATABASE_URL: "sqlite:///:memory:"
         SECRET_KEY: dummy_secret_key_for_testing
-        DYNAMODB_TABLE_NAME: ai-wizard-table-test
         OPENAI_API_KEY: dummy-api-key-for-testing
         OPENAI_MODEL: gpt-4-turbo-preview
         ALLOWED_ORIGINS: "https://${{ env.DOMAIN_NAME }}"
