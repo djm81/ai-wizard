@@ -105,17 +105,20 @@ jobs:
         {
           "type": "service_account",
           "project_id": "test-project",
-          "private_key_id": "dummy-key-id",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDK/6Ua8gsCeJJq\nWH0qOrpIKUV5hvNX+IzoyJv/O2YTiYjuAJdxV2UxqhzQOsAv6TTUR0Qj7Rp0Kqvz\nBQXTNxwHGl8qH4mxCfUKq5DyuaHvuX6TqZUZzIR0jO7rNvHZUBRNhZ3Qj0h7Pf5x\nL+QfMoR5fTtlQEkXmtqcjdwxVU1XsHXqg+FQgvpf5F0FZuAZuQhvqLQAUHs5P3tF\nPrMD1wZqZmw8EbhFhYyHsXjF9yfVzQA7PTxvzxXHMftYR+TRhl5NkRr0kHZeYaBg\nF4G0qhgfG/h6PD6pGP4GxlhejwQRJ+953F9FLvZzQjxWlQVR7wQCn8Z/2y4ERZ+N\nAgMBAAECggEBAJKyvFrXYV4bxiBVuZ4dz5HtHrhCxsGtEyDCyQoVj1UgzDf8JLhk\n2HHhPYbqV8eFTrQX2NsqCzIcPGWK2qYHNYB0YAMjccs2PJyWvw3jy3YxGxH2uHJ+\nLHEGLxl31HuF6oKZIxHUpxUcKwoPBQJz/sRy1nAqE+ntGUV3Jc/YVUhHVDT3OmQM\nKghH0kKA3TxRXzqOUh7h9rjUBqDQlj5PuTH7NvJoKnxpGtShWz+FAoIBAQD2XYSL\nL8JFGoA1xA9B7U8nHIJo2RpU6RvEoBdMFn3AZpkQe/J9YhvJZ2uF3D+wfGGJL4jK\nQ8RlXULl5BJwCVHX\n-----END PRIVATE KEY-----\n",
-          "client_email": "firebase-adminsdk-test@test-project.iam.gserviceaccount.com",
+          "private_key_id": "test-key-id",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC9QFRnuqf7\nWR6gXUkD/PFr6pJ+CY4ZZxXc+oi3hJ2JYEj1rFhqHGJH+uAeGINX3qvBQsYB\nXRKHEGHxunXKNZvPXb/RZvUOwF9XERlpUDH4BhxQN0RHx0s+QkjUWHDFPvhK\nA/KIp/1hHHZJFw7GDH5YMHhW5WlCzl3TFrN3Q4ZsEuKgTnDV+AY4dR8UA+dG\nRD+kVRCD+YVtmCvBzd3RgZZUaWqHGD8ezpAqEZxaE4WGJwDtZNbENhM1jWTR\nKCKgz9qJyhxkTQSFoXhAuWWzHphC3nHwR5A3CgEcE/qwXKkGSX2XwX8xwU0B\nF+qRTUjZAgMBAAECggEABWzxS1Y2/FxUYuQYA0L5q4A+YQFeWXu3bhqJxxHq\n2Z8Iq+FZXB+PfxuZ4CcjxoF+vUL0cJLWOZgvYew+TGbA5HGKLy7ynU/qjz5x\n+v4Og/T9R9+QgdHO04ZXKMS+jG4CGFaE1K8CAwEAAQKBgQC9QFRnuqf7\nWR6gXUkD/PFr6pJ+CY4ZZxXc+oi3hJ2JYEj1rFhqHGJH+uAeGINX3qvBQsYB\nXRKHEGHxunXKNZvPXb/RZvUOwF9XERlpUDH4BhxQN0RHx0s+QkjUWHDFPvhK\nA/KIp/1hHHZJFw7GDH5YMHhW5WlCzl3TFrN3Q4ZsEuKgTnDV+AY4dR8UA+dG\nRD+kVRCD+YVtmCvBzd3RgZZUaWqHGD8ezpAqEZxaE4WGJwDtZNbENhM1jWTR\nKCKgz9qJyhxkTQSFoXhAuWWzHphC3nHwR5A3CgEcE/qwXKkGSX2XwX8xwU0B\nF+qRTUjZAgMBAAECggEABWzxS1Y2/FxUYuQYA0L5q4A+YQFeWXu3bhqJxxHq\n-----END PRIVATE KEY-----\n",
+          "client_email": "test-service-account@test-project.iam.gserviceaccount.com",
           "client_id": "123456789",
           "auth_uri": "https://accounts.google.com/o/oauth2/auth",
           "token_uri": "https://oauth2.googleapis.com/token",
           "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-test%40test-project.iam.gserviceaccount.com",
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test-service-account%40test-project.iam.gserviceaccount.com",
           "universe_domain": "googleapis.com"
         }
         EOL
+
+        # Verify the file was created and has the correct format
+        cat app/config/firebase-adminsdk.json
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Run tests
