@@ -99,26 +99,10 @@ jobs:
         ALLOWED_ORIGINS=https://${{ env.DOMAIN_NAME }}
         EOL
         
-        # Create Firebase config directory and file with proper test credentials
+        # Create Firebase config directory and use actual Firebase config from secrets
         mkdir -p app/config
-        cat > app/config/firebase-adminsdk.json << EOL
-        {
-          "type": "service_account",
-          "project_id": "test-project",
-          "private_key_id": "test-key-id",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC9QFRnuqf7\nWR6gXUkD/PFr6pJ+CY4ZZxXc+oi3hJ2JYEj1rFhqHGJH+uAeGINX3qvBQsYB\nXRKHEGHxunXKNZvPXb/RZvUOwF9XERlpUDH4BhxQN0RHx0s+QkjUWHDFPvhK\nA/KIp/1hHHZJFw7GDH5YMHhW5WlCzl3TFrN3Q4ZsEuKgTnDV+AY4dR8UA+dG\nRD+kVRCD+YVtmCvBzd3RgZZUaWqHGD8ezpAqEZxaE4WGJwDtZNbENhM1jWTR\nKCKgz9qJyhxkTQSFoXhAuWWzHphC3nHwR5A3CgEcE/qwXKkGSX2XwX8xwU0B\nF+qRTUjZAgMBAAECggEABWzxS1Y2/FxUYuQYA0L5q4A+YQFeWXu3bhqJxxHq\n2Z8Iq+FZXB+PfxuZ4CcjxoF+vUL0cJLWOZgvYew+TGbA5HGKLy7ynU/qjz5x\n+v4Og/T9R9+QgdHO04ZXKMS+jG4CGFaE1K8CAwEAAQKBgQC9QFRnuqf7\nWR6gXUkD/PFr6pJ+CY4ZZxXc+oi3hJ2JYEj1rFhqHGJH+uAeGINX3qvBQsYB\nXRKHEGHxunXKNZvPXb/RZvUOwF9XERlpUDH4BhxQN0RHx0s+QkjUWHDFPvhK\nA/KIp/1hHHZJFw7GDH5YMHhW5WlCzl3TFrN3Q4ZsEuKgTnDV+AY4dR8UA+dG\nRD+kVRCD+YVtmCvBzd3RgZZUaWqHGD8ezpAqEZxaE4WGJwDtZNbENhM1jWTR\nKCKgz9qJyhxkTQSFoXhAuWWzHphC3nHwR5A3CgEcE/qwXKkGSX2XwX8xwU0B\nF+qRTUjZAgMBAAECggEABWzxS1Y2/FxUYuQYA0L5q4A+YQFeWXu3bhqJxxHq\n-----END PRIVATE KEY-----\n",
-          "client_email": "test-service-account@test-project.iam.gserviceaccount.com",
-          "client_id": "123456789",
-          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-          "token_uri": "https://oauth2.googleapis.com/token",
-          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test-service-account%40test-project.iam.gserviceaccount.com",
-          "universe_domain": "googleapis.com"
-        }
-        EOL
+        echo '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
 
-        # Verify the file was created and has the correct format
-        cat app/config/firebase-adminsdk.json
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Run tests
