@@ -124,13 +124,14 @@ jobs:
           "type": "service_account",
           "project_id": "test-project",
           "private_key_id": "dummy-key-id",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC9QFRnuqf7\n-----END PRIVATE KEY-----\n",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDJ7vwUjWHCkOx/\nn8UJK3YDu3BMHzp6u1yqz3w9j+BpqUtp3rTUhK0oUUYVxI4P6AF8GMW7MnPz7vqN\nCF8ZF05nVaQJ6nTKKPxj4r+bLmUCqFO7RGkPS1xN1E4YwYY6HzD/y6Iq8Vn8dEdm\nYNwZrUv8NuNGe6h+4y6S0KsZxBBJU9tqFZ2g3iakUhxnLw4osXQxVGWLLWfF0l3O\nIQc1qyGFgV3LYqeZQEJEZ1n9M1F7Qj7ROEWvjWVZhPqXjzSl6jY4+7z/WWoVUvwh\nVTwEVW3XW+0lIFcVfrRJ8uP+YhvGUP+GfGvhpyXQAGECgYEA8j1HZGGqwU/lxm3L\nH9QQIh8QNqH0LPLvYtF8kMxZFIjgVqBPv+0TL9YyGK9gcz4qQP9CXq3QZrPgt5HH\nHx8CgYEA1RVq7/2uiXhYjxkf7yLmzgvJyCYtWH6ZKGvnKLFd7G9Sd7j5lhqHN1Gu\nqFMOLlTJ1WSZtZ+WcZqF1gKHFBl1AIYu7BYZj8g=\n-----END PRIVATE KEY-----\n",
           "client_email": "firebase-adminsdk-test@test-project.iam.gserviceaccount.com",
           "client_id": "123456789",
           "auth_uri": "https://accounts.google.com/o/oauth2/auth",
           "token_uri": "https://oauth2.googleapis.com/token",
           "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-test%40test-project.iam.gserviceaccount.com"
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-test%40test-project.iam.gserviceaccount.com",
+          "universe_domain": "googleapis.com"
         }
         EOL
 
