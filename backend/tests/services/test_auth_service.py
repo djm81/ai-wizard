@@ -1,35 +1,14 @@
 import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
-import firebase_admin.auth
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from app.services.auth_service import AuthService
+import firebase_admin.auth
 
 @pytest.mark.asyncio
 class TestAuthService:
     """Test suite for AuthService"""
 
-    def test_verify_password(self, db_session):
-        """Test password verification"""
-        service = AuthService(db_session)
-        password = "testpassword123"
-        hashed = service.get_password_hash(password)
-        assert service.verify_password(password, hashed) is True
-        assert service.verify_password("wrongpassword", hashed) is False
-
-    def test_get_password_hash(self, db_session):
-        """Test password hashing"""
-        service = AuthService(db_session)
-        password = "testpassword123"
-        hashed1 = service.get_password_hash(password)
-        hashed2 = service.get_password_hash(password)
-        # Each hash should be different due to salt
-        assert hashed1 != hashed2
-        # But both should verify
-        assert service.verify_password(password, hashed1)
-        assert service.verify_password(password, hashed2)
-
-    @pytest.mark.asyncio
     async def test_get_current_user_success(self, db_session, test_user):
         """Test successful user authentication"""
         service = AuthService(db_session)
@@ -44,7 +23,6 @@ class TestAuthService:
             assert user.id == test_user.id
             assert user.email == test_user.email
 
-    @pytest.mark.asyncio
     async def test_get_current_user_invalid_token(self, db_session):
         """Test authentication with invalid token"""
         service = AuthService(db_session)
@@ -59,9 +37,8 @@ class TestAuthService:
                 await service.get_current_user(mock_credentials)
             assert exc_info.value.status_code == 401
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_user_not_found(self, db_session):
-        """Test authentication with valid token but non-existent user"""
+    async def test_get_current_user_user_not_found_creates_user(self, db_session):
+        """Test authentication creates new user when not found"""
         service = AuthService(db_session)
         mock_credentials = HTTPAuthorizationCredentials(
             scheme="Bearer",
@@ -69,8 +46,50 @@ class TestAuthService:
         )
 
         with patch('firebase_admin.auth.verify_id_token') as mock_verify:
-            mock_verify.return_value = {"email": "nonexistent@example.com"}
+            mock_verify.return_value = {
+                "email": "newuser@example.com",
+                "name": "New User"
+            }
+            user = await service.get_current_user(mock_credentials)
+            assert user.email == "newuser@example.com"
+            assert user.full_name == "New User"
+
+    async def test_get_current_user_existing_user(self, db_session, test_user):
+        """Test authentication with existing user"""
+        service = AuthService(db_session)
+        mock_credentials = HTTPAuthorizationCredentials(
+            scheme="Bearer",
+            credentials="mock-token"
+        )
+
+        with patch('firebase_admin.auth.verify_id_token') as mock_verify:
+            mock_verify.return_value = {
+                "email": test_user.email,
+                "name": test_user.full_name
+            }
+            user = await service.get_current_user(mock_credentials)
+            assert user.id == test_user.id
+            assert user.email == test_user.email
+
+    async def test_get_current_user_missing_email(self, db_session):
+        """Test authentication with token missing email claim"""
+        service = AuthService(db_session)
+        mock_credentials = HTTPAuthorizationCredentials(
+            scheme="Bearer",
+            credentials="mock-token"
+        )
+
+        with patch('firebase_admin.auth.verify_id_token') as mock_verify:
+            mock_verify.return_value = {"name": "Test User"}  # No email claim
             with pytest.raises(HTTPException) as exc_info:
                 await service.get_current_user(mock_credentials)
             assert exc_info.value.status_code == 401
-            assert "User not found in database" in str(exc_info.value.detail) 
+            assert "Token missing email claim" in str(exc_info.value.detail)
+
+    async def test_get_current_user_no_credentials(self, db_session):
+        """Test authentication with no credentials"""
+        service = AuthService(db_session)
+        with pytest.raises(HTTPException) as exc_info:
+            await service.get_current_user(None)
+        assert exc_info.value.status_code == 401
+        assert "Could not validate credentials" in str(exc_info.value.detail)

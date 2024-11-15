@@ -44,6 +44,7 @@ coverage/
 *.lcov
 
 # Logs
+logs/
 *.log
 
 # Firebase

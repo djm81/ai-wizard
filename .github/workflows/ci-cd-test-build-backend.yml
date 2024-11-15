@@ -107,6 +107,20 @@ jobs:
         fi
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
+    - name: Create test config
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+      run: |
+        # Create test environment file
+        echo "DATABASE_URL=sqlite:///:memory:" > .env.test
+        echo "SECRET_KEY=dummy_secret_key_for_testing" >> .env.test
+        echo "OPENAI_API_KEY=dummy-api-key-for-testing" >> .env.test
+        echo "OPENAI_MODEL=gpt-4-turbo-preview" >> .env.test
+        echo "ALLOWED_ORIGINS=https://${{ env.DOMAIN_NAME }}" >> .env.test
+        
+        # Create Firebase config directory and file
+        mkdir -p app/config
+        echo '{"type":"service_account","project_id":"test"}' > app/config/firebase-adminsdk.json
+
     - name: Run tests
       id: run_tests
       env:

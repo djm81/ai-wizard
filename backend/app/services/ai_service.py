@@ -1,37 +1,51 @@
 from typing import List, Optional
 import openai
+from fastapi import Depends
 from sqlalchemy.orm import Session
+from app.db.database import get_db
 from app.core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AIService:
-    def __init__(self, db_session: Session):
-        """Initialize AIService with database session and OpenAI client
-
-        Args:
-            db_session (Session): SQLAlchemy database session
-        """
-        self.db = db_session
-        self.client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    """Service for handling AI operations"""
+    def __init__(self, db: Session = Depends(get_db)):
+        self.db = db
         self.model = settings.OPENAI_MODEL
+        self.client = None
+        # Only initialize OpenAI client if API key is available
+        if settings.OPENAI_API_KEY:
+            try:
+                self.client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY.get_secret_value())
+            except Exception as e:
+                logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+                self.client = None
 
-    def set_api_key(self, api_key: str) -> bool:
+    async def set_api_key(self, api_key: str) -> bool:
         """Set OpenAI API key"""
         try:
             self.client = openai.AsyncOpenAI(api_key=api_key)
             return True
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to set API key: {str(e)}")
             return False
 
-    def remove_api_key(self) -> bool:
+    async def remove_api_key(self) -> bool:
         """Remove OpenAI API key"""
         try:
+            # Create client with no API key to properly clean up
             self.client = openai.AsyncOpenAI(api_key=None)
             return True
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to remove API key: {str(e)}")
             return False
 
-    async def refine_requirements(self, conversation_history: List[str]) -> str:
+    async def refine_requirements(self, conversation_history: list[str]) -> str:
         """Refine project requirements based on conversation history"""
+        if not self.client:
+            return "OpenAI client not initialized. Please set API key first."
+
         try:
             messages = [
                 {"role": "system", "content": "You are a helpful assistant that refines project requirements."},
@@ -58,7 +72,7 @@ class AIService:
             return response.choices[0].message.content
 
         except Exception as e:
-            print(f"Error in refine_requirements: {str(e)}")
+            logger.error(f"Error in refine_requirements: {str(e)}")
             return "An error occurred while refining requirements."
 
     async def generate_code(self, prompt: str) -> str:

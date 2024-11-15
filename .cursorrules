@@ -5,9 +5,10 @@ G1. Analyze the most likely root cause and source for each error step by step
 G2. Propose fix, if not exactly clear, ask what is the expected behavior here
 G3. Ensure, that we have no deprecated code, missing docstrings, unused imports, variables, parameters etc. which will lead to warnings or errors
 G4. Fix all linting errors, where they occur, after you proposed updated code
-G5. Finish every conversation with "AI Rules Applied", so I know you applied the rules.
-G6. When working with resources, such as terraform, where tags are used, use the following naming convention: "Service" and "Name"
-G7. After proposing changes, review the README.md file in the root folder and ensure, that it is updated accordingly to reflect the changes from a developer perspective when first time setting up the project by local checkout from github and running the pipelines and/or locally setting up a docker container with backend code, if not deploying the code to AWS, so we have all necessary information in one place.
+G5. When working with resources, such as terraform, where tags are used, use the following naming convention: "Service" and "Name"
+G6. After proposing changes, review the README.md file in the root folder and ensure, that it is updated accordingly to reflect the changes from a developer perspective when first time setting up the project by local checkout from github and running the pipelines and/or locally setting up a docker container with backend code, if not deploying the code to AWS, so we have all necessary information in one place.
+G7. Finish every conversation (when all matching rules have been validated andapplied) with **AI Rules Applied**, so I know you applied the rules.
+G8. Check for duplicate files with different extensions (especially .ts vs .tsx) and remove the incorrect one
 
 # Terraform rules (applies to .github/backend/terraform and .github/workflows)
 T1. When adding or modyfing terraform code, double check the code, so we do not create any unexpected drift in our infrastructure
@@ -33,8 +34,14 @@ B7. As we use Firebase Auth, we need to mock the auth validation, so we need to 
 B8. In test mode, we have no real database, so we need to use the in-memory database, which is already set up in conftest.py
 B9. Ensure the github backend pipeline in .github/workflows is updated accordingly, when backend code is changed
 
+# Error learnings and fixes after analysis of the AI generated code and finding the root cause of the errors
+E1. If you have found an error in code you generated and applied, analyze the root cause of the error and then fix the code accordingly.
+E2. Document the reasoning to avoid similar errors in the future in the ".learnings" file in root folder of this workspace.
+E3. Include the ".learnings" file as additional input in your chain-of-thought process, so you can avoid similar errors in the future. Especially, when your knowledge is limited or eventually outdated and the correction was not obvious.
+
 # Git version control specific rules (always apply after all other rules)
-V1. If .uncommitted_changes file does not exist in project root, create it.
-V2. Add a brief summary of the changes to the end of ".uncommitted_changes" file in project root, so we know what was changed.
-V3. Ensure that the first line of the ".uncommitted_changes" file is the title for the main changes from the file as it shows up in the commit message and github actions runs, etc. Update it to match the changes.
-V4. Add a note in the conversation, once the ".uncommitted_changes" file has been updated, so we know it has been applied
+V1. If ".uncommitted_changes" file does not exist in the workspace root folder, create it.
+V2. Add a brief summary of the changes to the end of ".uncommitted_changes" file in the workspace root folder, so we know what was changed, after each proposed code change in our conversations.
+V3. This applies to chat and compose conversations.
+V4. Ensure that the first line of the ".uncommitted_changes" file is the title summarizing the changes later on in the file as it shows up in the commit message and github actions runs, etc. Update it to match the changes, whenever new content is added to the file.
+V5. Add **Changelog updated** in the conversation, once the ".uncommitted_changes" file has been updated (or if you can't update it in chat, show the markdown that I can copy-paste into the file), so we know these rules have been applied.

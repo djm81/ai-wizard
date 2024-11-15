@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr
-from typing import List
+from typing import List, Optional
 import os
 
 # Determine if we're running in AWS Lambda

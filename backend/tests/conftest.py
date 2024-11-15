@@ -9,6 +9,8 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.ai_interaction import AIInteraction
 from app.services.auth_service import AuthService
+from app.services.ai_service import AIService
+from app.core.config import settings
 from typing import Generator
 
 # Test database setup
@@ -86,3 +88,12 @@ def test_ai_interaction(db_session: Session, test_user: User, test_project: Proj
     db_session.commit()
     db_session.refresh(interaction)
     return interaction
+
+@pytest.fixture
+def ai_service(db_session):
+    """Fixture for AIService with test configuration"""
+    service = AIService(db_session)
+    # Don't initialize OpenAI client in tests
+    service.client = None  # Will be mocked in individual tests
+    service.model = "test-model"
+    return service

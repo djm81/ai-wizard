@@ -2,13 +2,26 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import router
 from app.core.config import settings
+from app.core.firebase import initialize_firebase
+from app.core.logging_config import setup_logging
+from app.db.init_db import init_db
+from app.db.database import setup_database
 import logging
 import time
 
-# Configure logging
+# Setup logging
+setup_logging()
 logger = logging.getLogger(__name__)
 
+# Initialize Firebase Admin SDK
+initialize_firebase()
+
+# Create FastAPI app
 app = FastAPI(title="AI Wizard API")
+
+# Setup database and create tables
+setup_database(app)
+init_db()
 
 # Configure CORS
 app.add_middleware(

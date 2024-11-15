@@ -5,6 +5,9 @@ from app.models.project import Project
 from app.models.ai_interaction import AIInteraction
 from app.schemas.project import ProjectCreate, ProjectUpdate
 from app.schemas.ai_interaction import AIInteractionCreate
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ProjectService:
     def __init__(self, db: Session = Depends(get_db)):
@@ -46,12 +49,37 @@ class ProjectService:
         interaction: AIInteractionCreate
     ) -> AIInteraction:
         """Create a new AI interaction for a project"""
+        # TODO: Replace with actual AI model response
+        placeholder_response = (
+            "This is a placeholder response. In the future, this will be replaced "
+            "with an actual response from the AI model. Your prompt was: "
+            f"'{interaction.prompt}'"
+        )
+        
         db_interaction = AIInteraction(
             user_id=user_id,
             project_id=project_id,
-            **interaction.model_dump()
+            prompt=interaction.prompt,
+            response=placeholder_response
         )
         self.db.add(db_interaction)
         self.db.commit()
         self.db.refresh(db_interaction)
         return db_interaction
+
+    def delete_project(self, project_id: int) -> None:
+        """Delete a project and all its associated AI interactions"""
+        project = self.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        try:
+            # Delete associated AI interactions first
+            self.db.query(AIInteraction).filter(AIInteraction.project_id == project_id).delete()
+            # Delete the project
+            self.db.query(Project).filter(Project.id == project_id).delete()
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Failed to delete project: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to delete project")

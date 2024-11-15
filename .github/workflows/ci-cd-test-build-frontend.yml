@@ -82,6 +82,16 @@ jobs:
         run: npm test
         working-directory: ${{ env.WORKING_DIRECTORY }}
 
+      - name: Create test config
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          cat > .env.test << EOL
+          REACT_APP_API_URL=http://localhost:8000/api
+          REACT_APP_FIREBASE_API_KEY=test-api-key
+          REACT_APP_FIREBASE_AUTH_DOMAIN=test.firebaseapp.com
+          REACT_APP_FIREBASE_PROJECT_ID=test-project
+          EOL
+
   build:
     needs: [should_run, test]
     if: needs.should_run.outputs.run_deployment == 'true'
@@ -108,14 +118,16 @@ jobs:
 
       - name: Create env file
         run: |
-          echo "PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
-          echo "PUBLIC_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env
-          echo "PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.FIREBASE_AUTH_DOMAIN }}" >> .env
-          echo "PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env
-          echo "PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> .env
-          echo "PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}" >> .env
-          echo "PUBLIC_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}" >> .env
-          echo "PUBLIC_API_URL=https://api.${{ env.ENVIRONMENT == 'prod' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', env.ENVIRONMENT, vars.TF_VAR_DOMAIN_NAME) }}" >> .env
+          cat > .env << EOL
+          PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          PUBLIC_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}
+          PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+          PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          PUBLIC_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}
+          PUBLIC_API_URL=https://api.${{ env.ENVIRONMENT == 'prod' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', env.ENVIRONMENT, vars.TF_VAR_DOMAIN_NAME) }}
+          EOL
         working-directory: ${{ env.WORKING_DIRECTORY }}
 
       - name: Build
