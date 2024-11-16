@@ -304,7 +304,9 @@ jobs:
     - name: Install OpenAPI dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install fastapi pyyaml pydantic sqlalchemy mangum python-jose[cryptography] python-multipart email-validator bcrypt
+        pip install fastapi pyyaml pydantic sqlalchemy mangum python-jose[cryptography] \
+          python-multipart email-validator bcrypt pydantic-settings firebase-admin \
+          alembic openai psycopg2-binary python-dotenv
         
     - name: Generate OpenAPI Specification
       working-directory: ${{ env.WORKING_DIRECTORY }}

@@ -449,19 +449,69 @@ resource "aws_apigatewayv2_api" "api" {
     allow_credentials = true
   }
 
+  depends_on = [
+    aws_lambda_alias.api_alias_v2
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = merge(local.common_tags, {
     Name    = "${var.lambda_function_name_prefix}-api-${var.environment}"
     Service = "ai-wizard-backend"
   })
 }
 
+# Integration needs to be created before routes
 resource "aws_apigatewayv2_integration" "lambda" {
   provider          = aws.assume_role
   api_id            = aws_apigatewayv2_api.api.id
   integration_type  = "AWS_PROXY"
-
-  integration_uri    = aws_lambda_alias.api_alias_v2.invoke_arn
+  integration_uri   = aws_lambda_alias.api_alias_v2.invoke_arn
   integration_method = "POST"
+
+  depends_on = [
+    aws_apigatewayv2_api.api,
+    aws_lambda_alias.api_alias_v2
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Stage needs to be created after integration
+resource "aws_apigatewayv2_stage" "lambda" {
+  provider    = aws.assume_role
+  api_id      = aws_apigatewayv2_api.api.id
+  name        = var.environment
+  auto_deploy = true
+
+  depends_on = [
+    aws_apigatewayv2_api.api,
+    aws_apigatewayv2_integration.lambda
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Mapping needs to be created after stage
+resource "aws_apigatewayv2_api_mapping" "api" {
+  provider    = aws.assume_role
+  api_id      = aws_apigatewayv2_api.api.id
+  domain_name = aws_apigatewayv2_domain_name.api.id
+  stage       = aws_apigatewayv2_stage.lambda.id
+
+  depends_on = [
+    aws_apigatewayv2_stage.lambda
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Add a catch-all route
