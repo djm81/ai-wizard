@@ -101,8 +101,8 @@ resource "aws_iam_role_policy" "lambda_cloudwatch" {
           "logs:DescribeLogStreams"
         ]
         Resource = [
-          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}:*",
-          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}"
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}-v2:*",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}-v2"
         ]
       }
     ]
@@ -112,11 +112,11 @@ resource "aws_iam_role_policy" "lambda_cloudwatch" {
 # Create or import CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "lambda_logs" {
   provider          = aws.assume_role
-  name              = "/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}"
+  name              = "/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}-v2"
   retention_in_days = 14
 
   tags = merge(local.common_tags, {
-    Name    = "/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}"
+    Name    = "/aws/lambda/${var.lambda_function_name_prefix}-${var.environment}-v2"
     Service = "ai-wizard-backend"
   })
 

@@ -304,12 +304,12 @@ jobs:
     - name: Install OpenAPI dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install fastapi pyyaml pydantic sqlalchemy mangum python-jose[cryptography] python-multipart
+        pip install fastapi pyyaml pydantic sqlalchemy mangum python-jose[cryptography] python-multipart email-validator bcrypt
         
     - name: Generate OpenAPI Specification
       working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
-        # Copy necessary app files for spec generation
+        # Create minimal FastAPI app for spec generation
         mkdir -p app_temp/app
         cp -r app/* app_temp/app/
         cd app_temp

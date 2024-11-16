@@ -85,6 +85,8 @@ jobs:
       id: install_dependencies
       run: |
         poetry install
+        # Add PyYAML and bcrypt explicitly for OpenAPI spec generation
+        poetry add PyYAML bcrypt
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Set up environment
