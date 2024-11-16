@@ -85,8 +85,8 @@ jobs:
       id: install_dependencies
       run: |
         poetry install
-        # Add PyYAML and bcrypt explicitly for OpenAPI spec generation
-        poetry add PyYAML bcrypt
+        # Add PyYAML explicitly for OpenAPI spec generation
+        poetry add PyYAML
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Set up environment
@@ -105,19 +105,18 @@ jobs:
         mkdir -p app/config
         echo '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
 
+        # Create directories for OpenAPI specs
+        mkdir -p app/openapi
+        mkdir -p terraform/api
+
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
-    - name: Run tests
-      id: run_tests
+    - name: Generate OpenAPI Specification
+      id: generate_openapi
       env:
         PYTHONPATH: ${{ env.WORKING_DIRECTORY }}
-        DATABASE_URL: "sqlite:///:memory:"
-        SECRET_KEY: dummy_secret_key_for_testing
-        OPENAI_API_KEY: dummy-api-key-for-testing
-        OPENAI_MODEL: gpt-4-turbo-preview
-        ALLOWED_ORIGINS: "https://${{ env.DOMAIN_NAME }},https://api.${{ env.DOMAIN_NAME }}"
       run: |
-        # Generate OpenAPI spec first
+        # Generate OpenAPI spec
         poetry run python -c "
         from app.main import app
         import yaml
@@ -142,7 +141,18 @@ jobs:
         assert Path('app/openapi/specification.yaml').exists(), 'App spec not generated'
         assert Path('terraform/api/specification.yaml').exists(), 'Terraform spec not generated'
         "
-        
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    - name: Run tests
+      id: run_tests
+      env:
+        PYTHONPATH: ${{ env.WORKING_DIRECTORY }}
+        DATABASE_URL: "sqlite:///:memory:"
+        SECRET_KEY: dummy_secret_key_for_testing
+        OPENAI_API_KEY: dummy-api-key-for-testing
+        OPENAI_MODEL: gpt-4-turbo-preview
+        ALLOWED_ORIGINS: "https://${{ env.DOMAIN_NAME }},https://api.${{ env.DOMAIN_NAME }}"
+      run: |
         # Run tests
         poetry run pytest \
           --cov=app \

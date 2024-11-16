@@ -296,6 +296,25 @@ jobs:
           -reconfigure
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
+    - name: Download Terraform Plans
+      uses: actions/download-artifact@v4
+      with:
+        name: terraform-plans-${{ env.ENVIRONMENT }}
+        path: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Download Lambda package
+      uses: actions/download-artifact@v4
+      with:
+        name: lambda_function
+        path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
+
+    - name: Calculate Lambda package hash
+      id: lambda_hash
+      run: |
+        HASH=$(openssl dgst -sha256 -binary lambda_package.zip | openssl base64)
+        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
+
     - name: Set up Python for OpenAPI
       uses: actions/setup-python@v5
       with:
@@ -340,26 +359,6 @@ jobs:
           echo "Error: OpenAPI specification file not found"
           exit 1
         fi
-
-    - name: Download Terraform Plans
-      uses: actions/download-artifact@v4
-      with:
-        name: terraform-plans-${{ env.ENVIRONMENT }}
-        path: ${{ env.WORKING_DIRECTORY }}/terraform
-
-    - name: Download Lambda package
-      uses: actions/download-artifact@v4
-      with:
-        name: lambda_function
-        path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
-
-    - name: Calculate Lambda package hash
-      id: lambda_hash
-      run: |
-        HASH=$(openssl dgst -sha256 -binary lambda_package.zip | openssl base64)
-        echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
-
     # First apply CloudWatch Log Group
     - name: Plan and Apply CloudWatch Log Group
       id: apply_cloudwatch_log_group
