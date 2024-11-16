@@ -33,6 +33,17 @@ def log_request_details(event):
     logger.info(f"Request Headers: {json.dumps(safe_headers, indent=2)}")
     logger.info("=====================")
 
+async def wrap_mangum_with_logging(event, context):
+    """Wrapper function to ensure logging happens before and after Mangum processing"""
+    logger.info("Starting request processing in Lambda")
+    try:
+        response = await mangum_handler(event, context)
+        logger.info(f"Completed request processing. Status: {response.get('statusCode')}")
+        return response
+    except Exception as e:
+        logger.error(f"Error in Mangum handler: {str(e)}", exc_info=True)
+        raise
+
 def lambda_handler(event, context):
     """
     AWS Lambda handler function that wraps the FastAPI application.
@@ -42,8 +53,17 @@ def lambda_handler(event, context):
     log_request_details(event)
 
     try:
-        response = mangum_handler(event, context)
+        import asyncio
+        response = asyncio.get_event_loop().run_until_complete(
+            wrap_mangum_with_logging(event, context)
+        )
         logger.info(f"Response Status Code: {response.get('statusCode', 'No status code')}")
+        
+        # Log 404 errors specifically
+        if response.get('statusCode') == 404:
+            logger.error(f"404 Not Found for path: {event.get('path')}")
+            logger.error(f"Available routes: {[route.path for route in app.routes]}")
+        
         return response
 
     except Exception as e:

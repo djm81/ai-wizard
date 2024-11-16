@@ -13,6 +13,22 @@ def setup_logging(service_name: str = "ai-copilot"):
     Returns:
         logging.Logger: Configured logger instance
     """
+    # Check if running in AWS Lambda
+    is_lambda = bool(os.getenv('AWS_LAMBDA_FUNCTION_NAME'))
+    
+    # Set up root logger for Lambda environment
+    if is_lambda:
+        # Configure root logger for Lambda
+        root_logger = logging.getLogger()
+        if not root_logger.handlers:
+            root_logger.setLevel(logging.INFO)
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setFormatter(logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            ))
+            root_logger.addHandler(handler)
+    
+    # Set up service-specific logger
     logger = logging.getLogger(service_name)
     logger.setLevel(logging.INFO)
     
@@ -24,15 +40,11 @@ def setup_logging(service_name: str = "ai-copilot"):
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    # Check if running in AWS Lambda
-    is_lambda = bool(os.getenv('AWS_LAMBDA_FUNCTION_NAME'))
-    
     if is_lambda:
         # In Lambda, just use stream handler which automatically goes to CloudWatch
         handler = logging.StreamHandler(sys.stdout)
     else:
         # In local development, log to file
-        # Navigate up from app/utils to backend/logs
         log_dir = Path(__file__).parent.parent.parent / "logs"
         log_dir.mkdir(exist_ok=True)
         
@@ -40,6 +52,10 @@ def setup_logging(service_name: str = "ai-copilot"):
     
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+    
+    # Ensure propagation to root logger in Lambda
+    if is_lambda:
+        logger.propagate = True
     
     return logger
 
