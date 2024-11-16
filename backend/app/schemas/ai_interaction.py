@@ -1,10 +1,12 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
 
 class AIInteractionBase(BaseModel):
     """Base schema for AI Interaction data"""
     prompt: str = Field(..., min_length=10, max_length=1000)
+
+    model_config = ConfigDict(from_attributes=True)
 
 class AIInteractionCreate(AIInteractionBase):
     """Schema for creating a new AI interaction"""
@@ -23,6 +25,3 @@ class AIInteraction(AIInteractionBase):
     response: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True

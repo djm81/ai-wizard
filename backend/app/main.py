@@ -3,15 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import router
 from app.core.config import settings
 from app.core.firebase import initialize_firebase
-from app.core.logging_config import setup_logging
 from app.db.init_db import init_db
 from app.db.database import setup_database
-import logging
+from app.utils.logging_config import logger
 import time
-
-# Setup logging
-setup_logging()
-logger = logging.getLogger(__name__)
 
 # Initialize Firebase Admin SDK
 initialize_firebase()
@@ -59,7 +54,8 @@ async def log_requests(request: Request, call_next):
     except Exception as e:
         logger.error(
             f"Request failed: {request.method} {request.url} "
-            f"- Error: {str(e)}"
+            f"- Error: {str(e)}",
+            exc_info=True
         )
         raise
 
@@ -75,10 +71,11 @@ async def root():
 async def test_auth(request: Request):
     """Test endpoint to verify authorization header handling"""
     auth_header = request.headers.get('Authorization', '')
-    logger.info(f"Received Authorization header: {auth_header}")
+    logger.info(f"Auth test endpoint accessed")
+    logger.debug(f"Authorization header present: {'Authorization' in request.headers}")
     return {
         "message": "Auth test endpoint",
-        "auth_header": auth_header,
+        "auth_header_present": bool(auth_header),
         "auth_scheme": auth_header.split()[0] if ' ' in auth_header else 'No scheme'
     }
 

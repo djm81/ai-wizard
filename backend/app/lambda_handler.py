@@ -1,15 +1,8 @@
 import json
-import logging
 from mangum import Mangum
 from app.main import app
 import os
-
-# Configure logging with more detailed format
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger()
+from app.utils.logging_config import logger
 
 # Ensure environment variables are set
 os.environ.setdefault('STAGE', 'dev')
@@ -30,7 +23,7 @@ def log_request_details(event):
     # Add specific logging for Authorization header
     headers = event.get('headers', {})
     auth_header = headers.get('Authorization', 'No Authorization header')
-    logger.info(f"Authorization Header: {auth_header}")
+    logger.info(f"Authorization Header Present: {'Authorization' in headers}")
     
     # Log other headers without sensitive info
     safe_headers = {
@@ -50,7 +43,7 @@ def lambda_handler(event, context):
 
     try:
         response = mangum_handler(event, context)
-        logger.info(f"Response: {json.dumps(response, indent=2)}")
+        logger.info(f"Response Status Code: {response.get('statusCode', 'No status code')}")
         return response
 
     except Exception as e:

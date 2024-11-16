@@ -231,3 +231,26 @@ run: |
 mkdir -p app/config
 echo '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
 ```
+
+## Git Ignore File Management
+
+### Error
+Git ignore patterns were added to component-specific .gitignore files instead of the root .gitignore file, leading to inconsistent version control behavior.
+
+### Root Cause
+1. Multiple .gitignore files in different directories can cause confusion
+2. Component-specific patterns may need to be applied project-wide
+3. Lack of centralized version control configuration
+
+### Solution
+1. Maintain all git ignore patterns in the root .gitignore file
+2. Use proper path prefixes for component-specific patterns
+3. Remove unnecessary component-level .gitignore files
+
+### Prevention
+When working with git ignore patterns:
+1. Always add patterns to the root .gitignore file
+2. Use proper path prefixes (e.g., backend/logs/* instead of logs/*)
+3. Document ignore patterns with comments
+4. Remove component-level .gitignore files unless absolutely necessary
+5. Review existing patterns before adding new ones

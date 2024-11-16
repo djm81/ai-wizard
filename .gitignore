@@ -44,8 +44,9 @@ coverage/
 *.lcov
 
 # Logs
-logs/
 *.log
+backend/logs/*.log
+!backend/logs/.gitkeep
 
 # Firebase
 firebaseConfig.js
