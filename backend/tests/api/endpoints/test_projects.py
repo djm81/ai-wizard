@@ -10,11 +10,11 @@ from unittest.mock import patch
 class TestProjectEndpoints:
     async def test_list_projects(self, client, test_user, test_project, auth_headers):
         with patch.object(AuthService, 'get_current_user', return_value=test_user):
-            response = client.get("/api/projects/", headers=auth_headers)
+            response = client.get("/projects/", headers=auth_headers)
             assert response.status_code == 200
             data = response.json()
             assert len(data) == 1
-            assert data[0]["id"] == test_project.id
+            assert data[0]["name"] == test_project.name
 
     async def test_create_project(self, client, test_user, auth_headers):
         with patch.object(AuthService, 'get_current_user', return_value=test_user):
@@ -23,7 +23,7 @@ class TestProjectEndpoints:
                 "description": "New Description"
             }
             response = client.post(
-                "/api/projects/",
+                "/projects/",
                 json=project_data,
                 headers=auth_headers
             )
@@ -35,17 +35,17 @@ class TestProjectEndpoints:
     async def test_read_project(self, client, test_user, test_project, auth_headers):
         with patch.object(AuthService, 'get_current_user', return_value=test_user):
             response = client.get(
-                f"/api/projects/{test_project.id}",
+                f"/projects/{test_project.id}",
                 headers=auth_headers
             )
             assert response.status_code == 200
             data = response.json()
-            assert data["id"] == test_project.id
+            assert data["name"] == test_project.name
 
     async def test_list_project_interactions(self, client, test_user, test_project, test_ai_interaction, auth_headers):
         with patch.object(AuthService, 'get_current_user', return_value=test_user):
             response = client.get(
-                f"/api/projects/{test_project.id}/ai-interactions",
+                f"/projects/{test_project.id}/ai-interactions",
                 headers=auth_headers
             )
             assert response.status_code == 200
@@ -59,7 +59,7 @@ class TestProjectEndpoints:
                 "prompt": "New test prompt"
             }
             response = client.post(
-                f"/api/projects/{test_project.id}/ai-interactions",
+                f"/projects/{test_project.id}/ai-interactions",
                 json=interaction_data,
                 headers=auth_headers
             )

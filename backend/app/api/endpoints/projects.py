@@ -92,3 +92,21 @@ async def delete_project(
         raise HTTPException(status_code=403, detail="Not authorized to access this project")
     service.delete_project(project_id)
     return None
+
+@router.get("/{project_id}/ai-interactions/{interaction_id}", response_model=AIInteraction)
+async def read_project_interaction(
+    project_id: int,
+    interaction_id: int,
+    current_user: User = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific AI interaction for a project"""
+    service = ProjectService(db)
+    project = service.get_project(project_id)
+    if project.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this project")
+    
+    interaction = service.get_project_interaction(project_id, interaction_id)
+    if not interaction:
+        raise HTTPException(status_code=404, detail="AI Interaction not found")
+    return interaction

@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.project import Project
@@ -83,3 +83,17 @@ class ProjectService:
             self.db.rollback()
             logger.error(f"Failed to delete project: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to delete project")
+
+    def get_project_interaction(self, project_id: int, interaction_id: int) -> AIInteraction:
+        """Get a specific AI interaction for a project"""
+        interaction = (
+            self.db.query(AIInteraction)
+            .filter(
+                AIInteraction.project_id == project_id,
+                AIInteraction.id == interaction_id
+            )
+            .first()
+        )
+        if not interaction:
+            raise HTTPException(status_code=404, detail="AI Interaction not found")
+        return interaction
