@@ -1,0 +1,905 @@
+openapi: 3.1.0
+info:
+  title: AI Wizard API
+  description: API for AI-powered development assistance
+  version: 1.0.0
+paths:
+  /users/:
+    post:
+      tags:
+      - users
+      summary: Create User
+      operationId: create_user_users__post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /users/me:
+    get:
+      tags:
+      - users
+      summary: Read Users Me
+      operationId: read_users_me_users_me_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: self
+        in: query
+        required: true
+        schema:
+          title: Self
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWithProfile'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - users
+      summary: Update User Me
+      operationId: update_user_me_users_me_put
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: self
+        in: query
+        required: true
+        schema:
+          title: Self
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - users
+      summary: Delete User Me
+      operationId: delete_user_me_users_me_delete
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: self
+        in: query
+        required: true
+        schema:
+          title: Self
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /users/me/profile:
+    post:
+      tags:
+      - users
+      summary: Create User Profile
+      operationId: create_user_profile_users_me_profile_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: self
+        in: query
+        required: true
+        schema:
+          title: Self
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - users
+      summary: Read User Profile
+      operationId: read_user_profile_users_me_profile_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: self
+        in: query
+        required: true
+        schema:
+          title: Self
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - users
+      summary: Update User Profile
+      operationId: update_user_profile_users_me_profile_put
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: self
+        in: query
+        required: true
+        schema:
+          title: Self
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /ai/set-api-key:
+    post:
+      tags:
+      - ai
+      summary: Set Api Key
+      description: Set OpenAI API key for the service
+      operationId: set_api_key_ai_set_api_key_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: self
+        in: query
+        required: true
+        schema:
+          title: Self
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIKeyUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /ai/remove-api-key:
+    post:
+      tags:
+      - ai
+      summary: Remove Api Key
+      description: Remove OpenAI API key from the service
+      operationId: remove_api_key_ai_remove_api_key_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: self
+        in: query
+        required: true
+        schema:
+          title: Self
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /ai/refine-requirements:
+    post:
+      tags:
+      - ai
+      summary: Refine Requirements
+      description: Refine project requirements based on conversation history
+      operationId: refine_requirements_ai_refine_requirements_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: self
+        in: query
+        required: true
+        schema:
+          title: Self
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+              title: Conversation
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /ai/generate-code:
+    post:
+      tags:
+      - ai
+      summary: Generate Code
+      description: Generate code based on the given prompt
+      operationId: generate_code_ai_generate_code_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: self
+        in: query
+        required: true
+        schema:
+          title: Self
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateCodeRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /projects/:
+    get:
+      tags:
+      - projects
+      summary: List Projects
+      description: List all projects for the current user
+      operationId: list_projects_projects__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Project'
+                type: array
+                title: Response List Projects Projects  Get
+      security:
+      - HTTPBearer: []
+    post:
+      tags:
+      - projects
+      summary: Create Project
+      description: Create a new project
+      operationId: create_project_projects__post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+  /projects/{project_id}:
+    get:
+      tags:
+      - projects
+      summary: Read Project
+      description: Get a specific project
+      operationId: read_project_projects__project_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Project Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - projects
+      summary: Delete Project
+      description: Delete a specific project
+      operationId: delete_project_projects__project_id__delete
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Project Id
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /projects/{project_id}/ai-interactions:
+    get:
+      tags:
+      - projects
+      summary: List Project Interactions
+      description: List all AI interactions for a project
+      operationId: list_project_interactions_projects__project_id__ai_interactions_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Project Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AIInteraction'
+                title: Response List Project Interactions Projects  Project Id  Ai
+                  Interactions Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - projects
+      summary: Create Project Interaction
+      description: Create a new AI interaction for a project
+      operationId: create_project_interaction_projects__project_id__ai_interactions_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Project Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIInteractionCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIInteraction'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /projects/{project_id}/ai-interactions/{interaction_id}:
+    get:
+      tags:
+      - projects
+      summary: Read Project Interaction
+      description: Get a specific AI interaction for a project
+      operationId: read_project_interaction_projects__project_id__ai_interactions__interaction_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Project Id
+      - name: interaction_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Interaction Id
+      - name: self
+        in: query
+        required: true
+        schema:
+          title: Self
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIInteraction'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /:
+    get:
+      summary: Root
+      operationId: root__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /test-auth:
+    get:
+      summary: Test Auth
+      description: Test endpoint to verify authorization header handling
+      operationId: test_auth_test_auth_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    AIInteraction:
+      properties:
+        prompt:
+          type: string
+          maxLength: 1000
+          minLength: 10
+          title: Prompt
+        id:
+          type: integer
+          title: Id
+        user_id:
+          type: integer
+          title: User Id
+        project_id:
+          type: integer
+          title: Project Id
+        response:
+          type: string
+          title: Response
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - prompt
+      - id
+      - user_id
+      - project_id
+      - response
+      - created_at
+      - updated_at
+      title: AIInteraction
+      description: Schema for AI interaction response
+    AIInteractionCreate:
+      properties:
+        prompt:
+          type: string
+          maxLength: 1000
+          minLength: 10
+          title: Prompt
+      type: object
+      required:
+      - prompt
+      title: AIInteractionCreate
+      description: Schema for creating a new AI interaction
+    APIKeyUpdate:
+      properties:
+        api_key:
+          type: string
+          title: Api Key
+      type: object
+      required:
+      - api_key
+      title: APIKeyUpdate
+    GenerateCodeRequest:
+      properties:
+        prompt:
+          type: string
+          title: Prompt
+      type: object
+      required:
+      - prompt
+      title: GenerateCodeRequest
+      description: Schema for code generation request
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    MessageResponse:
+      properties:
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - message
+      title: MessageResponse
+    Project:
+      properties:
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        id:
+          type: integer
+          title: Id
+        user_id:
+          type: integer
+          title: User Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - name
+      - id
+      - user_id
+      - created_at
+      - updated_at
+      title: Project
+      description: Schema for project response
+    ProjectCreate:
+      properties:
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+      type: object
+      required:
+      - name
+      title: ProjectCreate
+      description: Schema for creating a new project
+    User:
+      properties:
+        email:
+          type: string
+          title: Email
+        full_name:
+          type: string
+          title: Full Name
+        id:
+          type: integer
+          title: Id
+        is_active:
+          type: boolean
+          title: Is Active
+        is_superuser:
+          type: boolean
+          title: Is Superuser
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - email
+      - full_name
+      - id
+      - is_active
+      - is_superuser
+      - created_at
+      - updated_at
+      title: User
+      description: Schema for user response
+    UserCreate:
+      properties:
+        email:
+          type: string
+          title: Email
+        full_name:
+          type: string
+          title: Full Name
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - email
+      - full_name
+      - password
+      title: UserCreate
+      description: Schema for creating a new user
+    UserProfile:
+      properties:
+        bio:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Bio
+        preferences:
+          anyOf:
+          - type: object
+          - type: 'null'
+          title: Preferences
+        id:
+          type: integer
+          title: Id
+        user_id:
+          type: integer
+          title: User Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - user_id
+      - created_at
+      - updated_at
+      title: UserProfile
+      description: Schema for user profile response
+    UserProfileCreate:
+      properties:
+        bio:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Bio
+        preferences:
+          anyOf:
+          - type: object
+          - type: 'null'
+          title: Preferences
+      type: object
+      title: UserProfileCreate
+      description: Schema for creating a new user profile
+    UserProfileUpdate:
+      properties:
+        bio:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Bio
+        preferences:
+          anyOf:
+          - type: object
+          - type: 'null'
+          title: Preferences
+      type: object
+      title: UserProfileUpdate
+      description: Schema for updating a user profile
+    UserUpdate:
+      properties:
+        email:
+          anyOf:
+          - type: string
+            format: email
+          - type: 'null'
+          title: Email
+        full_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Full Name
+        password:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Password
+      type: object
+      title: UserUpdate
+      description: Schema for updating a user
+    UserWithProfile:
+      properties:
+        email:
+          type: string
+          title: Email
+        full_name:
+          type: string
+          title: Full Name
+        id:
+          type: integer
+          title: Id
+        is_active:
+          type: boolean
+          title: Is Active
+        is_superuser:
+          type: boolean
+          title: Is Superuser
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        profile:
+          anyOf:
+          - $ref: '#/components/schemas/UserProfile'
+          - type: 'null'
+      type: object
+      required:
+      - email
+      - full_name
+      - id
+      - is_active
+      - is_superuser
+      - created_at
+      - updated_at
+      title: UserWithProfile
+      description: Schema for user with profile response
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer

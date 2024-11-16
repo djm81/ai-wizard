@@ -254,3 +254,28 @@ When working with git ignore patterns:
 3. Document ignore patterns with comments
 4. Remove component-level .gitignore files unless absolutely necessary
 5. Review existing patterns before adding new ones
+
+## API URL Trailing Slash Handling
+
+### Error
+Frontend API calls with trailing slashes caused redirect loops (307 redirects) when interacting with FastAPI endpoints.
+
+### Root Cause
+1. FastAPI automatically redirects URLs with trailing slashes to non-trailing versions
+2. Frontend was sending requests with trailing slashes
+3. Each redirect triggered a new request, creating an infinite loop
+4. React's strict mode and development features amplified the issue
+
+### Solution
+1. Remove trailing slashes from frontend API calls
+2. Keep consistent URL patterns across the application
+3. Update API documentation to clarify URL format
+4. Add logging to track redirect issues
+
+### Prevention
+When working with FastAPI and frontend API calls:
+1. Never use trailing slashes in API URLs from frontend
+2. Document URL format requirements in API documentation
+3. Add logging for redirect responses
+4. Consider disabling FastAPI's automatic redirects if not needed
+5. Add URL format validation in frontend API calls

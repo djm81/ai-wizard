@@ -7,12 +7,20 @@ from app.db.init_db import init_db
 from app.db.database import setup_database
 from app.utils.logging_config import logger
 import time
+import yaml
+from pathlib import Path
 
 # Initialize Firebase Admin SDK
 initialize_firebase()
 
 # Create FastAPI app
-app = FastAPI(title="AI Wizard API")
+app = FastAPI(
+    title="AI Wizard API",
+    description="API for AI-powered development assistance",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 # Setup database and create tables
 setup_database(app)
@@ -61,6 +69,23 @@ async def log_requests(request: Request, call_next):
 
 # Include routers without /api prefix since we're using api.domain.com
 app.include_router(router)
+
+@app.on_event("startup")
+async def generate_openapi_spec():
+    """Generate OpenAPI specification file on startup"""
+    openapi_spec = app.openapi()
+    
+    # Write to app directory
+    app_spec_dir = Path(__file__).parent / "openapi"
+    app_spec_dir.mkdir(exist_ok=True)
+    with open(app_spec_dir / "specification.yaml", "w") as f:
+        yaml.dump(openapi_spec, f, sort_keys=False)
+    
+    # Write to terraform directory
+    terraform_spec_dir = Path(__file__).parent.parent / "terraform" / "api"
+    terraform_spec_dir.mkdir(exist_ok=True, parents=True)
+    with open(terraform_spec_dir / "specification.yaml", "w") as f:
+        yaml.dump(openapi_spec, f, sort_keys=False)
 
 @app.get("/")
 async def root():

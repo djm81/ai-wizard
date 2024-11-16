@@ -412,10 +412,20 @@ resource "aws_acm_certificate_validation" "backend_api" {
   validation_record_fqdns = [for record in aws_route53_record.backend_api_cert_validation : record.fqdn]
 }
 
+# API Gateway configuration
 resource "aws_apigatewayv2_api" "api" {
-  provider        = aws.assume_role
-  name            = "${var.lambda_function_name_prefix}-${var.environment}"
-  protocol_type   = "HTTP"
+  provider      = aws.assume_role
+  name          = "${var.lambda_function_name_prefix}-${var.environment}"
+  protocol_type = "HTTP"
+  
+  # Use OpenAPI specification
+  body = file("${path.module}/api/specification.yaml")
+  
+  # Ensure routes are created from the OpenAPI spec
+  route_selection_expression = "$request.method $request.path"
+  
+  # Add target Lambda integration
+  target = aws_lambda_alias.api_alias_v2.invoke_arn
 
   cors_configuration {
     allow_origins = [

@@ -62,6 +62,15 @@ export const useAIInteractions = () => {
     }
   };
 
+  const getInteraction = async (projectId: number, interactionId: number): Promise<AIInteraction> => {
+    try {
+      return await apiCall(`${API_URL}/projects/${projectId}/ai-interactions/${interactionId}/`);
+    } catch (error) {
+      console.error('Error fetching AI interaction:', error);
+      throw error;
+    }
+  };
+
   const createInteraction = async (
     projectId: number, 
     interaction: AIInteractionCreate
@@ -80,5 +89,35 @@ export const useAIInteractions = () => {
     }
   };
 
-  return { getProjectInteractions, createInteraction };
+  return { getProjectInteractions, getInteraction, createInteraction };
+};
+
+export const useAI = () => {
+  const { apiCall } = useApi();
+
+  const generateCode = async (prompt: string): Promise<string> => {
+    try {
+      return await apiCall(`${API_URL}/ai/generate-code/`, {
+        method: 'POST',
+        data: { prompt },
+      });
+    } catch (error) {
+      console.error('Error generating code:', error);
+      throw error;
+    }
+  };
+
+  const refineRequirements = async (conversation: string[]): Promise<string> => {
+    try {
+      return await apiCall(`${API_URL}/ai/refine-requirements/`, {
+        method: 'POST',
+        data: conversation,
+      });
+    } catch (error) {
+      console.error('Error refining requirements:', error);
+      throw error;
+    }
+  };
+
+  return { generateCode, refineRequirements };
 };

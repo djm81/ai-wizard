@@ -115,6 +115,33 @@ jobs:
         OPENAI_MODEL: gpt-4-turbo-preview
         ALLOWED_ORIGINS: "https://${{ env.DOMAIN_NAME }},https://api.${{ env.DOMAIN_NAME }}"
       run: |
+        # Generate OpenAPI spec first
+        poetry run python -c "
+        from app.main import app
+        import yaml
+        from pathlib import Path
+        
+        # Generate spec
+        spec = app.openapi()
+        
+        # Save in app directory
+        app_spec_dir = Path('app/openapi')
+        app_spec_dir.mkdir(exist_ok=True)
+        with open(app_spec_dir / 'specification.yaml', 'w') as f:
+            yaml.dump(spec, f, sort_keys=False)
+            
+        # Save in terraform directory
+        terraform_spec_dir = Path('terraform/api')
+        terraform_spec_dir.mkdir(exist_ok=True, parents=True)
+        with open(terraform_spec_dir / 'specification.yaml', 'w') as f:
+            yaml.dump(spec, f, sort_keys=False)
+            
+        # Validate specs exist
+        assert Path('app/openapi/specification.yaml').exists(), 'App spec not generated'
+        assert Path('terraform/api/specification.yaml').exists(), 'Terraform spec not generated'
+        "
+        
+        # Run tests
         poetry run pytest \
           --cov=app \
           --cov-report=xml \
