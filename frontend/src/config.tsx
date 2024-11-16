@@ -6,7 +6,7 @@ const mockEnv = {
   PUBLIC_FIREBASE_MESSAGING_SENDER_ID: 'test-sender-id',
   PUBLIC_FIREBASE_APP_ID: 'test-app-id',
   PUBLIC_GOOGLE_CLIENT_ID: 'test-client-id',
-  PUBLIC_API_URL: 'http://localhost:8000/api'
+  PUBLIC_API_URL: 'http://localhost:8000'
 };
 
 // For tests, use mock values

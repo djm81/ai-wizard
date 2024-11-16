@@ -59,8 +59,8 @@ async def log_requests(request: Request, call_next):
         )
         raise
 
-# Include routers
-app.include_router(router, prefix="/api")
+# Include routers without /api prefix since we're using api.domain.com
+app.include_router(router)
 
 @app.get("/")
 async def root():

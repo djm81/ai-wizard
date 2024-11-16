@@ -331,7 +331,7 @@ resource "aws_lambda_function" "api_v2" {
     variables = {
       STAGE = var.environment
       DATABASE_URL = var.database_url
-      ALLOWED_ORIGINS = "https://${var.domain_name}"
+      ALLOWED_ORIGINS = "https://${var.domain_name},https://api.${var.domain_name}"
     }
   }
 
@@ -418,7 +418,10 @@ resource "aws_apigatewayv2_api" "api" {
   protocol_type   = "HTTP"
 
   cors_configuration {
-    allow_origins = [var.domain_name != "" ? "https://${var.domain_name}" : "*"]
+    allow_origins = [
+      "https://${var.domain_name}",
+      "https://api.${var.domain_name}"
+    ]
     allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
     allow_headers = [
       "Content-Type",

@@ -96,7 +96,7 @@ jobs:
         SECRET_KEY=dummy_secret_key_for_testing
         OPENAI_API_KEY=dummy-api-key-for-testing
         OPENAI_MODEL=gpt-4-turbo-preview
-        ALLOWED_ORIGINS=https://${{ env.DOMAIN_NAME }}
+        ALLOWED_ORIGINS=https://${{ env.DOMAIN_NAME }},https://api.${{ env.DOMAIN_NAME }}
         EOL
         
         # Create Firebase config directory and use actual Firebase config from secrets
@@ -113,7 +113,7 @@ jobs:
         SECRET_KEY: dummy_secret_key_for_testing
         OPENAI_API_KEY: dummy-api-key-for-testing
         OPENAI_MODEL: gpt-4-turbo-preview
-        ALLOWED_ORIGINS: "https://${{ env.DOMAIN_NAME }}"
+        ALLOWED_ORIGINS: "https://${{ env.DOMAIN_NAME }},https://api.${{ env.DOMAIN_NAME }}"
       run: |
         poetry run pytest \
           --cov=app \

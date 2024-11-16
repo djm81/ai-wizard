@@ -86,10 +86,10 @@ jobs:
         working-directory: ${{ env.WORKING_DIRECTORY }}
         run: |
           cat > .env.test << EOL
-          REACT_APP_API_URL=http://localhost:8000/api
-          REACT_APP_FIREBASE_API_KEY=test-api-key
-          REACT_APP_FIREBASE_AUTH_DOMAIN=test.firebaseapp.com
-          REACT_APP_FIREBASE_PROJECT_ID=test-project
+          PUBLIC_API_URL=http://localhost:8000
+          PUBLIC_FIREBASE_API_KEY=test-api-key
+          PUBLIC_FIREBASE_AUTH_DOMAIN=test.firebaseapp.com
+          PUBLIC_FIREBASE_PROJECT_ID=test-project
           EOL
 
   build:

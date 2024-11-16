@@ -9,10 +9,13 @@ changes=$(cat ".uncommitted_changes")
 echo "Change log from .uncommitted_changes:"
 echo "$changes"
 
+untracked_files=$(git ls-files --others --exclude-standard)
+echo "Untracked files: $untracked_files"
+
 changed_files=$(git diff --name-only)
 echo "Changed files: $changed_files"
 
-if [[ -z $changed_files ]]; then
+if [[ -z $changed_files && -z $untracked_files ]]; then
   echo "No changes detected by git!"
   exit 1
 fi
@@ -24,5 +27,5 @@ git commit -m "$changes"
 echo "Pushing changes to remote repository..."
 git push
 
-echo "Removing uncommitted changes file..."
+echo "Resetting uncommitted changes file..."
 echo "" > .uncommitted_changes
