@@ -370,48 +370,6 @@ resource "aws_lambda_alias" "api_alias_v2" {
   }
 }
 
-# API Gateway Custom Domain Certificate (in the same region as API Gateway)
-resource "aws_acm_certificate" "backend_api" {
-  provider          = aws.assume_role
-  domain_name       = "api.${var.domain_name}"
-  validation_method = "DNS"
-
-  tags = merge(local.common_tags, {
-    Name    = "ai-wizard-backend-api-cert-${var.environment}"
-    Service = "ai-wizard-backend"
-  })
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Route 53 record for API certificate validation
-resource "aws_route53_record" "backend_api_cert_validation" {
-  provider = aws.assume_role
-  for_each = {
-    for dvo in aws_acm_certificate.backend_api.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
-  ttl             = 60
-  type            = each.value.type
-  zone_id         = var.route53_hosted_zone_id
-}
-
-# Certificate validation
-resource "aws_acm_certificate_validation" "backend_api" {
-  provider                = aws.assume_role
-  certificate_arn         = aws_acm_certificate.backend_api.arn
-  validation_record_fqdns = [for record in aws_route53_record.backend_api_cert_validation : record.fqdn]
-}
-
 # API Gateway configuration
 resource "aws_apigatewayv2_api" "api" {
   provider      = aws.assume_role
@@ -481,24 +439,58 @@ resource "aws_apigatewayv2_integration" "lambda" {
   }
 }
 
-# Stage needs to be created after integration
+# Single stage definition with all configurations
 resource "aws_apigatewayv2_stage" "lambda" {
-  provider    = aws.assume_role
-  api_id      = aws_apigatewayv2_api.api.id
-  name        = var.environment
+  provider = aws.assume_role
+  api_id = aws_apigatewayv2_api.api.id
+  name   = var.environment
   auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gw.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip            = "$context.identity.sourceIp"
+      requestTime   = "$context.requestTime"
+      httpMethod    = "$context.httpMethod"
+      routeKey      = "$context.routeKey"
+      status        = "$context.status"
+      protocol      = "$context.protocol"
+      responseLength = "$context.responseLength"
+      path          = "$context.path"
+      authorization = "$context.authorizer.error"
+    })
+  }
+
+  default_route_settings {
+    detailed_metrics_enabled = true
+    throttling_burst_limit  = 100
+    throttling_rate_limit   = 50
+  }
+
+  # Add stage variables
+  stage_variables = {
+    lambdaAlias = var.environment
+  }
 
   depends_on = [
     aws_apigatewayv2_api.api,
-    aws_apigatewayv2_integration.lambda
+    aws_apigatewayv2_integration.lambda,
+    aws_cloudwatch_log_group.api_gw,
+    aws_iam_role.api_gateway_cloudwatch
   ]
 
   lifecycle {
     create_before_destroy = true
   }
+
+  tags = merge(local.common_tags, {
+    Name    = "${var.lambda_function_name_prefix}-api-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
 }
 
-# Mapping needs to be created after stage
+# Single API mapping definition
 resource "aws_apigatewayv2_api_mapping" "api" {
   provider    = aws.assume_role
   api_id      = aws_apigatewayv2_api.api.id
@@ -506,7 +498,8 @@ resource "aws_apigatewayv2_api_mapping" "api" {
   stage       = aws_apigatewayv2_stage.lambda.id
 
   depends_on = [
-    aws_apigatewayv2_stage.lambda
+    aws_apigatewayv2_stage.lambda,
+    aws_apigatewayv2_domain_name.api
   ]
 
   lifecycle {
@@ -603,52 +596,6 @@ resource "aws_iam_role_policy" "api_gateway_logging" {
   })
 }
 
-# Add stage configuration
-resource "aws_apigatewayv2_stage" "lambda" {
-  provider = aws.assume_role
-  api_id = aws_apigatewayv2_api.api.id
-  name   = var.environment
-  auto_deploy = true
-
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.api_gw.arn
-    format = jsonencode({
-      requestId      = "$context.requestId"
-      ip            = "$context.identity.sourceIp"
-      requestTime   = "$context.requestTime"
-      httpMethod    = "$context.httpMethod"
-      routeKey      = "$context.routeKey"
-      status        = "$context.status"
-      protocol      = "$context.protocol"
-      responseLength = "$context.responseLength"
-      path          = "$context.path"
-      authorization = "$context.authorizer.error"
-    })
-  }
-
-  default_route_settings {
-    detailed_metrics_enabled = true
-    throttling_burst_limit  = 100
-    throttling_rate_limit   = 50
-  }
-
-  # Add stage variables
-  stage_variables = {
-    lambdaAlias = var.environment
-  }
-
-  tags = merge(local.common_tags, {
-    Name    = "${var.lambda_function_name_prefix}-api-${var.environment}"
-    Service = "ai-wizard-backend"
-  })
-
-  depends_on = [
-    aws_iam_service_linked_role.apigw,
-    aws_api_gateway_account.main,
-    aws_cloudwatch_log_group.api_gw
-  ]
-}
-
 # Add CloudWatch log group for API Gateway
 resource "aws_cloudwatch_log_group" "api_gw" {
   provider          = aws.assume_role
@@ -694,14 +641,6 @@ resource "aws_apigatewayv2_domain_name" "api" {
     endpoint_type   = "REGIONAL"
     security_policy = "TLS_1_2"
   }
-}
-
-# Add API mapping
-resource "aws_apigatewayv2_api_mapping" "api" {
-  provider    = aws.assume_role
-  api_id      = aws_apigatewayv2_api.api.id
-  domain_name = aws_apigatewayv2_domain_name.api.id
-  stage       = aws_apigatewayv2_stage.lambda.id
 }
 
 # Update Route53 record for API

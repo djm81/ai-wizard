@@ -2,15 +2,17 @@
 import subprocess
 import json
 import sys
+import argparse
 
-def get_latest_run_logs():
+def get_latest_run_logs(workflow_name=None):
     """Get logs from the latest workflow run"""
     try:
-        # Get latest run ID
-        result = subprocess.run(
-            ['gh', 'run', 'list', '--limit', '1', '--json', 'databaseId'],
-            capture_output=True, text=True
-        )
+        # Get latest run ID with optional workflow name filter
+        command = ['gh', 'run', 'list', '--limit', '1', '--json', 'databaseId']
+        if workflow_name:
+            command += ['--workflow', workflow_name]
+        result = subprocess.run(command, capture_output=True, text=True)
+        
         run_id = json.loads(result.stdout)[0]['databaseId']
 
         # Get name of the workflow
@@ -69,6 +71,10 @@ def analyze_error(logs_data):
                 # break
 
 if __name__ == "__main__":
-    logs_data = get_latest_run_logs()
+    parser = argparse.ArgumentParser(description="Analyze workflow logs for common errors")
+    parser.add_argument("-w", "--workflow", help="Specify the workflow name")
+    args = parser.parse_args()
+
+    logs_data = get_latest_run_logs(args.workflow)
     if logs_data:
         analyze_error(logs_data)
