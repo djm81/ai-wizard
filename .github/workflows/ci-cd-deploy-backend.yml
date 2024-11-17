@@ -150,7 +150,7 @@ jobs:
           -var="environment=${{ env.ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
           aws_acm_certificate.backend_api \
-          "arn:aws:acm:${var.aws_region}:${var.aws_account_id}:certificate/*" || true
+          "arn:aws:acm:${{ vars.TF_VAR_AWS_REGION }}:${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:certificate/*" || true
 
     - name: Import API Gateway Certificate Validation Records
       run: |
@@ -167,7 +167,7 @@ jobs:
           -var="environment=${{ env.ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
           aws_route53_record.backend_api_cert_validation \
-          "${var.route53_hosted_zone_id}_api.${var.domain_name}" || true
+          "${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}_api.${{ env.DOMAIN_NAME }}" || true
 
     - name: Check API Gateway Service Role
       id: check_apigw_role

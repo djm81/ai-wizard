@@ -1,47 +1,160 @@
-Rules for code generation, testing, review and version control:
+# AI Code Assistant Rules
 
-# General rules (apply always)
-G1. Analyze the most likely root cause and source for each error step by step
-G2. Propose fix, if not exactly clear, ask what is the expected behavior here
-G3. Ensure, that we have no deprecated code, missing docstrings, unused imports, variables, parameters etc. which will lead to warnings or errors
-G4. Fix all linting errors, where they occur, after you proposed updated code
-G5. When working with resources, such as terraform, where tags are used, use the following naming convention: "Service" and "Name"
-G6. After proposing changes, review the README.md file in the root folder and ensure, that it is updated accordingly to reflect the changes from a developer perspective when first time setting up the project by local checkout from github and running the pipelines and/or locally setting up a docker container with backend code, if not deploying the code to AWS, so we have all necessary information in one place.
-G7. Finish every conversation (when all matching rules have been validated andapplied) with **AI Rules Applied**, so I know you applied the rules.
-G8. Check for duplicate files with different extensions (especially .ts vs .tsx) and remove the incorrect one
+## Core Principles
+C1. Analyze issues systematically with root cause analysis
+C2. Propose clear solutions with explanations
+C3. Follow language-specific best practices and patterns
+C4. Maintain clean code (no deprecated code, unused imports, proper docstrings)
+C5. Document all significant changes
+C6. Validate changes against existing tests and linting rules
+C7. Preserve existing identifiers and comments to maintain context
 
-# Terraform rules (applies to .github/backend/terraform and .github/workflows)
-T1. When adding or modyfing terraform code, double check the code, so we do not create any unexpected drift in our infrastructure
-T2. Check for duplicate resources, which would lead to errors
-T3. When creating new resources, add the required tags, so we can find them later, especially the Service and Name tags as required by infracost
-T4. After modifying terraform code, validate the pipelines in .github/workflows folder, to ensure we have all dependencies in place.
-T5. Ensure for all terraform statements in pipelines in.github/workflows folder, that we use the variables from .tfvars file, so we can manage our infrastructure in one place. Also ensure, that all required variables are added to each terraform statement, where applicable, so the pipeline won't wait for user input due to missing variable assignment.
-T6. After modifying terraform code, run "terraform validate" to check for errors and warnings and based on output, improve your code and apply necessary changes.
+## Code Quality Standards
+Q1. Remove all unused code, imports, and variables
+Q2. Fix linting errors in proposed code changes
+Q3. Ensure proper error handling and logging
+Q4. Add/update docstrings for new/modified functions
+Q5. Check for and remove duplicate files (especially .ts vs .tsx)
+Q6. Follow project-specific naming conventions
+Q7. Ensure code changes are properly tested
+Q8. Maintain existing decision comments and rationale
 
-# Frontend rules (applies to .github/frontend and .github/workflows)
-F1. We use firebase auth and expect a valid token, so eventually we need to mock some api calls if they would be fired towards firebase or google auth for token validation
-F2. In frontend for testing we use "Bearer mock-token" as test-token, where "mock-token" is the value of the Bearer token, so we could use this validation value, if required
-F3. Ensure the github frontend pipeline in .github/workflows is updated accordingly, when frontend code is changed
+## Frontend Development (React/TypeScript)
+F1. Follow React hooks and functional component patterns
+F2. Implement Firebase auth token handling
+   - Use "Bearer mock-token" for testing
+   - Mock Firebase/Google auth calls in tests
+F3. Maintain type safety with proper TypeScript definitions
+F4. Update frontend CI/CD pipeline when needed
+F5. Ensure components are properly tested
 
-# Backend rules (applies to .github/backend and .github/workflows)
-B1. Ensure that our api incl. authentication (and mocks) has matching values and endpoints as well as their basic implementation at least.
-B2. We use pytest, so tests should be created using pytest fixtures and syntax.
-B3. We use FastAPI, so we need to follow its patterns and syntax.
-B4. We use SQLAlchemy, so we need to follow its patterns and syntax.
-B5. We use Pytest, so we need to follow its patterns and syntax.
-B6. Expect the api token from frontend to be async (javascript/typescript) and use "Bearer mock-token" as test-token, where "mock-token" is the value of the Bearer token, so we could use this validation value, if required
-B7. As we use Firebase Auth, we need to mock the auth validation, so we need to mock the firebase auth api and admin sdk api calls, if used in our api
-B8. In test mode, we have no real database, so we need to use the in-memory database, which is already set up in conftest.py
-B9. Ensure the github backend pipeline in .github/workflows is updated accordingly, when backend code is changed
+## Backend Development (FastAPI/Python)
+B1. Follow FastAPI patterns and best practices
+B2. Use SQLAlchemy ORM patterns correctly
+B3. Implement pytest fixtures and patterns for testing
+B4. Handle async operations properly
+B5. Mock Firebase Auth in tests
+   - Use "Bearer mock-token" for testing
+   - Mock Firebase Admin SDK calls
+B6. Use in-memory database for testing
+B7. Update backend CI/CD pipeline when needed
 
-# Error learnings and fixes after analysis of the AI generated code and finding the root cause of the errors
-E1. If you have found an error in code you generated and applied, analyze the root cause of the error and then fix the code accordingly.
-E2. Document the reasoning to avoid similar errors in the future in the ".learnings" file in root folder of this workspace.
-E3. Include the ".learnings" file as additional input in your chain-of-thought process, so you can avoid similar errors in the future. Especially, when your knowledge is limited or eventually outdated and the correction was not obvious.
+## Infrastructure (Terraform)
+T1. Prevent infrastructure drift
+T2. Check for resource duplicates
+T3. Include required tags (Service, Name) on resources
+T4. Validate terraform code before applying
+T5. Use variables from .tfvars files in pipelines
+T6. Ensure complete variable assignments in pipeline steps
 
-# Git version control specific rules (always apply after all other rules)
-V1. If ".uncommitted_changes" file does not exist in the workspace root folder, create it.
-V2. Add a brief summary of the changes to the end of ".uncommitted_changes" file in the workspace root folder, so we know what was changed, after each proposed code change in our conversations.
-V3. This applies to chat and compose conversations.
-V4. Ensure that the first line of the ".uncommitted_changes" file is the title summarizing the changes later on in the file as it shows up in the commit message and github actions runs, etc. Update it to match the changes, whenever new content is added to the file.
-V5. Add **Changelog updated** in the conversation, once the ".uncommitted_changes" file has been updated (or if you can't update it in chat, show the markdown that I can copy-paste into the file), so we know these rules have been applied.
+## CloudFormation
+CF1. Follow AWS CloudFormation best practices
+CF2. Use proper IAM least privilege principles
+CF3. Include required tags on resources
+    - Service
+    - Name
+    - Environment
+CF4. Validate templates before deployment
+    - Use cfn-lint for validation
+    - Check for circular dependencies
+CF5. Maintain existing stack parameters and conditions
+CF6. Document all custom resources
+CF7. Include proper deletion policies
+CF8. Use cross-stack references where appropriate
+
+## GitHub Workflows
+W1. Preserve existing workflow structure and comments
+W2. Maintain workflow identifiers and step names
+W3. Follow GitHub Actions best practices
+    - Use specific version pins for actions
+    - Implement proper error handling
+    - Add timeout limits
+W4. Include proper environment variables
+W5. Implement proper secret handling
+W6. Add appropriate workflow triggers
+W7. Maintain existing conditional logic
+W8. Document complex workflow steps
+W9. Implement proper job dependencies
+W10. Include proper cleanup steps
+
+## Documentation & Change Management
+D1. Update README.md for significant changes
+   - Include setup instructions
+   - Document new dependencies
+   - Update deployment steps
+D2. Document error learnings in .learnings file
+D3. Track changes in .uncommitted_changes file
+   - Create file if not exists
+   - Update summary line
+   - Add detailed change descriptions
+D4. Mark completed reviews with "**AI Rules Applied**"
+D5. Confirm changelog updates with "**Changelog updated**"
+
+## Testing & Validation
+V1. Ensure test coverage for new code
+V2. Validate API endpoints and authentication
+V3. Check for breaking changes
+V4. Verify pipeline configurations
+V5. Test resource cleanup
+V6. Validate error handling
+
+## Database Management
+D1. Follow SQLAlchemy relationship patterns
+    - Use proper cascade settings
+    - Define clear foreign key relationships
+D2. Implement proper database migrations
+D3. Handle database transactions correctly
+D4. Use appropriate indexing strategies
+D5. Implement proper connection pooling
+D6. Handle database errors gracefully
+D7. Use appropriate session management
+D8. Follow naming conventions for database objects
+
+## API Design
+A1. Follow RESTful API conventions
+A2. Implement proper request/response schemas
+A3. Use consistent error response formats
+A4. Include proper API documentation
+    - OpenAPI/Swagger specifications
+    - Example requests/responses
+A5. Implement proper versioning
+A6. Handle rate limiting appropriately
+A7. Implement proper pagination
+A8. Use consistent endpoint naming
+
+## Security
+S1. Implement proper authentication flows
+S2. Follow authorization best practices
+S3. Handle sensitive data appropriately
+    - API keys
+    - Tokens
+    - User credentials
+S4. Implement proper CORS policies
+S5. Follow secure coding practices
+S6. Implement proper input validation
+S7. Handle security headers correctly
+S8. Follow least privilege principle
+
+## Error Handling & Logging
+E1. Implement consistent error handling patterns
+E2. Use proper logging levels
+    - DEBUG for development details
+    - INFO for normal operations
+    - WARNING for potential issues
+    - ERROR for failures
+E3. Include proper error context
+E4. Implement proper error recovery
+E5. Use structured logging format
+E6. Handle async operation errors
+E7. Implement proper error boundaries
+E8. Follow error documentation standards
+
+## State Management
+M1. Follow consistent state management patterns
+M2. Implement proper loading states
+M3. Handle error states appropriately
+M4. Implement proper data caching
+M5. Handle component lifecycle correctly
+M6. Implement proper cleanup
+M7. Follow state immutability patterns
+M8. Use appropriate state management tools
