@@ -363,9 +363,14 @@ jobs:
         
     - name: Generate OpenAPI Specification
       working-directory: ${{ env.WORKING_DIRECTORY }}
+      env:
+        FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_ADMINSDK_JSON }}
       run: |
-        # Create minimal FastAPI app for spec generation
-        mkdir -p app_temp/app
+        # Create config directory and save Firebase credentials
+        mkdir -p app_temp/app/config
+        echo "$FIREBASE_CREDENTIALS" > app_temp/app/config/firebase-adminsdk.json
+
+        # Copy application code
         cp -r app/* app_temp/app/
         cd app_temp
         

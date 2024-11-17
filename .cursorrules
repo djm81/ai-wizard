@@ -158,3 +158,29 @@ M5. Handle component lifecycle correctly
 M6. Implement proper cleanup
 M7. Follow state immutability patterns
 M8. Use appropriate state management tools
+
+## Security Testing & Validation
+ST1. Analyze cryptographic requirements
+    - Identify components requiring real credentials
+    - Check for cryptographic validation requirements
+    - Document which components can't be mocked
+ST2. Validate security component mocking
+    - Test if security components accept mock data
+    - Verify cryptographic validation requirements
+    - Document failed mock attempts in .learnings
+ST3. Handle sensitive credentials in CI/CD
+    - Use GitHub secrets for real credentials
+    - Never mock cryptographically validated credentials
+    - Implement proper secret rotation
+ST4. Test security boundaries
+    - Validate authentication flows
+    - Test authorization boundaries
+    - Verify token validation
+ST5. Document security testing requirements
+    - List required real credentials
+    - Specify mock limitations
+    - Include setup instructions
+ST6. Implement proper test isolation
+    - Separate security critical tests
+    - Use dedicated test credentials
+    - Maintain test environment security
