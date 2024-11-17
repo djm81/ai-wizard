@@ -403,7 +403,7 @@ jobs:
         fi
         
         # Verify OpenAPI version
-        if ! grep -q "openapi: '3.0.2'" terraform/api/specification.yaml; then
+        if ! grep -q "^openapi: 3.0.2$" terraform/api/specification.yaml; then
           echo "Error: OpenAPI version is not 3.0.2"
           exit 1
         fi

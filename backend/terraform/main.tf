@@ -482,6 +482,10 @@ resource "aws_apigatewayv2_stage" "lambda" {
 
   lifecycle {
     create_before_destroy = true
+    # Ensure API mappings are removed first
+    replace_triggered_by = [
+      aws_apigatewayv2_api.api
+    ]
   }
 
   tags = merge(local.common_tags, {
@@ -504,6 +508,10 @@ resource "aws_apigatewayv2_api_mapping" "api" {
 
   lifecycle {
     create_before_destroy = true
+    # Add explicit dependency for cleanup
+    replace_triggered_by = [
+      aws_apigatewayv2_stage.lambda
+    ]
   }
 }
 
