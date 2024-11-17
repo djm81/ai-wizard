@@ -135,6 +135,40 @@ jobs:
           "/aws/lambda/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}-${{ env.ENVIRONMENT }}" || true
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
+    - name: Import API Gateway Certificate
+      run: |
+        # First try to import existing certificate if it exists
+        terraform import \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="domain_name=${{ env.DOMAIN_NAME }}" \
+          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
+          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
+          -var="environment=${{ env.ENVIRONMENT }}" \
+          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
+          aws_acm_certificate.backend_api \
+          "arn:aws:acm:${var.aws_region}:${var.aws_account_id}:certificate/*" || true
+
+    - name: Import API Gateway Certificate Validation Records
+      run: |
+        # Try to import existing validation records if they exist
+        terraform import \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="domain_name=${{ env.DOMAIN_NAME }}" \
+          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
+          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
+          -var="environment=${{ env.ENVIRONMENT }}" \
+          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
+          aws_route53_record.backend_api_cert_validation \
+          "${var.route53_hosted_zone_id}_api.${var.domain_name}" || true
+
     - name: Check API Gateway Service Role
       id: check_apigw_role
       run: |

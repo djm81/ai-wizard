@@ -641,6 +641,10 @@ resource "aws_apigatewayv2_domain_name" "api" {
     endpoint_type   = "REGIONAL"
     security_policy = "TLS_1_2"
   }
+
+  depends_on = [
+    aws_acm_certificate_validation.backend_api
+  ]
 }
 
 # Update Route53 record for API
@@ -739,6 +743,48 @@ resource "aws_route53_record" "api" {
     zone_id                = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].hosted_zone_id
     evaluate_target_health = false
   }
+}
+
+# API Gateway Custom Domain Certificate (in the same region as API Gateway)
+resource "aws_acm_certificate" "backend_api" {
+  provider          = aws.assume_role
+  domain_name       = "api.${var.domain_name}"
+  validation_method = "DNS"
+
+  tags = merge(local.common_tags, {
+    Name    = "ai-wizard-backend-api-cert-${var.environment}"
+    Service = "ai-wizard-backend"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Route 53 record for API certificate validation
+resource "aws_route53_record" "backend_api_cert_validation" {
+  provider = aws.assume_role
+  for_each = {
+    for dvo in aws_acm_certificate.backend_api.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = var.route53_hosted_zone_id
+}
+
+# Certificate validation
+resource "aws_acm_certificate_validation" "backend_api" {
+  provider                = aws.assume_role
+  certificate_arn         = aws_acm_certificate.backend_api.arn
+  validation_record_fqdns = [for record in aws_route53_record.backend_api_cert_validation : record.fqdn]
 }
 
 # Outputs
