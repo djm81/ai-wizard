@@ -382,7 +382,10 @@ jobs:
         import yaml
         from pathlib import Path
         
+        # Force OpenAPI 3.0.2 version for API Gateway compatibility
         spec = app.openapi()
+        spec['openapi'] = '3.0.2'  # Downgrade from 3.1.0 to 3.0.2
+        
         spec_dir = Path('../terraform/api')
         spec_dir.mkdir(exist_ok=True, parents=True)
         with open(spec_dir / 'specification.yaml', 'w') as f:
@@ -392,10 +395,16 @@ jobs:
         # Generate spec
         python generate_spec.py
         
-        # Validate spec exists
+        # Validate spec exists and version
         cd ..
         if [ ! -f "terraform/api/specification.yaml" ]; then
           echo "Error: OpenAPI specification file not found"
+          exit 1
+        fi
+        
+        # Verify OpenAPI version
+        if ! grep -q "openapi: '3.0.2'" terraform/api/specification.yaml; then
+          echo "Error: OpenAPI version is not 3.0.2"
           exit 1
         fi
     # First apply CloudWatch Log Group

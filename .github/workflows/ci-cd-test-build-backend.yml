@@ -115,6 +115,7 @@ jobs:
       id: generate_openapi
       env:
         PYTHONPATH: ${{ env.WORKING_DIRECTORY }}
+        FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_ADMINSDK_JSON }}
       run: |
         # Generate OpenAPI spec
         poetry run python -c "
@@ -122,8 +123,9 @@ jobs:
         import yaml
         from pathlib import Path
         
-        # Generate spec
+        # Generate spec with compatible version
         spec = app.openapi()
+        spec['openapi'] = '3.0.2'  # Ensure API Gateway compatibility
         
         # Save in app directory
         app_spec_dir = Path('app/openapi')
@@ -137,9 +139,14 @@ jobs:
         with open(terraform_spec_dir / 'specification.yaml', 'w') as f:
             yaml.dump(spec, f, sort_keys=False)
             
-        # Validate specs exist
+        # Validate specs exist and version
         assert Path('app/openapi/specification.yaml').exists(), 'App spec not generated'
         assert Path('terraform/api/specification.yaml').exists(), 'Terraform spec not generated'
+        
+        # Verify OpenAPI version
+        with open(app_spec_dir / 'specification.yaml') as f:
+            loaded_spec = yaml.safe_load(f)
+            assert loaded_spec['openapi'] == '3.0.2', 'Invalid OpenAPI version'
         "
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
