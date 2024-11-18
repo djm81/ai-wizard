@@ -368,27 +368,46 @@ jobs:
       continue-on-error: true
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
+    # Move OpenAPI spec handling to before IAM deployment
+    - name: Set up Python for OpenAPI
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install OpenAPI dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install fastapi pyyaml pydantic sqlalchemy mangum python-jose[cryptography] \
+          python-multipart email-validator bcrypt pydantic-settings firebase-admin \
+          alembic openai psycopg2-binary python-dotenv
+
     - name: Update OpenAPI Specification
       run: |
         # Ensure terraform api directory exists
-        mkdir -p backend/terraform/api
+        mkdir -p terraform/api
         
         # Copy OpenAPI spec from app to terraform if it exists
-        if [ -f "backend/app/openapi/specification.yaml" ]; then
-          cp backend/app/openapi/specification.yaml backend/terraform/api/
+        if [ -f "app/openapi/specification.yaml" ]; then
+          echo "Using existing OpenAPI specification from app directory"
+          cp app/openapi/specification.yaml terraform/api/
+        else
+          echo "Error: OpenAPI specification.yaml not found in /backend/app/openapi/"
+          exit 1
         fi
         
         # Validate spec exists
-        if [ ! -f "backend/terraform/api/specification.yaml" ]; then
+        if [ ! -f "terraform/api/specification.yaml" ]; then
           echo "Error: OpenAPI specification.yaml not found in backend/terraform/api/"
           exit 1
         fi
         
         # Verify OpenAPI version
-        if ! grep -q "^openapi: 3.0.2$" backend/terraform/api/specification.yaml; then
+        if ! grep -q "^openapi: 3.0.2$" terraform/api/specification.yaml; then
           echo "Error: OpenAPI version is not 3.0.2"
           exit 1
         fi
+        
+        echo "OpenAPI specification updated successfully"
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
     # First handle IAM roles and permissions
@@ -489,18 +508,4 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-    - name: Update OpenAPI Specification
-      run: |
-        # Ensure terraform api directory exists
-        mkdir -p backend/terraform/api
-        
-        # Copy OpenAPI spec from app to terraform
-        cp backend/app/openapi/specification.yaml backend/terraform/api/
-        
-        # Verify OpenAPI version
-        if ! grep -q "^openapi: 3.0.2$" backend/terraform/api/specification.yaml; then
-          echo "Error: OpenAPI version is not 3.0.2"
-          exit 1
-        fi
 
