@@ -375,6 +375,7 @@ jobs:
         python-version: '3.12'
 
     - name: Install OpenAPI dependencies
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
         python -m pip install --upgrade pip
         pip install fastapi pyyaml pydantic sqlalchemy mangum python-jose[cryptography] \
@@ -382,6 +383,7 @@ jobs:
           alembic openai psycopg2-binary python-dotenv
 
     - name: Update OpenAPI Specification
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
         # Ensure terraform api directory exists
         mkdir -p terraform/api
@@ -408,11 +410,11 @@ jobs:
         fi
         
         echo "OpenAPI specification updated successfully"
-      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     # First handle IAM roles and permissions
     - name: Plan and Apply IAM Resources
       id: apply_iam
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
       run: |
         # Create plan for IAM resources
         TARGETS=""
@@ -451,6 +453,7 @@ jobs:
     # Then handle all other resources
     - name: Plan and Apply Main Infrastructure
       id: apply_main
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
       run: |
         # Create plan for all remaining resources
         terraform plan \
@@ -471,12 +474,12 @@ jobs:
 
     - name: Terraform Output Application URL
       id: output_application_url
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
       run: |
         echo "Your application for ${{ env.ENVIRONMENT }} stage is accessible at: $(terraform output -raw website_url)"
         echo "Your API for ${{ env.ENVIRONMENT }} stage is accessible at: https://$(terraform output -raw api_domain)"
         echo "application_url=$(terraform output -raw website_url)" >> $GITHUB_OUTPUT
         echo "api_url=https://$(terraform output -raw api_domain)" >> $GITHUB_OUTPUT
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     outputs:
       application_url: ${{ steps.output_application_url.outputs.application_url }}

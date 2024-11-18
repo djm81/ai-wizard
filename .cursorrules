@@ -46,6 +46,7 @@ T3. Include required tags (Service, Name) on resources
 T4. Validate terraform code before applying
 T5. Use variables from .tfvars files in pipelines
 T6. Ensure complete variable assignments in pipeline steps
+T7. Ensure directories are inside or below module directory when referencing files
 
 ## CloudFormation
 CF1. Follow AWS CloudFormation best practices
@@ -76,6 +77,7 @@ W7. Maintain existing conditional logic
 W8. Document complex workflow steps
 W9. Implement proper job dependencies
 W10. Include proper cleanup steps
+W11. Ensure working directory and relative paths are correct in pipeline steps
 
 ## Documentation & Change Management
 D1. Update README.md for significant changes

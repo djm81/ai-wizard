@@ -85,14 +85,14 @@ jobs:
 
     - name: Install dependencies
       id: install_dependencies
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
         poetry install
-        # Add PyYAML explicitly for OpenAPI spec generation
         poetry add PyYAML
-      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Set up environment
       id: setup_environment
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
         # Create test environment file .env.test
         cat > .env.test << EOL
@@ -111,10 +111,9 @@ jobs:
         mkdir -p app/openapi
         mkdir -p terraform/api
 
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-
     - name: Generate OpenAPI Specification
       id: generate_openapi
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       env:
         PYTHONPATH: ${{ env.WORKING_DIRECTORY }}
         FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_ADMINSDK_JSON }}
@@ -150,10 +149,10 @@ jobs:
             loaded_spec = yaml.safe_load(f)
             assert loaded_spec['openapi'] == '3.0.2', 'Invalid OpenAPI version'
         "
-      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Run tests
       id: run_tests
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       env:
         PYTHONPATH: ${{ env.WORKING_DIRECTORY }}
         DATABASE_URL: "sqlite:///:memory:"
@@ -168,7 +167,6 @@ jobs:
           --cov-report=xml \
           --cov-report=term-missing \
           tests/
-      working-directory: ${{ env.WORKING_DIRECTORY }}
 
     - name: Upload coverage data to coveralls.io
       id: upload_coverage
@@ -177,7 +175,6 @@ jobs:
       run: |
         poetry run pip install coveralls
         poetry run coveralls --service=github
-      working-directory: ${{ env.WORKING_DIRECTORY }}
 
   build:
     needs: [should_run, test]
