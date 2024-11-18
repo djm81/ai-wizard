@@ -503,14 +503,6 @@ resource "aws_apigatewayv2_route" "any" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
-# Add explicit root route
-resource "aws_apigatewayv2_route" "root" {
-  provider  = aws.assume_role
-  api_id    = aws_apigatewayv2_api.api.id
-  route_key = "GET /"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
-
 # Also verify the Lambda execution role has necessary permissions
 resource "aws_iam_role_policy" "lambda_execution" {
   provider = aws.assume_role
