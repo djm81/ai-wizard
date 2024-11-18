@@ -12,10 +12,12 @@ logger = logging.getLogger(__name__)
 def initialize_firebase() -> None:
     """Initialize Firebase Admin SDK with credentials."""
     try:
-        cred_path = Path("config/firebase-adminsdk.json")
+        base_dir = Path(__file__).parent.parent
+        cred_path = base_dir / "config" / "firebase-adminsdk.json"
+
         if not cred_path.exists():
             msg = (
-                "Firebase credentials file not found at config/firebase-adminsdk.json. "
+                "Firebase credentials file not found at app/config/firebase-adminsdk.json. "
                 "Please ensure firebase-adminsdk.json is present in the config directory."
             )
             raise FileNotFoundError(msg) from None

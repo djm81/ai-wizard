@@ -107,6 +107,16 @@ jobs:
         mkdir -p app/config
         echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
 
+        # Verify Firebase config file exists
+        if [ ! -f "app/config/firebase-adminsdk.json" ]; then
+          echo "Firebase config file not created correctly"
+          exit 1
+        fi
+
+        # Show file structure for debugging
+        echo "Directory structure:"
+        ls -R app/config/
+
         # Create directories for OpenAPI specs
         mkdir -p app/openapi
         mkdir -p terraform/api
@@ -202,9 +212,12 @@ jobs:
 
         # Create Firebase config directory and file
         mkdir -p app/config
-        if [ ! -e "app/config/firebase-adminsdk.json" ]; then
-          echo "Creating Firebase config file 'app/config/firebase-adminsdk.json' ..."
-          echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
+        echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
+
+        # Verify Firebase config
+        if [ ! -f "app/config/firebase-adminsdk.json" ]; then
+          echo "Firebase config file not created correctly"
+          exit 1
         fi
 
     - name: Package Lambda function
