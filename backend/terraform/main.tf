@@ -473,19 +473,8 @@ resource "aws_apigatewayv2_stage" "lambda" {
     lambdaAlias = var.environment
   }
 
-  # depends_on = [
-  #   aws_apigatewayv2_api.api,
-  #   aws_apigatewayv2_integration.lambda,
-  #   aws_cloudwatch_log_group.api_gw,
-  #   aws_iam_role.api_gateway_cloudwatch
-  # ]
-
   lifecycle {
     create_before_destroy = true
-    # Ensure API mappings are removed first
-    replace_triggered_by = [
-      aws_apigatewayv2_api.api
-    ]
   }
 
   tags = merge(local.common_tags, {
@@ -501,17 +490,8 @@ resource "aws_apigatewayv2_api_mapping" "api" {
   domain_name = aws_apigatewayv2_domain_name.api.id
   stage       = aws_apigatewayv2_stage.lambda.id
 
-  # depends_on = [
-  #   aws_apigatewayv2_stage.lambda,
-  #   aws_apigatewayv2_domain_name.api
-  # ]
-
   lifecycle {
     create_before_destroy = true
-    # Add explicit dependency for cleanup
-    replace_triggered_by = [
-      aws_apigatewayv2_stage.lambda
-    ]
   }
 }
 
