@@ -105,7 +105,7 @@ jobs:
 
         # Create Firebase config directory and use actual Firebase config from secrets
         mkdir -p app/config
-        echo '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
+        echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
 
         # Create directories for OpenAPI specs
         mkdir -p app/openapi
