@@ -16,12 +16,7 @@ logger = logging.getLogger(__name__)
 
 def format_log_section(title: str, content: str) -> str:
     """Format a section of the log file with proper headers."""
-    return (
-        f"\n{'='*80}\n"
-        f"{title}\n"
-        f"{'='*80}\n"
-        f"{content}\n"
-    )
+    return f"\n{'='*80}\n" f"{title}\n" f"{'='*80}\n" f"{content}\n"
 
 
 def get_latest_report() -> Optional[Path]:
@@ -83,4 +78,4 @@ def aggregate_logs() -> int:
 
 
 if __name__ == "__main__":
-    exit(aggregate_logs()) 
+    exit(aggregate_logs())

@@ -60,6 +60,13 @@ repos:
           "--reports=no"
         ]
         pass_filenames: false
+        exclude: |
+          (?x)^(
+            tests/.*|
+            setup\.py|
+            docs/.*|
+            migrations/.*
+          )$
 
   # Fifth: File type specific checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
