@@ -74,17 +74,12 @@ app.include_router(router)
 async def generate_openapi_spec():
     """Generate OpenAPI specification file on startup"""
     openapi_spec = app.openapi()
+    openapi_spec['openapi'] = '3.0.2'  # Ensure API Gateway compatibility
     
-    # Write to app directory
+    # Only write to app directory, let deployment pipeline handle terraform spec
     app_spec_dir = Path(__file__).parent / "openapi"
     app_spec_dir.mkdir(exist_ok=True)
     with open(app_spec_dir / "specification.yaml", "w") as f:
-        yaml.dump(openapi_spec, f, sort_keys=False)
-    
-    # Write to terraform directory
-    terraform_spec_dir = Path(__file__).parent.parent / "terraform" / "api"
-    terraform_spec_dir.mkdir(exist_ok=True, parents=True)
-    with open(terraform_spec_dir / "specification.yaml", "w") as f:
         yaml.dump(openapi_spec, f, sort_keys=False)
 
 @app.get("/")

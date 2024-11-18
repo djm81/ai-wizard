@@ -341,14 +341,14 @@ resource "aws_lambda_function" "api_v2" {
   })
 
   lifecycle {
-    # ignore_changes = [
-    #   # Ignore changes to tags, etc
-    #   tags,
-    #   # Don't recreate on code updates
-    #   filename,
-    #   # Allow updates through code hash
-    #   source_code_hash,
-    # ]
+    ignore_changes = [
+      # Ignore changes when app package is deployed
+      filename,
+      source_code_hash,
+      handler,
+      # Still allow environment updates
+      environment,
+    ]
     create_before_destroy = true
   }
 
@@ -429,10 +429,10 @@ resource "aws_apigatewayv2_integration" "lambda" {
   integration_uri   = aws_lambda_alias.api_alias_v2.invoke_arn
   integration_method = "POST"
 
-  depends_on = [
-    aws_apigatewayv2_api.api,
-    aws_lambda_alias.api_alias_v2
-  ]
+  # depends_on = [
+  #   aws_apigatewayv2_api.api,
+  #   aws_lambda_alias.api_alias_v2
+  # ]
 
   lifecycle {
     create_before_destroy = true
@@ -473,12 +473,12 @@ resource "aws_apigatewayv2_stage" "lambda" {
     lambdaAlias = var.environment
   }
 
-  depends_on = [
-    aws_apigatewayv2_api.api,
-    aws_apigatewayv2_integration.lambda,
-    aws_cloudwatch_log_group.api_gw,
-    aws_iam_role.api_gateway_cloudwatch
-  ]
+  # depends_on = [
+  #   aws_apigatewayv2_api.api,
+  #   aws_apigatewayv2_integration.lambda,
+  #   aws_cloudwatch_log_group.api_gw,
+  #   aws_iam_role.api_gateway_cloudwatch
+  # ]
 
   lifecycle {
     create_before_destroy = true
@@ -501,10 +501,10 @@ resource "aws_apigatewayv2_api_mapping" "api" {
   domain_name = aws_apigatewayv2_domain_name.api.id
   stage       = aws_apigatewayv2_stage.lambda.id
 
-  depends_on = [
-    aws_apigatewayv2_stage.lambda,
-    aws_apigatewayv2_domain_name.api
-  ]
+  # depends_on = [
+  #   aws_apigatewayv2_stage.lambda,
+  #   aws_apigatewayv2_domain_name.api
+  # ]
 
   lifecycle {
     create_before_destroy = true

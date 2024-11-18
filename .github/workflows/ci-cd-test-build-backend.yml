@@ -7,7 +7,8 @@ on:
       - test
       - main
     paths:
-      - 'backend/**'
+      - 'backend/app/**'
+      - '!backend/app/openapi/**'
       - '!backend/terraform/**'
       - '!backend/aws-setup/**'
       - '.github/workflows/ci-cd-test-build-backend.yml'
@@ -16,7 +17,8 @@ on:
       - test  # PR from dev to test
       - main  # PR from test to main
     paths:
-      - 'backend/**'
+      - 'backend/app/**'
+      - '!backend/app/openapi/**'
       - '!backend/terraform/**'
       - '!backend/aws-setup/**'
       - '.github/workflows/ci-cd-test-build-backend.yml'
