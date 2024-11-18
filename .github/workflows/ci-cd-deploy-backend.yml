@@ -3,21 +3,21 @@ name: Deploy Backend
 on:
   push:
     branches:
-      - dev
-      - test
-      - main
+    - dev
+    - test
+    - main
     paths:
-      - 'backend/terraform/**'
-      - 'backend/app/openapi/**'
-      - '.github/workflows/ci-cd-deploy-backend.yml'
+    - backend/terraform/**
+    - backend/app/openapi/**
+    - .github/workflows/ci-cd-deploy-backend.yml
   pull_request:
     branches:
-      - test  # PR from dev to test
-      - main  # PR from test to main
+    - test    # PR from dev to test
+    - main    # PR from test to main
     paths:
-      - 'backend/terraform/**'
-      - 'backend/app/openapi/**'
-      - '.github/workflows/ci-cd-deploy-backend.yml'
+    - backend/terraform/**
+    - backend/app/openapi/**
+    - .github/workflows/ci-cd-deploy-backend.yml
   workflow_dispatch:  # Manual trigger
 
 env:
@@ -47,25 +47,25 @@ jobs:
       run_deployment: ${{ steps.check.outputs.run }}
       is_deployable: ${{ steps.check.outputs.deployable }}
     steps:
-      - uses: actions/checkout@v4
-      - id: check
-        run: |
-          # Always run for workflow_dispatch
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-            echo "deployable=true" >> $GITHUB_OUTPUT
-          # For PRs, run but don't deploy
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-            echo "deployable=false" >> $GITHUB_OUTPUT
-          # For pushes to main branches, run and deploy
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-            echo "deployable=true" >> $GITHUB_OUTPUT
-          else
-            echo "run=false" >> $GITHUB_OUTPUT
-            echo "deployable=false" >> $GITHUB_OUTPUT
-          fi
+    - uses: actions/checkout@v4
+    - id: check
+      run: |
+        # Always run for workflow_dispatch
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+          echo "deployable=true" >> $GITHUB_OUTPUT
+        # For PRs, run but don't deploy
+        elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+          echo "deployable=false" >> $GITHUB_OUTPUT
+        # For pushes to main branches, run and deploy
+        elif [[ "${{ github.event_name }}" == "push" ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+          echo "deployable=true" >> $GITHUB_OUTPUT
+        else
+          echo "run=false" >> $GITHUB_OUTPUT
+          echo "deployable=false" >> $GITHUB_OUTPUT
+        fi
 
   plan_and_estimate:
     needs: should_run
@@ -83,7 +83,7 @@ jobs:
         aws-region: ${{ vars.TF_VAR_AWS_REGION }}
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
-          
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
@@ -316,7 +316,7 @@ jobs:
         aws-region: ${{ vars.TF_VAR_AWS_REGION }}
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
-  
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
@@ -387,7 +387,7 @@ jobs:
       run: |
         # Ensure terraform api directory exists
         mkdir -p terraform/api
-        
+
         # Copy OpenAPI spec from app to terraform if it exists
         if [ -f "app/openapi/specification.yaml" ]; then
           echo "Using existing OpenAPI specification from app directory"
@@ -396,19 +396,19 @@ jobs:
           echo "Error: OpenAPI specification.yaml not found in /backend/app/openapi/"
           exit 1
         fi
-        
+
         # Validate spec exists
         if [ ! -f "terraform/api/specification.yaml" ]; then
           echo "Error: OpenAPI specification.yaml not found in backend/terraform/api/"
           exit 1
         fi
-        
+
         # Verify OpenAPI version
         if ! grep -q "^openapi: 3.0.2$" terraform/api/specification.yaml; then
           echo "Error: OpenAPI version is not 3.0.2"
           exit 1
         fi
-        
+
         echo "OpenAPI specification updated successfully"
 
     # First handle IAM roles and permissions
@@ -421,7 +421,7 @@ jobs:
         if [[ "${{ steps.check_lambda.outputs.skip_initial_package }}" != "true" ]]; then
           TARGETS="-target=aws_lambda_function.api_v2 "
         fi
-        
+
         terraform plan \
           -target=aws_iam_service_linked_role.apigw \
           -target=aws_iam_role.api_gateway_cloudwatch \
@@ -445,7 +445,7 @@ jobs:
 
         # Apply IAM resources
         terraform apply -auto-approve tfplan-iam-${{ env.ENVIRONMENT }}
-        
+
         # Wait for IAM role propagation
         echo "Waiting for IAM roles to propagate..."
         sleep 30
@@ -511,4 +511,3 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-

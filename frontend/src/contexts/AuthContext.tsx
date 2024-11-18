@@ -24,12 +24,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
 
   useEffect(() => {
     let unsubscribe = () => {};
-    
+
     const initAuth = async () => {
       try {
         await initializeGoogleAuth();
         const auth = getAuth();
-        
+
         if (auth) {
           unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {

@@ -50,13 +50,13 @@ The project is currently in active development. The core functionality includes:
 2. Backend Setup:
    ```bash
    cd backend
-   
+
    # Install dependencies
    poetry install
-   
+
    # Create environment file
    cp .env.example .env
-   
+
    # Set up Firebase credentials
    # Copy your Firebase Admin SDK JSON to:
    mkdir -p app/config
@@ -77,7 +77,7 @@ The project is currently in active development. The core functionality includes:
    ```bash
    cd frontend
    npm install
-   
+
    # Create environment file
    cp .env.example .env
    ```

@@ -30,7 +30,7 @@ REPO="$LOGIN/ai-wizard"  # Replace with your repo
 echo -e "\nChecking repository access..."
 if gh repo view "$REPO" &> /dev/null; then
     echo "✓ Has access to $REPO"
-    
+
     # Check workflow permissions
     echo -e "\nWorkflow Permissions:"
     gh api "repos/$REPO/actions/permissions" | jq -r '.enabled'

@@ -1,79 +1,67 @@
+"""lambda_handler module for AI Wizard backend."""
+
+import asyncio
 import json
-from mangum import Mangum
+import logging
+from typing import Any, Dict, Optional
+
 from app.main import app
-import os
-from app.utils.logging_config import logger
+from app.utils.logging_config import setup_logging
+from mangum import Mangum
 
-# Ensure environment variables are set
-os.environ.setdefault('STAGE', 'dev')
-os.environ.setdefault('ALLOWED_ORIGINS', '*')
+logger = logging.getLogger(__name__)
+setup_logging()
 
-# Create Mangum handler for AWS Lambda
-mangum_handler = Mangum(app, lifespan="off")  # Disable lifespan events
 
-def log_request_details(event):
-    """Helper function to log detailed request information"""
-    logger.info("=== Request Details ===")
-    logger.info(f"Request Path: {event.get('path', 'No path')}")
-    logger.info(f"HTTP Method: {event.get('httpMethod', 'No method')}")
-    logger.info(f"Resource Path: {event.get('resource', 'No resource')}")
-    logger.info(f"API Gateway ARN: {event.get('requestContext', {}).get('apiId', 'No API ID')}")
-    logger.info(f"Stage: {event.get('requestContext', {}).get('stage', 'No stage')}")
-    
-    # Add specific logging for Authorization header
-    headers = event.get('headers', {})
-    auth_header = headers.get('Authorization', 'No Authorization header')
-    logger.info(f"Authorization Header Present: {'Authorization' in headers}")
-    
-    # Log other headers without sensitive info
+def log_request_details(event: Dict[str, Any]) -> None:
+    """Log request details from event for debugging."""
+    request_context = event.get("requestContext", {})
+    http = request_context.get("http", {})
+    headers = event.get("headers", {})
+
+    # Log request details
+    logger.info("Request: %s %s", http.get("method"), http.get("path"))
+
+    # Log headers for debugging (excluding sensitive data)
     safe_headers = {
-        k: v for k, v in headers.items() 
-        if k.lower() not in ["authorization", "cookie"]
+        k: v
+        for k, v in headers.items()
+        if k.lower() not in {"authorization", "cookie"}
     }
-    logger.info(f"Request Headers: {json.dumps(safe_headers, indent=2)}")
-    logger.info("=====================")
+    logger.debug("Headers: %s", safe_headers)
 
-async def wrap_mangum_with_logging(event, context):
-    """Wrapper function to ensure logging happens before and after Mangum processing"""
-    logger.info("Starting request processing in Lambda")
-    try:
-        response = await mangum_handler(event, context)
-        logger.info(f"Completed request processing. Status: {response.get('statusCode')}")
-        return response
-    except Exception as e:
-        logger.error(f"Error in Mangum handler: {str(e)}", exc_info=True)
-        raise
 
-def lambda_handler(event, context):
+handler = Mangum(app)
+
+
+def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """AWS Lambda handler function with detailed logging.
+
+    Args:
+        event: AWS Lambda event
+        context: AWS Lambda context
+
+    Returns:
+        API Gateway response
     """
-    AWS Lambda handler function that wraps the FastAPI application.
-    Uses Mangum to translate between AWS Lambda events and ASGI.
-    """
-    logger.info("Lambda function invoked")
-    log_request_details(event)
-
     try:
-        import asyncio
-        response = asyncio.get_event_loop().run_until_complete(
-            wrap_mangum_with_logging(event, context)
-        )
-        logger.info(f"Response Status Code: {response.get('statusCode', 'No status code')}")
-        
-        # Log 404 errors specifically
-        if response.get('statusCode') == 404:
-            logger.error(f"404 Not Found for path: {event.get('path')}")
-            logger.error(f"Available routes: {[route.path for route in app.routes]}")
-        
-        return response
+        # Log request details
+        log_request_details(event)
+
+        # Handle the request
+        return handler(event, context)
 
     except Exception as e:
-        logger.error(f"Error handling request: {str(e)}", exc_info=True)
+        # Log error details
+        logger.error("Lambda handler error: %s", str(e), exc_info=True)
+
+        # Return error response
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": "Internal Server Error", "details": str(e)}),
-            "headers": {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Credentials": True
-            }
-        } 
+            "body": json.dumps(
+                {
+                    "error": "Internal server error",
+                    "detail": str(e) if app.debug else None,
+                }
+            ),
+        }

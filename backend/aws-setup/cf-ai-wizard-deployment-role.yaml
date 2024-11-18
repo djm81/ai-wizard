@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'IAM role for AI Wizard Terraform deployment using AWS managed policies'
+Description: IAM role for AI Wizard Terraform deployment using AWS managed policies
 
 Parameters:
   TrustedAccount:
@@ -15,71 +15,71 @@ Parameters:
 Resources:
   # Create the IAM role
   AIWizardDeploymentRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       RoleName: AIWizardDeploymentRole
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Effect: Allow
-            Principal:
-              AWS: 
-                - !Sub 'arn:aws:iam::${TrustedAccount}:root'
-                - !Sub 'arn:aws:iam::${TrustedAccount}:user/aws-deploy'
-                - !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
-            Action: 
-              - 'sts:AssumeRole'
-              - 'sts:TagSession'
+        - Effect: Allow
+          Principal:
+            AWS:
+            - !Sub 'arn:aws:iam::${TrustedAccount}:root'
+            - !Sub 'arn:aws:iam::${TrustedAccount}:user/aws-deploy'
+            - !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
+          Action:
+          - sts:AssumeRole
+          - sts:TagSession
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+      - arn:aws:iam::aws:policy/AdministratorAccess
 
   # Custom policy now includes KMS and any missing permissions
   AIWizardCustomPolicy:
-    Type: 'AWS::IAM::ManagedPolicy'
+    Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: AIWizardCustomPolicy
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
           # Allow managing assumed role sessions
-          - Effect: Allow
-            Action:
-              - 'sts:AssumeRole'
-              - 'sts:TagSession'
-              - 'sts:GetCallerIdentity'
-              - 'sts:GetSessionToken'
-              - 'sts:GetFederationToken'
-            Resource: 
-              - !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
-              - !Sub 'arn:aws:iam::${TrustedAccount}:role/assumed-role/AIWizardDeploymentRole/*'
-          
+        - Effect: Allow
+          Action:
+          - sts:AssumeRole
+          - sts:TagSession
+          - sts:GetCallerIdentity
+          - sts:GetSessionToken
+          - sts:GetFederationToken
+          Resource:
+          - !Sub 'arn:aws:iam::${TrustedAccount}:role/AIWizardDeploymentRole'
+          - !Sub 'arn:aws:iam::${TrustedAccount}:role/assumed-role/AIWizardDeploymentRole/*'
+
           # Allow creating service-linked roles
-          - Effect: Allow
-            Action:
-              - 'iam:CreateServiceLinkedRole'
-              - 'iam:DeleteServiceLinkedRole'
-              - 'iam:GetServiceLinkedRoleDeletionStatus'
-            Resource: 
-              - !Sub 'arn:aws:iam::${TrustedAccount}:role/aws-service-role/*'
-              - !Sub 'arn:aws:iam::${TrustedAccount}:role/aws-service-role/ops.apigateway.amazonaws.com/*'
+        - Effect: Allow
+          Action:
+          - iam:CreateServiceLinkedRole
+          - iam:DeleteServiceLinkedRole
+          - iam:GetServiceLinkedRoleDeletionStatus
+          Resource:
+          - !Sub 'arn:aws:iam::${TrustedAccount}:role/aws-service-role/*'
+          - !Sub 'arn:aws:iam::${TrustedAccount}:role/aws-service-role/ops.apigateway.amazonaws.com/*'
 
           # Allow KMS operations for CloudWatch Logs
-          - Effect: Allow
-            Action:
-              - 'kms:CreateKey'
-              - 'kms:CreateAlias'
-              - 'kms:DeleteAlias'
-              - 'kms:Describe*'
-              - 'kms:List*'
-              - 'kms:PutKeyPolicy'
-              - 'kms:UpdateAlias'
-            Resource: '*'
+        - Effect: Allow
+          Action:
+          - kms:CreateKey
+          - kms:CreateAlias
+          - kms:DeleteAlias
+          - kms:Describe*
+          - kms:List*
+          - kms:PutKeyPolicy
+          - kms:UpdateAlias
+          Resource: '*'
 
           # Add any missing ACM permissions not covered by Route53 and CloudFront
-          - Effect: Allow
-            Action:
-              - 'acm:*'
-            Resource: '*'
+        - Effect: Allow
+          Action:
+          - acm:*
+          Resource: '*'
 
 Outputs:
   RoleARN:

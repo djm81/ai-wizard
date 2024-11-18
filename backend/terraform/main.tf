@@ -51,7 +51,7 @@ resource "aws_dynamodb_table" "ai_wizard" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${var.dynamodb_table_name}-${var.environment}"
+    Name    = "${var.dynamodb_table_name}-${var.environment}"
     Service = "ai-wizard-backend"
   })
 
@@ -77,7 +77,7 @@ resource "aws_iam_role" "lambda_exec" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-lambda-exec-role-${var.environment}"
+    Name    = "ai-wizard-lambda-exec-role-${var.environment}"
     Service = "ai-wizard-backend"
   })
 }
@@ -152,7 +152,7 @@ resource "aws_s3_bucket" "frontend" {
   bucket   = "${var.frontend_bucket_name}-${var.environment}"
 
   tags = merge(local.common_tags, {
-    Name = "${var.frontend_bucket_name}-${var.environment}"
+    Name    = "${var.frontend_bucket_name}-${var.environment}"
     Service = "ai-wizard-frontend"
   })
 }
@@ -176,8 +176,8 @@ resource "aws_s3_bucket_policy" "frontend" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowCloudFrontOAI"
-        Effect    = "Allow"
+        Sid    = "AllowCloudFrontOAI"
+        Effect = "Allow"
         Principal = {
           AWS = aws_cloudfront_origin_access_identity.frontend.iam_arn
         }
@@ -194,8 +194,8 @@ resource "aws_acm_certificate" "frontend" {
   validation_method = "DNS"
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-frontend-cert"
-    Service = "ai-wizard-frontend"  
+    Name    = "ai-wizard-frontend-cert"
+    Service = "ai-wizard-frontend"
   })
 
   lifecycle {
@@ -241,7 +241,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   origin {
     domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id   = "S3-${aws_s3_bucket.frontend.id}"
-    
+
     s3_origin_config {
       origin_access_identity = aws_cloudfront_origin_access_identity.frontend.cloudfront_access_identity_path
     }
@@ -285,7 +285,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "ai-wizard-frontend-cdn-${var.environment}"
+    Name    = "ai-wizard-frontend-cdn-${var.environment}"
     Service = "ai-wizard-frontend"
   })
 
@@ -321,16 +321,16 @@ resource "aws_lambda_function" "api_v2" {
   provider         = aws.assume_role
   filename         = "${path.module}/lambda/lambda_package.zip"
   function_name    = "${var.lambda_function_name_prefix}-${var.environment}-v2"
-  role            = aws_iam_role.lambda_exec.arn
-  handler         = "app.lambda_handler.mangum_handler"
-  runtime         = "python3.12"
+  role             = aws_iam_role.lambda_exec.arn
+  handler          = "app.lambda_handler.mangum_handler"
+  runtime          = "python3.12"
   source_code_hash = var.lambda_source_code_hash
-  publish         = true  # Enable versioning
+  publish          = true # Enable versioning
 
   environment {
     variables = {
-      STAGE = var.environment
-      DATABASE_URL = var.database_url
+      STAGE           = var.environment
+      DATABASE_URL    = var.database_url
       ALLOWED_ORIGINS = "https://${var.domain_name},https://api.${var.domain_name}"
     }
   }
@@ -375,13 +375,13 @@ resource "aws_apigatewayv2_api" "api" {
   provider      = aws.assume_role
   name          = "${var.lambda_function_name_prefix}-${var.environment}"
   protocol_type = "HTTP"
-  
+
   # Use OpenAPI specification
   body = file("${path.module}/api/specification.yaml")
-  
+
   # Ensure routes are created from the OpenAPI spec
   route_selection_expression = "$request.method $request.path"
-  
+
   # Add target Lambda integration
   target = aws_lambda_alias.api_alias_v2.invoke_arn
 
@@ -403,7 +403,7 @@ resource "aws_apigatewayv2_api" "api" {
       "Content-Type",
       "Authorization"
     ]
-    max_age = 300
+    max_age           = 300
     allow_credentials = true
   }
 
@@ -423,10 +423,10 @@ resource "aws_apigatewayv2_api" "api" {
 
 # Integration needs to be created before routes
 resource "aws_apigatewayv2_integration" "lambda" {
-  provider          = aws.assume_role
-  api_id            = aws_apigatewayv2_api.api.id
-  integration_type  = "AWS_PROXY"
-  integration_uri   = aws_lambda_alias.api_alias_v2.invoke_arn
+  provider           = aws.assume_role
+  api_id             = aws_apigatewayv2_api.api.id
+  integration_type   = "AWS_PROXY"
+  integration_uri    = aws_lambda_alias.api_alias_v2.invoke_arn
   integration_method = "POST"
 
   # depends_on = [
@@ -441,31 +441,31 @@ resource "aws_apigatewayv2_integration" "lambda" {
 
 # Single stage definition with all configurations
 resource "aws_apigatewayv2_stage" "lambda" {
-  provider = aws.assume_role
-  api_id = aws_apigatewayv2_api.api.id
-  name   = var.environment
+  provider    = aws.assume_role
+  api_id      = aws_apigatewayv2_api.api.id
+  name        = var.environment
   auto_deploy = true
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gw.arn
     format = jsonencode({
       requestId      = "$context.requestId"
-      ip            = "$context.identity.sourceIp"
-      requestTime   = "$context.requestTime"
-      httpMethod    = "$context.httpMethod"
-      routeKey      = "$context.routeKey"
-      status        = "$context.status"
-      protocol      = "$context.protocol"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      protocol       = "$context.protocol"
       responseLength = "$context.responseLength"
-      path          = "$context.path"
-      authorization = "$context.authorizer.error"
+      path           = "$context.path"
+      authorization  = "$context.authorizer.error"
     })
   }
 
   default_route_settings {
     detailed_metrics_enabled = true
-    throttling_burst_limit  = 100
-    throttling_rate_limit   = 50
+    throttling_burst_limit   = 100
+    throttling_rate_limit    = 50
   }
 
   # Add stage variables
@@ -651,9 +651,9 @@ resource "aws_route53_record" "backend_api" {
 
 # Create service-linked role for API Gateway logging
 resource "aws_iam_service_linked_role" "apigw" {
-  provider           = aws.assume_role
-  aws_service_name   = "ops.apigateway.amazonaws.com"
-  description        = "Service-linked role for API Gateway"
+  provider         = aws.assume_role
+  aws_service_name = "ops.apigateway.amazonaws.com"
+  description      = "Service-linked role for API Gateway"
 
   lifecycle {
     prevent_destroy = true
@@ -679,7 +679,7 @@ resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
 
 # Update API Gateway account settings to enable CloudWatch logging
 resource "aws_api_gateway_account" "main" {
-  provider = aws.assume_role
+  provider            = aws.assume_role
   cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
 
   depends_on = [
@@ -820,4 +820,3 @@ output "lambda_function_arn" {
   description = "ARN of the Lambda function"
   value       = aws_lambda_function.api_v2.arn
 }
-

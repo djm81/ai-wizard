@@ -18,4 +18,4 @@ All logs include:
 - Module name
 - Message
 
-In Lambda, logs are automatically formatted for CloudWatch with request IDs and other AWS-specific information. 
+In Lambda, logs are automatically formatted for CloudWatch with request IDs and other AWS-specific information.

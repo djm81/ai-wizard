@@ -1,15 +1,20 @@
+"""ai_service module for AI Wizard backend."""
+
+import logging
 from typing import List, Optional
+
 import openai
+from app.core.config import settings
+from app.db.database import get_db
 from fastapi import Depends
 from sqlalchemy.orm import Session
-from app.db.database import get_db
-from app.core.config import settings
-import logging
 
 logger = logging.getLogger(__name__)
 
+
 class AIService:
     """Service for handling AI operations"""
+
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
         self.model = settings.OPENAI_MODEL
@@ -17,7 +22,9 @@ class AIService:
         # Only initialize OpenAI client if API key is available
         if settings.OPENAI_API_KEY:
             try:
-                self.client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY.get_secret_value())
+                self.client = openai.AsyncOpenAI(
+                    api_key=settings.OPENAI_API_KEY.get_secret_value()
+                )
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client: {str(e)}")
                 self.client = None
@@ -48,25 +55,30 @@ class AIService:
 
         try:
             messages = [
-                {"role": "system", "content": "You are a helpful assistant that refines project requirements."},
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that refines project requirements.",
+                },
             ]
-            
+
             # Add conversation history as alternating user/assistant messages
             for i, message in enumerate(conversation_history):
                 role = "user" if i % 2 == 0 else "assistant"
                 messages.append({"role": role, "content": message})
-            
+
             # Add final instruction
-            messages.append({
-                "role": "user", 
-                "content": "Please refine these requirements into a clear project specification."
-            })
+            messages.append(
+                {
+                    "role": "user",
+                    "content": "Please refine these requirements into a clear project specification.",
+                }
+            )
 
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=0.7,
-                max_tokens=1000
+                max_tokens=1000,
             )
 
             return response.choices[0].message.content
@@ -81,8 +93,11 @@ class AIService:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that generates code."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant that generates code.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 max_tokens=1000,
                 temperature=0.7,

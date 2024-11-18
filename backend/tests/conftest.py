@@ -1,22 +1,30 @@
+"""conftest module for AI Wizard backend."""
+
+from typing import Generator
+
 import pytest
+from app.core.config import settings
+from app.db.database import get_db
+from app.main import app
+from app.models.ai_interaction import AIInteraction
+from app.models.base import Base
+from app.models.project import Project
+from app.models.user import User
+from app.services.ai_service import AIService
+from app.services.auth_service import AuthService
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from app.main import app
-from app.db.database import get_db
-from app.models.base import Base
-from app.models.user import User
-from app.models.project import Project
-from app.models.ai_interaction import AIInteraction
-from app.services.auth_service import AuthService
-from app.services.ai_service import AIService
-from app.core.config import settings
-from typing import Generator
+from sqlalchemy.orm import Session, sessionmaker
 
 # Test database setup
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_engine(
+    SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+TestingSessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine
+)
+
 
 @pytest.fixture(scope="function")
 def db_session() -> Generator[Session, None, None]:
@@ -29,27 +37,33 @@ def db_session() -> Generator[Session, None, None]:
         session.close()
         Base.metadata.drop_all(bind=engine)
 
+
 @pytest.fixture
 def test_user(db_session: Session) -> User:
     """Create a test user"""
     user = User(
         email="test@example.com",
         hashed_password="hashed_password",
-        full_name="Test User"
+        full_name="Test User",
     )
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
     return user
 
+
 @pytest.fixture
 def auth_headers() -> dict[str, str]:
     """Provide mock auth headers for testing"""
     return {"Authorization": "Bearer mock-token"}
 
+
 @pytest.fixture
-def client(db_session: Session, test_user: User) -> Generator[TestClient, None, None]:
+def client(
+    db_session: Session, test_user: User
+) -> Generator[TestClient, None, None]:
     """Test client fixture with auth and DB overrides"""
+
     def get_test_db():
         yield db_session
 
@@ -57,37 +71,44 @@ def client(db_session: Session, test_user: User) -> Generator[TestClient, None, 
         return test_user
 
     app.dependency_overrides[get_db] = get_test_db
-    app.dependency_overrides[AuthService.get_current_user] = mock_get_current_user
+    app.dependency_overrides[
+        AuthService.get_current_user
+    ] = mock_get_current_user
 
     try:
         yield TestClient(app)
     finally:
         app.dependency_overrides.clear()
 
+
 @pytest.fixture
 def test_project(db_session: Session, test_user: User) -> Project:
     project = Project(
         user_id=test_user.id,
         name="Test Project",
-        description="Test Description"
+        description="Test Description",
     )
     db_session.add(project)
     db_session.commit()
     db_session.refresh(project)
     return project
 
+
 @pytest.fixture
-def test_ai_interaction(db_session: Session, test_user: User, test_project: Project) -> AIInteraction:
+def test_ai_interaction(
+    db_session: Session, test_user: User, test_project: Project
+) -> AIInteraction:
     interaction = AIInteraction(
         user_id=test_user.id,
         project_id=test_project.id,
         prompt="Test prompt",
-        response="Test response"
+        response="Test response",
     )
     db_session.add(interaction)
     db_session.commit()
     db_session.refresh(interaction)
     return interaction
+
 
 @pytest.fixture
 def ai_service(db_session):
@@ -97,3 +118,7 @@ def ai_service(db_session):
     service.client = None  # Will be mocked in individual tests
     service.model = "test-model"
     return service
+
+
+# ruff: noqa: B101
+# Bandit B101 is disabled for test files as assertions are intended for testing

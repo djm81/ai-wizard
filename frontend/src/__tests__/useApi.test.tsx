@@ -27,9 +27,9 @@ describe('useApi hook', () => {
 
   test('apiCall sends request with authorization header', async () => {
     const { result } = renderHook(() => useApi());
-    
+
     mockGetAuthToken.mockResolvedValueOnce('mock-token');
-    
+
     const response = await result.current.apiCall('http://example.com/api');
 
     expect(axios).toHaveBeenCalledWith({
@@ -50,7 +50,7 @@ describe('useApi hook', () => {
 
     const { result } = renderHook(() => useApi());
     await expect(result.current.apiCall('http://example.com/api')).rejects.toThrow('API Error');
-    
+
     expect(console.error).toHaveBeenCalledWith('API call error:', mockError);
   });
 });

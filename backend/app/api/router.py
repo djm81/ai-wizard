@@ -1,5 +1,7 @@
+"""router module for AI Wizard backend."""
+
+from app.api.endpoints import ai, projects, users
 from fastapi import APIRouter
-from app.api.endpoints import users, ai, projects
 
 router = APIRouter()
 

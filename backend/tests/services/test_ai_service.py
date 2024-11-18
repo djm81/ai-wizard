@@ -1,6 +1,10 @@
+"""test_ai_service module for AI Wizard backend."""
+
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock
 from app.services.ai_service import AIService
+
 
 @pytest.mark.asyncio
 class TestAIService:
@@ -14,11 +18,11 @@ class TestAIService:
             AsyncMock(message=AsyncMock(content="Refined requirements"))
         ]
         ai_service.client = mock_client
-        
+
         conversation_history = [
             "Create a web application",
             "What kind of web application?",
-            "A todo list app"
+            "A todo list app",
         ]
         result = await ai_service.refine_requirements(conversation_history)
         assert result == "Refined requirements"
@@ -29,11 +33,11 @@ class TestAIService:
         mock_client = AsyncMock()
         mock_client.chat.completions.create.side_effect = Exception("API Error")
         ai_service.client = mock_client
-        
+
         conversation_history = [
             "Create a web application",
             "What kind of web application?",
-            "A todo list app"
+            "A todo list app",
         ]
         result = await ai_service.refine_requirements(conversation_history)
         assert result == "An error occurred while refining requirements."
@@ -41,7 +45,9 @@ class TestAIService:
     async def test_set_api_key(self, ai_service):
         """Test setting OpenAI API key"""
         mock_client = AsyncMock()
-        with patch('openai.AsyncOpenAI', return_value=mock_client) as mock_openai:
+        with patch(
+            "openai.AsyncOpenAI", return_value=mock_client
+        ) as mock_openai:
             result = await ai_service.set_api_key("test_key")
             assert result is True
             mock_openai.assert_called_once_with(api_key="test_key")
@@ -51,14 +57,16 @@ class TestAIService:
         """Test removing OpenAI API key"""
         # First set an API key to ensure we have a client
         mock_client = AsyncMock()
-        with patch('openai.AsyncOpenAI', return_value=mock_client) as mock_openai:
+        with patch(
+            "openai.AsyncOpenAI", return_value=mock_client
+        ) as mock_openai:
             # Set API key first
             await ai_service.set_api_key("test_key")
             mock_openai.assert_called_once_with(api_key="test_key")
-            
+
             # Reset the mock for the remove operation
             mock_openai.reset_mock()
-            
+
             # Now test removing the key
             result = await ai_service.remove_api_key()
             assert result is True

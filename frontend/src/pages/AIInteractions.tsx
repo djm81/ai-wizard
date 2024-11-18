@@ -15,10 +15,10 @@ const AIInteractions: React.FC = () => {
   // Use AbortController for cleanup
   useEffect(() => {
     const abortController = new AbortController();
-    
+
     const fetchInteractions = async () => {
       if (!projectId) return;
-      
+
       try {
         setLoading(true);
         setError(null);
@@ -66,7 +66,7 @@ const AIInteractions: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>AI Interactions</Typography>
-      
+
       <Box component="form" onSubmit={handleSubmit} sx={{ mb: 4 }}>
         <TextField
           fullWidth

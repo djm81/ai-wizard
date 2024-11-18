@@ -83,14 +83,14 @@ const createAuthMock = () => {
       },
       onAuthStateChanged: jest.fn((nextOrObserver: NextOrObserver<FirebaseUser | null>): Unsubscribe => {
         listeners.push(nextOrObserver);
-        
+
         // First notify with initial state (loading: true)
         if (typeof nextOrObserver === 'function') {
           nextOrObserver(null);
         } else {
           nextOrObserver.next?.(null);
         }
-        
+
         // Ensure loading state change is synchronous for tests
         isLoading = false;
         if (typeof nextOrObserver === 'function') {
@@ -98,7 +98,7 @@ const createAuthMock = () => {
         } else {
           nextOrObserver.next?.(internalCurrentUser);
         }
-        
+
         return () => {
           const index = listeners.indexOf(nextOrObserver);
           if (index > -1) listeners.splice(index, 1);
@@ -167,19 +167,19 @@ export const mockFunctions = {
       scope: 'email profile',
       callback: (response: GoogleOAuthResponse) => {}
     });
-    
+
     // Then simulate token request
     const { access_token } = await tokenClient.requestAccessToken();
-    
+
     // Then proceed with Firebase auth
     const { getAuth, GoogleAuthProvider, signInWithCredential } = require('firebase/auth');
     const credential = GoogleAuthProvider.credential(null, access_token);
     const { user } = await signInWithCredential(getAuth(), credential);
-    
+
     if (authMock.auth?.updateCurrentUser) {
       await authMock.auth.updateCurrentUser(user);
     }
-    
+
     return convertFirebaseUserToUser(user);
   }),
   signOut: jest.fn().mockImplementation(async () => {

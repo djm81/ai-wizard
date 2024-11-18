@@ -11,9 +11,9 @@ const mockEnv = {
 
 // For tests, use mock values
 // For runtime, use import.meta.env
-export const ENV = 
-  (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') 
-    ? mockEnv 
+export const ENV =
+  (typeof process !== 'undefined' && process.env.NODE_ENV === 'test')
+    ? mockEnv
     : {
         PUBLIC_FIREBASE_API_KEY: import.meta.env.PUBLIC_FIREBASE_API_KEY,
         PUBLIC_FIREBASE_AUTH_DOMAIN: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,

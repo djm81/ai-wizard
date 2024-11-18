@@ -10,4 +10,4 @@ export interface AIInteraction {
 
 export interface AIInteractionCreate {
     prompt: string;
-} 
+}

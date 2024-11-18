@@ -72,7 +72,7 @@ export const useAIInteractions = () => {
   };
 
   const createInteraction = async (
-    projectId: number, 
+    projectId: number,
     interaction: AIInteractionCreate
   ): Promise<AIInteraction> => {
     try {

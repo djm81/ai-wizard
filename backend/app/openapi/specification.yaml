@@ -459,8 +459,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AIInteraction'
-                title: Response List Project Interactions Projects  Project Id  Ai
-                  Interactions Get
+                title: Response List Project Interactions Projects  Project Id  Ai Interactions Get
         '422':
           description: Validation Error
           content:

@@ -21,9 +21,9 @@ describe('AIInteractions component', () => {
   const renderWithRouter = async () => {
     (useAIInteractions as jest.Mock).mockReturnValue({
       getProjectInteractions: jest.fn().mockResolvedValue(mockInteractions),
-      createInteraction: jest.fn().mockResolvedValue({ 
-        id: 3, 
-        prompt: 'New Prompt', 
+      createInteraction: jest.fn().mockResolvedValue({
+        id: 3,
+        prompt: 'New Prompt',
         response: 'Processing...',
         created_at: new Date().toISOString()
       }),

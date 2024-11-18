@@ -2,26 +2,26 @@ name: Test and Build Backend API
 
 on:
   push:
-    branches: 
-      - dev
-      - test
-      - main
+    branches:
+    - dev
+    - test
+    - main
     paths:
-      - 'backend/app/**'
-      - '!backend/app/openapi/**'
-      - '!backend/terraform/**'
-      - '!backend/aws-setup/**'
-      - '.github/workflows/ci-cd-test-build-backend.yml'
+    - backend/app/**
+    - '!backend/app/openapi/**'
+    - '!backend/terraform/**'
+    - '!backend/aws-setup/**'
+    - .github/workflows/ci-cd-test-build-backend.yml
   pull_request:
     branches:
-      - test  # PR from dev to test
-      - main  # PR from test to main
+    - test    # PR from dev to test
+    - main    # PR from test to main
     paths:
-      - 'backend/app/**'
-      - '!backend/app/openapi/**'
-      - '!backend/terraform/**'
-      - '!backend/aws-setup/**'
-      - '.github/workflows/ci-cd-test-build-backend.yml'
+    - backend/app/**
+    - '!backend/app/openapi/**'
+    - '!backend/terraform/**'
+    - '!backend/aws-setup/**'
+    - .github/workflows/ci-cd-test-build-backend.yml
   workflow_dispatch:  # Manual trigger
 env:
   TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_AWS_REGION }}
@@ -44,25 +44,25 @@ jobs:
       run_deployment: ${{ steps.check.outputs.run }}
       is_deployable: ${{ steps.check.outputs.deployable }}
     steps:
-      - uses: actions/checkout@v4
-      - id: check
-        run: |
-          # Always run for workflow_dispatch
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-            echo "deployable=true" >> $GITHUB_OUTPUT
-          # For PRs, run but don't deploy
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-            echo "deployable=false" >> $GITHUB_OUTPUT
-          # For pushes to main branches, run and deploy
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-            echo "deployable=true" >> $GITHUB_OUTPUT
-          else
-            echo "run=false" >> $GITHUB_OUTPUT
-            echo "deployable=false" >> $GITHUB_OUTPUT
-          fi
+    - uses: actions/checkout@v4
+    - id: check
+      run: |
+        # Always run for workflow_dispatch
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+          echo "deployable=true" >> $GITHUB_OUTPUT
+        # For PRs, run but don't deploy
+        elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+          echo "deployable=false" >> $GITHUB_OUTPUT
+        # For pushes to main branches, run and deploy
+        elif [[ "${{ github.event_name }}" == "push" ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+          echo "deployable=true" >> $GITHUB_OUTPUT
+        else
+          echo "run=false" >> $GITHUB_OUTPUT
+          echo "deployable=false" >> $GITHUB_OUTPUT
+        fi
 
   test:
     needs: should_run
@@ -102,7 +102,7 @@ jobs:
         OPENAI_MODEL=gpt-4-turbo-preview
         ALLOWED_ORIGINS=https://${{ env.DOMAIN_NAME }},https://api.${{ env.DOMAIN_NAME }}
         EOL
-        
+
         # Create Firebase config directory and use actual Firebase config from secrets
         mkdir -p app/config
         echo '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
@@ -123,27 +123,27 @@ jobs:
         from app.main import app
         import yaml
         from pathlib import Path
-        
+
         # Generate spec with compatible version
         spec = app.openapi()
         spec['openapi'] = '3.0.2'  # Ensure API Gateway compatibility
-        
+
         # Save in app directory
         app_spec_dir = Path('app/openapi')
         app_spec_dir.mkdir(exist_ok=True)
         with open(app_spec_dir / 'specification.yaml', 'w') as f:
             yaml.dump(spec, f, sort_keys=False)
-            
+
         # Save in terraform directory
         terraform_spec_dir = Path('terraform/api')
         terraform_spec_dir.mkdir(exist_ok=True, parents=True)
         with open(terraform_spec_dir / 'specification.yaml', 'w') as f:
             yaml.dump(spec, f, sort_keys=False)
-            
+
         # Validate specs exist and version
         assert Path('app/openapi/specification.yaml').exists(), 'App spec not generated'
         assert Path('terraform/api/specification.yaml').exists(), 'Terraform spec not generated'
-        
+
         # Verify OpenAPI version
         with open(app_spec_dir / 'specification.yaml') as f:
             loaded_spec = yaml.safe_load(f)
@@ -155,11 +155,11 @@ jobs:
       working-directory: ${{ env.WORKING_DIRECTORY }}
       env:
         PYTHONPATH: ${{ env.WORKING_DIRECTORY }}
-        DATABASE_URL: "sqlite:///:memory:"
+        DATABASE_URL: 'sqlite:///:memory:'
         SECRET_KEY: dummy_secret_key_for_testing
         OPENAI_API_KEY: dummy-api-key-for-testing
         OPENAI_MODEL: gpt-4-turbo-preview
-        ALLOWED_ORIGINS: "https://${{ env.DOMAIN_NAME }},https://api.${{ env.DOMAIN_NAME }}"
+        ALLOWED_ORIGINS: https://${{ env.DOMAIN_NAME }},https://api.${{ env.DOMAIN_NAME }}
       run: |
         # Run tests
         poetry run pytest \
@@ -183,7 +183,7 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -206,19 +206,19 @@ jobs:
           echo "Creating Firebase config file 'app/config/firebase-adminsdk.json' ..."
           echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > app/config/firebase-adminsdk.json
         fi
-        
+
     - name: Package Lambda function
       working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
         # Create a temporary build directory
         mkdir -p build
-        
+
         # Copy application code
         cp -r app build/
-        
+
         # Create requirements file excluding development dependencies
         poetry export --only main -f requirements.txt --without-hashes --output requirements.txt
-        
+
         # Install dependencies
         pip install \
           --target=build \
@@ -228,10 +228,10 @@ jobs:
           --platform manylinux2014_x86_64 \
           --upgrade pydantic \
           -r requirements.txt
-        
+
         # Remove unnecessary files to reduce package size
         cd build
-                
+
         # Clean up
         find . -type d -name "tests" -exec rm -rf {} +
         find . -type d -name "__pycache__" -exec rm -rf {} +
@@ -241,17 +241,17 @@ jobs:
         # Preserve email-validator dist-info while cleaning others
         find . -type d -name "*.dist-info" ! -name "email_validator*.dist-info" -exec rm -rf {} +
         find . -type d -name "*.egg-info" -exec rm -rf {} +
-        
+
         # Create deployment package
         zip -r9 ../lambda_package.zip .
         cd ..
-        
+
         # Create lambda directory if it doesn't exist
         mkdir -p terraform/lambda
-        
+
         # Move package to terraform lambda directory
         mv lambda_package.zip terraform/lambda/
-        
+
         # Show package size and contents
         ls -lh terraform/lambda/lambda_package.zip
         echo "Lambda package contents:"
@@ -377,7 +377,7 @@ jobs:
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}    
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   notify_deployment:
     needs: [should_run, test, build, deploy]
@@ -404,4 +404,3 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-

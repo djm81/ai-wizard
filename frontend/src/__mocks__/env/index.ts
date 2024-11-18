@@ -9,7 +9,7 @@ export const ENV = {
     PUBLIC_FIREBASE_APP_ID: 'mock-app-id',
     PUBLIC_GOOGLE_CLIENT_ID: 'mock-google-client-id'
 };
-  
+
 export const getEnvConfig = () => ({
     API_URL: ENV.PUBLIC_API_URL
 });

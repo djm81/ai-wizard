@@ -1,8 +1,11 @@
+"""test_project_service module for AI Wizard backend."""
+
 import pytest
-from fastapi import HTTPException
-from app.services.project_service import ProjectService
-from app.schemas.project import ProjectCreate
 from app.schemas.ai_interaction import AIInteractionCreate
+from app.schemas.project import ProjectCreate
+from app.services.project_service import ProjectService
+from fastapi import HTTPException
+
 
 @pytest.mark.unit
 class TestProjectService:
@@ -15,8 +18,7 @@ class TestProjectService:
     def test_create_project(self, db_session, test_user):
         service = ProjectService(db_session)
         project_create = ProjectCreate(
-            name="Test Project",
-            description="Test Description"
+            name="Test Project", description="Test Description"
         )
         project = service.create_project(test_user.id, project_create)
         assert project.name == "Test Project"
@@ -34,7 +36,9 @@ class TestProjectService:
             service.get_project(999)
         assert exc_info.value.status_code == 404
 
-    def test_get_project_interactions(self, db_session, test_project, test_ai_interaction):
+    def test_get_project_interactions(
+        self, db_session, test_project, test_ai_interaction
+    ):
         service = ProjectService(db_session)
         interactions = service.get_project_interactions(test_project.id)
         assert len(interactions) == 1
@@ -42,13 +46,9 @@ class TestProjectService:
 
     def test_create_ai_interaction(self, db_session, test_user, test_project):
         service = ProjectService(db_session)
-        interaction_create = AIInteractionCreate(
-            prompt="New prompt"
-        )
+        interaction_create = AIInteractionCreate(prompt="New prompt")
         interaction = service.create_ai_interaction(
-            test_user.id,
-            test_project.id,
-            interaction_create
+            test_user.id, test_project.id, interaction_create
         )
         assert interaction.prompt == "New prompt"
         assert "placeholder response" in interaction.response.lower()
@@ -61,3 +61,6 @@ class TestProjectService:
         with pytest.raises(HTTPException) as exc_info:
             service.get_project(test_project.id)
         assert exc_info.value.status_code == 404
+
+
+# ruff: noqa: B101

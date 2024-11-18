@@ -11,9 +11,9 @@ const Account: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3, maxWidth: 600, mx: 'auto' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-          <Avatar 
-            src={user.photoURL || undefined} 
-            alt={user.displayName || 'User'} 
+          <Avatar
+            src={user.photoURL || undefined}
+            alt={user.displayName || 'User'}
             sx={{ width: 64, height: 64, mr: 2 }}
           />
           <Box>
@@ -30,9 +30,9 @@ const Account: React.FC = () => {
           <Typography variant="h6" gutterBottom>
             Account Actions
           </Typography>
-          <Button 
-            variant="outlined" 
-            color="error" 
+          <Button
+            variant="outlined"
+            color="error"
             onClick={signOut}
             sx={{ mt: 1 }}
           >
@@ -44,4 +44,4 @@ const Account: React.FC = () => {
   );
 };
 
-export default Account; 
+export default Account;

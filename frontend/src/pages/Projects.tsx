@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useProjects } from '../api';
 import { Project, ProjectCreate } from '../types/project';
-import { 
-  Box, 
-  Button, 
-  TextField, 
-  List, 
-  ListItem, 
+import {
+  Box,
+  Button,
+  TextField,
+  List,
+  ListItem,
   ListItemText,
   ListItemButton,
   Dialog,
@@ -124,12 +124,12 @@ const Projects: React.FC = () => {
           sx={{ mr: 2 }}
           required
           error={newProjectName.length > 0 && !isValidProjectName}
-          helperText={newProjectName.length > 0 && !isValidProjectName ? 
+          helperText={newProjectName.length > 0 && !isValidProjectName ?
             "Project name must be at least 3 characters" : ""}
           disabled={isSubmitting}
         />
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={handleCreateProject}
           disabled={!isValidProjectName || isSubmitting}
           sx={{
@@ -147,11 +147,11 @@ const Projects: React.FC = () => {
       <List>
         {projects.map((project) => (
           <ListItem key={project.id} disablePadding>
-            <ListItemButton 
+            <ListItemButton
               onClick={() => handleProjectClick(project)}
               disabled={isSubmitting}
             >
-              <ListItemText 
+              <ListItemText
                 primary={project.name}
                 secondary={`Created: ${new Date(project.created_at || '').toLocaleDateString()}`}
               />
@@ -160,8 +160,8 @@ const Projects: React.FC = () => {
         ))}
       </List>
 
-      <Dialog 
-        open={dialogOpen} 
+      <Dialog
+        open={dialogOpen}
         onClose={() => !isSubmitting && setDialogOpen(false)}
         maxWidth="md"
         fullWidth
@@ -186,17 +186,17 @@ const Projects: React.FC = () => {
                 </Paper>
               </Box>
               <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                <Button 
-                  variant="contained" 
-                  component={Link} 
+                <Button
+                  variant="contained"
+                  component={Link}
                   to={`/projects/${selectedProject.id}/ai-interactions`}
                   fullWidth
                   disabled={isSubmitting}
                 >
                   View AI Interactions
                 </Button>
-                <Button 
-                  variant="outlined" 
+                <Button
+                  variant="outlined"
                   color="error"
                   onClick={handleDeleteClick}
                   fullWidth
@@ -214,7 +214,7 @@ const Projects: React.FC = () => {
               </Box>
             </DialogContent>
             <DialogActions>
-              <Button 
+              <Button
                 onClick={() => setDialogOpen(false)}
                 disabled={isSubmitting}
               >
@@ -236,15 +236,15 @@ const Projects: React.FC = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button 
+          <Button
             onClick={() => setDeleteConfirmOpen(false)}
             disabled={isSubmitting}
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleDeleteConfirm} 
-            color="error" 
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
             variant="contained"
             disabled={isSubmitting}
             sx={{
