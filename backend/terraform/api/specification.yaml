@@ -1,4 +1,4 @@
-openapi: 3.0.2
+openapi: 3.1.0
 info:
   title: AI Wizard API
   description: API for AI-powered development assistance
@@ -459,7 +459,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AIInteraction'
-                title: Response List Project Interactions Projects  Project Id  Ai Interactions Get
+                title: Response List Project Interactions Projects  Project Id  Ai
+                  Interactions Get
         '422':
           description: Validation Error
           content:
@@ -656,8 +657,9 @@ components:
           type: string
           title: Name
         description:
-          type: string
-          nullable: true
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Description
         id:
           type: integer

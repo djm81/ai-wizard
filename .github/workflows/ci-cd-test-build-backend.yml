@@ -117,49 +117,6 @@ jobs:
         echo "Directory structure:"
         ls -R app/config/
 
-        # Create directories for OpenAPI specs
-        mkdir -p app/openapi
-        mkdir -p terraform/api
-
-    - name: Generate OpenAPI Specification
-      id: generate_openapi
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      env:
-        PYTHONPATH: ${{ env.WORKING_DIRECTORY }}
-        FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_ADMINSDK_JSON }}
-      run: |
-        # Generate OpenAPI spec
-        poetry run python -c "
-        from app.main import app
-        import yaml
-        from pathlib import Path
-
-        # Generate spec with compatible version
-        spec = app.openapi()
-        spec['openapi'] = '3.0.2'  # Ensure API Gateway compatibility
-
-        # Save in app directory
-        app_spec_dir = Path('app/openapi')
-        app_spec_dir.mkdir(exist_ok=True)
-        with open(app_spec_dir / 'specification.yaml', 'w') as f:
-            yaml.dump(spec, f, sort_keys=False)
-
-        # Save in terraform directory
-        terraform_spec_dir = Path('terraform/api')
-        terraform_spec_dir.mkdir(exist_ok=True, parents=True)
-        with open(terraform_spec_dir / 'specification.yaml', 'w') as f:
-            yaml.dump(spec, f, sort_keys=False)
-
-        # Validate specs exist and version
-        assert Path('app/openapi/specification.yaml').exists(), 'App spec not generated'
-        assert Path('terraform/api/specification.yaml').exists(), 'Terraform spec not generated'
-
-        # Verify OpenAPI version
-        with open(app_spec_dir / 'specification.yaml') as f:
-            loaded_spec = yaml.safe_load(f)
-            assert loaded_spec['openapi'] == '3.0.2', 'Invalid OpenAPI version'
-        "
-
     - name: Run tests
       id: run_tests
       working-directory: ${{ env.WORKING_DIRECTORY }}

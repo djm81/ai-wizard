@@ -1,4 +1,4 @@
-openapi: 3.0.2
+openapi: 3.1.0
 info:
   title: AI Wizard API
   description: API for AI-powered development assistance
@@ -459,7 +459,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AIInteraction'
-                title: Response List Project Interactions Projects  Project Id  Ai Interactions Get
+                title: Response List Project Interactions Projects  Project Id  Ai
+                  Interactions Get
         '422':
           description: Validation Error
           content:
@@ -656,8 +657,9 @@ components:
           type: string
           title: Name
         description:
-          type: string
-          nullable: true
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Description
         id:
           type: integer
@@ -754,12 +756,14 @@ components:
     UserProfile:
       properties:
         bio:
-          type: string
-          nullable: true
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Bio
         preferences:
-          type: object
-          nullable: true
+          anyOf:
+          - type: object
+          - type: 'null'
           title: Preferences
         id:
           type: integer
@@ -816,17 +820,20 @@ components:
     UserUpdate:
       properties:
         email:
-          type: string
-          format: email
-          nullable: true
+          anyOf:
+          - type: string
+            format: email
+          - type: 'null'
           title: Email
         full_name:
-          type: string
-          nullable: true
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Full Name
         password:
-          type: string
-          nullable: true
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Password
       type: object
       title: UserUpdate
@@ -857,8 +864,9 @@ components:
           format: date-time
           title: Updated At
         profile:
-          $ref: '#/components/schemas/UserProfile'
-          nullable: true
+          anyOf:
+          - $ref: '#/components/schemas/UserProfile'
+          - type: 'null'
       type: object
       required:
       - email

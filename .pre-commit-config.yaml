@@ -112,3 +112,10 @@ repos:
         entry: python scripts/add_missing_docstrings.py
         language: python
         types: [python]
+
+      - id: generate-openapi-spec
+        name: Generate OpenAPI Specification
+        entry: python scripts/generate_openapi_spec.py
+        language: python
+        files: ^backend/app/.*\.py$
+        pass_filenames: false
