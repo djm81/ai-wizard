@@ -31,7 +31,7 @@ def log_request_details(event: Dict[str, Any]) -> None:
     logger.debug("Headers: %s", safe_headers)
 
 
-handler = Mangum(app)
+mangum_handler = Mangum(app)
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -49,7 +49,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         log_request_details(event)
 
         # Handle the request
-        return handler(event, context)
+        return mangum_handler(event, context)
 
     except Exception as e:
         # Log error details
