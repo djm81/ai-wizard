@@ -44,14 +44,17 @@ repos:
         require_serial: true
         additional_dependencies: [
           'pylint',
-          'mangum',
           'pyyaml',
           'fastapi',
           'pydantic',
+          'pydantic-settings',
           'sqlalchemy',
           'firebase-admin',
           'uvicorn',
-          'pydantic-settings'
+          'mangum',
+          'email-validator',
+          'bcrypt',
+          'openai'
         ]
         args: [
           "--rcfile=pyproject.toml",
@@ -92,13 +95,6 @@ repos:
   # Last: Custom validation hooks
   - repo: local
     hooks:
-      - id: check-openapi-version
-        name: Check OpenAPI Version
-        entry: python scripts/check_openapi_version.py
-        language: python
-        files: ^backend/app/openapi/specification\.yaml$
-        additional_dependencies: ['pyyaml']
-
       - id: validate-working-directories
         name: Validate Pipeline Working Directories
         entry: python scripts/validate_pipeline_dirs.py
@@ -119,3 +115,23 @@ repos:
         language: python
         files: ^backend/app/.*\.py$
         pass_filenames: false
+        additional_dependencies: [
+          'pyyaml',
+          'fastapi',
+          'pydantic',
+          'pydantic-settings',
+          'sqlalchemy',
+          'firebase-admin',
+          'uvicorn',
+          'mangum',
+          'email-validator',
+          'bcrypt',
+          'openai'
+        ]
+
+      - id: check-openapi-version
+        name: Check OpenAPI Version
+        entry: python scripts/check_openapi_version.py
+        language: python
+        files: ^backend/app/openapi/specification\.yaml$
+        additional_dependencies: ['pyyaml']

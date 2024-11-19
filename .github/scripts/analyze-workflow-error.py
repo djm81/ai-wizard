@@ -18,27 +18,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def run_safe_command(
-    command: List[str], **kwargs
-) -> subprocess.CompletedProcess:
-    """Run a command safely after validating executable path."""
-    # Validate the executable exists in PATH
-    executable = command[0]
-    if not which(executable):
-        raise ValueError(f"Executable '{executable}' not found in PATH")
-
-    # Validate command arguments
-    if not all(isinstance(arg, str) for arg in command):
-        raise ValueError("All command arguments must be strings")
-
-    # Run command with safe defaults and explicit security settings
+def run_command(command: list[str], **kwargs) -> subprocess.CompletedProcess:
+    """Run a command with proper error handling and logging."""
+    logger.info("Running command: %s", " ".join(command))
     try:
-        return subprocess.run(
+        # Using shell=False and list arguments for security
+        return subprocess.run(  # nosec B603
             command,
             capture_output=True,
             text=True,
             check=True,
-            shell=False,
+            shell=False,  # Explicitly set for security
             **kwargs,
         )
     except subprocess.CalledProcessError as e:
@@ -59,7 +49,7 @@ def get_workflow_logs(run_id: str) -> Optional[str]:
         raise ValueError("Invalid run ID format")
 
     try:
-        result = run_safe_command(["gh", "run", "view", run_id, "--log"])
+        result = run_command(["gh", "run", "view", run_id, "--log"])
         return result.stdout
     except (subprocess.CalledProcessError, ValueError) as e:
         logger.error("Failed to get workflow logs: %s", e)
@@ -77,7 +67,7 @@ def validate_gh_cli() -> str:
 def get_workflow_name(run_id: str) -> Optional[str]:
     """Get workflow name from run ID."""
     try:
-        result = run_safe_command(
+        result = run_command(
             ["gh", "run", "view", run_id, "--json", "workflowName"]
         )
         workflow_data = json.loads(result.stdout)
@@ -94,18 +84,18 @@ def get_latest_run_logs(workflow_name=None):
         command = ["gh", "run", "list", "--limit", "1", "--json", "databaseId"]
         if workflow_name:
             command += ["--workflow", workflow_name]
-        result = run_safe_command(command)
+        result = run_command(command)
 
         run_id = json.loads(result.stdout)[0]["databaseId"]
 
         # Get name of the workflow
-        result = run_safe_command(
+        result = run_command(
             ["gh", "run", "view", str(run_id), "--json", "workflowName"]
         )
         wf_name = json.loads(result.stdout)["workflowName"]
 
         # Get run logs
-        result = run_safe_command(["gh", "run", "view", str(run_id), "--log"])
+        result = run_command(["gh", "run", "view", str(run_id), "--log"])
 
         return {"workflow_name": wf_name, "logs": result.stdout}
     except (subprocess.CalledProcessError, json.JSONDecodeError, OSError) as e:

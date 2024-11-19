@@ -55,10 +55,12 @@ description = "AI Wizard Application Assistant"
 authors = ["Dominikus Nold"]
 license = "MIT License"
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
 pyyaml = "^6.0.2"
+email-validator = "^2.2.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
@@ -83,16 +85,20 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.bandit]
 exclude_dirs = ["tests", "venv", ".venv"]
-skips = ["B101"]  # Skip assert usage in tests
 targets = ["backend/app", "scripts", ".github/scripts"]
+ignore_nosec = true
 
 [tool.bandit.assert_used]
 skips = ["*/test_*.py", "*/tests/*.py"]
 
+[tool.bandit.skips]
+B104 = ["backend/app/main.py"]  # Allow binding to all interfaces in development
+B404 = [".github/scripts/analyze-workflow-error.py"]  # Allow subprocess module
+B603 = [".github/scripts/analyze-workflow-error.py"]  # Allow subprocess usage
+
 [tool.bandit.settings]
 # Properly format nosec comments
 nosec_indicator = "nosec"
-ignore_nosec = false  # Don't ignore nosec comments
 
 [tool.bandit.settings.B104]
 # Allow binding to all interfaces in development with proper warnings

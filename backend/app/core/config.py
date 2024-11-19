@@ -16,8 +16,11 @@ env_file = ".env.test" if os.getenv("PYTEST_CURRENT_TEST") else ".env"
 class Settings(BaseSettings):
     """Application settings and configuration"""
 
-    PROJECT_NAME: str = "AI Wizard Backend API"
-    PROJECT_VERSION: str = "1.0.0"
+    # API Info for FastAPI
+    API_TITLE: str = "ai-wizard-backend-api"
+    API_VERSION: str = "0.1.0"
+    API_DESCRIPTION: str = "AI Wizard Backend API for intelligent assistance"
+    OPENAPI_VERSION: str = "3.0.4"
 
     ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///:memory:")

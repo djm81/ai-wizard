@@ -8,7 +8,7 @@ import yaml
 
 
 def check_openapi_version():
-    """Check if OpenAPI spec version is 3.0.2"""
+    """Check if OpenAPI spec version is 3.0.4"""
     spec_file = Path("backend/app/openapi/specification.yaml")
 
     if not spec_file.exists():
@@ -19,8 +19,8 @@ def check_openapi_version():
         with open(spec_file) as f:
             spec = yaml.safe_load(f)
 
-        if spec.get("openapi") != "3.0.2":
-            print(f"OpenAPI version must be 3.0.2, found {spec.get('openapi')}")
+        if spec.get("openapi") != "3.0.4":
+            print(f"OpenAPI version must be 3.0.4, found {spec.get('openapi')}")
             return 1
 
         return 0

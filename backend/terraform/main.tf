@@ -376,8 +376,12 @@ resource "aws_apigatewayv2_api" "api" {
   name          = "${var.lambda_function_name_prefix}-${var.environment}"
   protocol_type = "HTTP"
 
-  # Use OpenAPI specification
-  body = file("${path.module}/api/specification.yaml")
+  # Use OpenAPI specification with dynamic name replacement
+  body = replace(
+    file("${path.module}/api/specification.yaml"),
+    "title: ai-wizard-backend-api",
+    "title: ai-wizard-backend-api-${var.environment}"
+  )
 
   # Ensure routes are created from the OpenAPI spec
   route_selection_expression = "$request.method $request.path"
