@@ -341,14 +341,14 @@ resource "aws_lambda_function" "api_v2" {
   })
 
   lifecycle {
-    ignore_changes = [
-      # Ignore changes when app package is deployed
-      filename,
-      source_code_hash,
-      handler,
-      # Still allow environment updates
-      environment,
-    ]
+    # ignore_changes = [
+    #   # Ignore changes when app package is deployed
+    #   filename,
+    #   source_code_hash,
+    #   handler,
+    #   # Still allow environment updates
+    #   environment,
+    # ]
     create_before_destroy = true
   }
 
