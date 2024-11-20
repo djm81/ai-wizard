@@ -1,5 +1,6 @@
 """conftest module for AI Wizard backend."""
 
+import os
 from typing import Generator
 
 import pytest
@@ -16,6 +17,15 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+# Set test environment variables before importing settings
+def pytest_configure(config):
+    """Configure test environment"""
+    os.environ["ENVIRONMENT"] = "test"
+    os.environ["ALLOWED_ORIGINS"] = "http://localhost:3000,http://localhost:5173"
+    os.environ["DATABASE_URL"] = "sqlite:///./test.db"
+    os.environ["SECRET_KEY"] = "test-secret-key"
+    os.environ["OPENAI_API_KEY"] = "test-api-key"
+
 # Test database setup
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(
@@ -25,6 +35,16 @@ TestingSessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine
 )
 
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_environment():
+    """Setup test environment variables"""
+    # This ensures environment variables are set before any tests run
+    os.environ["ENVIRONMENT"] = "test"
+    os.environ["ALLOWED_ORIGINS"] = "http://localhost:3000"
+    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+    os.environ["SECRET_KEY"] = "test-secret-key"
+    os.environ["OPENAI_API_KEY"] = "test-api-key"
+    yield
 
 @pytest.fixture(scope="function")
 def db_session() -> Generator[Session, None, None]:
