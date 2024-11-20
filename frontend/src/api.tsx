@@ -1,10 +1,14 @@
 import { useApi } from './hooks/useApi';
 import { getEnvConfig } from 'config';
 import { Project, ProjectCreate } from './types/project';
-import { AIInteraction, AIInteractionCreate } from './types/aiInteraction';
+import { AIInteraction, AIInteractionCreate, aiInteractionSchema } from './types/aiInteraction';
 import axios from 'axios';
+import { z } from 'zod';
 
 const { API_URL } = getEnvConfig();
+
+// Configure axios defaults
+axios.defaults.withCredentials = true; // Enable credentials for all requests
 
 export const useProjects = () => {
   const { apiCall } = useApi();
@@ -12,7 +16,10 @@ export const useProjects = () => {
   const getProjects = async (): Promise<Project[]> => {
     try {
       const response = await apiCall(`${API_URL}/projects/`, {
-        method: 'GET'
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
       });
       return response;
     } catch (error) {
@@ -55,7 +62,11 @@ export const useAIInteractions = () => {
 
   const getProjectInteractions = async (projectId: number): Promise<AIInteraction[]> => {
     try {
-      return await apiCall(`${API_URL}/projects/${projectId}/ai-interactions/`);
+      return await apiCall(`${API_URL}/projects/${projectId}/ai-interactions/`, {
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
     } catch (error) {
       console.error('Error fetching project interactions:', error);
       throw error;
@@ -76,11 +87,20 @@ export const useAIInteractions = () => {
     interaction: AIInteractionCreate
   ): Promise<AIInteraction> => {
     try {
+      // Validate the interaction data before sending
+      const validatedData = aiInteractionSchema.parse(interaction);
+      
       return await apiCall(`${API_URL}/projects/${projectId}/ai-interactions/`, {
         method: 'POST',
-        data: interaction,
+        data: validatedData,
       });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        // Handle validation errors
+        const errorMessage = error.errors.map(e => e.message).join(', ');
+        console.error('Validation error:', errorMessage);
+        throw new Error(errorMessage);
+      }
       console.error('Error creating AI interaction:', error);
       if (axios.isAxiosError(error) && error.response) {
         console.error('Response data:', error.response.data);
@@ -100,6 +120,9 @@ export const useAI = () => {
       return await apiCall(`${API_URL}/ai/generate-code/`, {
         method: 'POST',
         data: { prompt },
+        headers: {
+          'Accept': 'application/json',
+        }
       });
     } catch (error) {
       console.error('Error generating code:', error);

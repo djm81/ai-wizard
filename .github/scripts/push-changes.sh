@@ -1,5 +1,21 @@
 #!/bin/bash
 
+# Parse command line arguments
+SKIP_PRECOMMIT=false
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --skip-precommit-checks)
+      SKIP_PRECOMMIT=true
+      shift # Remove argument from processing
+      ;;
+    *)
+      echo "Unknown parameter: $1"
+      echo "Usage: $0 [--skip-precommit-checks]"
+      exit 1
+      ;;
+  esac
+done
+
 if [ ! -f "./.uncommitted_changes" ]; then
   echo "No .uncommitted_changes file found in project root!"
   exit 1
@@ -22,10 +38,22 @@ fi
 
 echo "Adding changes to git..."
 git add .
+
+# Run pre-commit checks if not skipped
+if [ "$SKIP_PRECOMMIT" = false ]; then
+  echo "Running pre-commit checks..."
+  if ! pre-commit run --all-files; then
+    echo "Pre-commit checks failed! Fix the issues or use --skip-precommit-checks to bypass."
+    exit 1
+  fi
+fi
+
 echo "Committing changes..."
-git commit -m "$changes"
+git commit -m "$changes" -n
 echo "Pushing changes to remote repository..."
 git push
 
 echo "Resetting uncommitted changes file..."
 echo "" > .uncommitted_changes
+
+echo "Done!"

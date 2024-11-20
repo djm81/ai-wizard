@@ -2,6 +2,7 @@ import { useProjects, useAIInteractions } from '../api';
 import type { Project, ProjectCreate } from '../types/project';
 import type { AIInteraction, AIInteractionCreate } from '../types/aiInteraction';
 import { ENV } from '../__mocks__/env';
+import { aiInteractionSchema } from '../types/aiInteraction';
 
 // Create a mock function that we can track
 const mockApiCall = jest.fn();
@@ -42,7 +43,10 @@ describe('API hooks', () => {
       await getProjects();
 
       expect(mockApiCall).toHaveBeenCalledWith(`${ENV.PUBLIC_API_URL}/projects/`, {
-        method: 'GET'
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
       });
     });
 
@@ -79,22 +83,46 @@ describe('API hooks', () => {
       await getProjectInteractions(projectId);
 
       expect(mockApiCall).toHaveBeenCalledWith(
-        `${ENV.PUBLIC_API_URL}/projects/${projectId}/ai-interactions/`
+        `${ENV.PUBLIC_API_URL}/projects/${projectId}/ai-interactions/`,
+        {
+          headers: {
+            'Accept': 'application/json',
+          }
+        }
       );
     });
 
-    test('createInteraction calls apiCall with correct URL and data', async () => {
+    test('createInteraction validates minimum prompt length', async () => {
       const { createInteraction } = useAIInteractions();
-      const interactionData: AIInteractionCreate = {
-        prompt: 'Test Prompt'
+      const shortPrompt = { prompt: 'Short' }; // Less than 10 characters
+
+      await expect(createInteraction(projectId, shortPrompt)).rejects.toThrow(
+        'Prompt must be at least 10 characters long'
+      );
+    });
+
+    test('createInteraction validates maximum prompt length', async () => {
+      const { createInteraction } = useAIInteractions();
+      const longPrompt = { prompt: 'a'.repeat(1001) }; // More than 1000 characters
+
+      await expect(createInteraction(projectId, longPrompt)).rejects.toThrow(
+        'Prompt must not exceed 1000 characters'
+      );
+    });
+
+    test('createInteraction calls apiCall with valid data', async () => {
+      const { createInteraction } = useAIInteractions();
+      const validInteractionData = {
+        prompt: 'This is a valid prompt with more than 10 characters'
       };
-      await createInteraction(projectId, interactionData);
+
+      await createInteraction(projectId, validInteractionData);
 
       expect(mockApiCall).toHaveBeenCalledWith(
         `${ENV.PUBLIC_API_URL}/projects/${projectId}/ai-interactions/`,
         {
           method: 'POST',
-          data: interactionData,
+          data: validInteractionData,
         }
       );
     });

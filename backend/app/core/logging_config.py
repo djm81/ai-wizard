@@ -1,68 +1,71 @@
-"""logging_config module for AI Wizard backend."""
+"""Logging configuration module for AI Wizard backend."""
 
+import json
 import logging
-import logging.handlers
 import os
+import sys
+from datetime import datetime
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Any, Dict
 
 from app.core.config import settings
 
-# Create logs directory if it doesn't exist
-LOGS_DIR = Path(__file__).parent.parent.parent / "logs"
-LOGS_DIR.mkdir(exist_ok=True)
 
+def setup_logging() -> None:
+    """Configure logging based on environment."""
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
 
-def setup_logging():
-    """Configure logging for the application"""
+    # Clear any existing handlers
+    logger.handlers.clear()
+
     # Create formatters
-    console_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    if not settings.IS_LAMBDA:
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+    else:
+        # JSON formatter for production
+        class JsonFormatter(logging.Formatter):
+            def format(self, record: logging.LogRecord) -> str:
+                log_data: Dict[str, Any] = {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "level": record.levelname,
+                    "message": record.getMessage(),
+                    "module": record.module,
+                    "function": record.funcName,
+                }
+                if hasattr(record, "request_id"):
+                    log_data["request_id"] = record.request_id
+                return json.dumps(log_data)
+
+        formatter = JsonFormatter()
+
+    # Console handler (always present)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    # File handler (only in development)
+    if not settings.IS_LAMBDA:
+        log_dir = Path("logs")
+        log_dir.mkdir(exist_ok=True)
+        log_file = log_dir / f"app_{datetime.now():%Y%m%d}.log"
+        file_handler = RotatingFileHandler(
+            log_file, maxBytes=10485760, backupCount=5
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    # Set logging level based on environment
+    logger.setLevel(
+        logging.DEBUG if not settings.IS_LAMBDA else logging.INFO
     )
-    file_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
-    )
 
-    # Create handlers
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(console_formatter)
-    console_handler.setLevel(settings.LOG_LEVEL)
 
-    # File handler for all logs
-    all_logs_file = LOGS_DIR / "app.log"
-    file_handler = logging.handlers.RotatingFileHandler(
-        all_logs_file,
-        maxBytes=10485760,  # 10MB
-        backupCount=5,
-        encoding="utf-8",
-    )
-    file_handler.setFormatter(file_formatter)
-    file_handler.setLevel(settings.LOG_LEVEL)
+# Get logger instance
+logger = logging.getLogger("ai-wizard")
 
-    # File handler for errors only
-    error_logs_file = LOGS_DIR / "error.log"
-    error_file_handler = logging.handlers.RotatingFileHandler(
-        error_logs_file,
-        maxBytes=10485760,  # 10MB
-        backupCount=5,
-        encoding="utf-8",
-    )
-    error_file_handler.setFormatter(file_formatter)
-    error_file_handler.setLevel(logging.ERROR)
-
-    # Configure root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(settings.LOG_LEVEL)
-
-    # Remove existing handlers to avoid duplicates
-    root_logger.handlers = []
-
-    # Add handlers
-    root_logger.addHandler(console_handler)
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(error_file_handler)
-
-    # Log startup message
-    root_logger.info(
-        f"Logging initialized. Log files will be written to {LOGS_DIR}"
-    )
+# Initialize logging
+setup_logging()

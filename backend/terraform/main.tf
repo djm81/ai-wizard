@@ -401,13 +401,20 @@ resource "aws_apigatewayv2_api" "api" {
       "X-Amz-Date",
       "X-Api-Key",
       "X-Amz-Security-Token",
-      "X-Requested-With"
+      "X-Requested-With",
+      "Origin",
+      "Accept",
+      "Access-Control-Request-Method",
+      "Access-Control-Request-Headers"
     ]
     expose_headers = [
       "Content-Type",
-      "Authorization"
+      "Authorization",
+      "Access-Control-Allow-Origin",
+      "Access-Control-Allow-Methods",
+      "Access-Control-Allow-Headers"
     ]
-    max_age           = 300
+    max_age = 300
     allow_credentials = true
   }
 

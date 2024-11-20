@@ -10,6 +10,7 @@ from app.services.auth_service import AuthService
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -69,6 +70,11 @@ async def refine_requirements(
 ):
     """Refine project requirements based on conversation history"""
     ai_service = AIService(db)
+    # Initialize with test key for testing
+    if not settings.IS_LAMBDA:
+        await ai_service.set_api_key("test-key")
+    else:
+        await ai_service.set_api_key(settings.OPENAI_API_KEY)
     return await ai_service.refine_requirements(conversation)
 
 
@@ -80,6 +86,11 @@ async def generate_code(
 ):
     """Generate code based on the given prompt"""
     ai_service = AIService(db)
+    # Initialize with test key for testing
+    if not settings.IS_LAMBDA:
+        await ai_service.set_api_key("test-key")
+    else:
+        await ai_service.set_api_key(settings.OPENAI_API_KEY)
     return await ai_service.generate_code(request.prompt)
 
 

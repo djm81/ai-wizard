@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAIInteractions } from '../api';
 import type { AIInteraction } from '../types/aiInteraction';
-import { Box, Typography, TextField, Button, CircularProgress } from '@mui/material';
+import { Box, Typography, TextField, Button, CircularProgress, Alert } from '@mui/material';
+
+const MIN_PROMPT_LENGTH = 10;
+const MAX_PROMPT_LENGTH = 1000;
 
 const AIInteractions: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -51,21 +54,39 @@ const AIInteractions: React.FC = () => {
     if (!projectId || !prompt.trim()) return;
 
     try {
+      setError(null);
       const newInteraction = await createInteraction(parseInt(projectId), { prompt });
       setInteractions(prev => [...prev, newInteraction]);
       setPrompt('');
     } catch (err) {
-      setError('Failed to create interaction');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to create interaction');
+      }
       console.error('Error:', err);
     }
   };
 
+  const isPromptValid = prompt.length >= MIN_PROMPT_LENGTH && prompt.length <= MAX_PROMPT_LENGTH;
+  const remainingChars = MAX_PROMPT_LENGTH - prompt.length;
+  const helperText = prompt.length > 0 
+    ? `${remainingChars} characters remaining${prompt.length < MIN_PROMPT_LENGTH 
+      ? `, need ${MIN_PROMPT_LENGTH - prompt.length} more characters` 
+      : ''}`
+    : `Minimum ${MIN_PROMPT_LENGTH} characters required`;
+
   if (loading) return <CircularProgress />;
-  if (error) return <Typography color="error">{error}</Typography>;
 
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>AI Interactions</Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Box component="form" onSubmit={handleSubmit} sx={{ mb: 4 }}>
         <TextField
@@ -76,9 +97,15 @@ const AIInteractions: React.FC = () => {
           required
           multiline
           rows={3}
+          error={prompt.length > 0 && !isPromptValid}
+          helperText={helperText}
           sx={{ mb: 2 }}
         />
-        <Button type="submit" variant="contained" disabled={!prompt.trim()}>
+        <Button 
+          type="submit" 
+          variant="contained" 
+          disabled={!isPromptValid}
+        >
           Create Interaction
         </Button>
       </Box>
@@ -89,6 +116,12 @@ const AIInteractions: React.FC = () => {
           <Typography variant="body1">{interaction.response}</Typography>
         </Box>
       ))}
+
+      {interactions.length === 0 && !loading && (
+        <Typography color="text.secondary">
+          No interactions yet. Start by creating one!
+        </Typography>
+      )}
     </Box>
   );
 };

@@ -22,7 +22,21 @@ class Settings(BaseSettings):
     API_DESCRIPTION: str = "AI Wizard Backend API for intelligent assistance"
     OPENAPI_VERSION: str = "3.0.4"
 
-    ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+    # CORS settings
+    if os.getenv("ALLOWED_ORIGINS") and len(os.getenv("ALLOWED_ORIGINS")) > 0:
+        ALLOWED_ORIGINS: list[str] = os.getenv("ALLOWED_ORIGINS").split(',')
+    else:
+        ALLOWED_ORIGINS: list[str] = [
+            "http://localhost:3000",  # React dev server
+            "http://localhost:5173",  # Vite dev server
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173",
+        ]
+    
+    ALLOW_CREDENTIALS: bool = True
+    ALLOW_METHODS: list[str] = ["*"]
+    ALLOW_HEADERS: list[str] = ["*"]
+    
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///:memory:")
     SECRET_KEY: SecretStr = SecretStr(
         os.getenv("SECRET_KEY", "fallback_secret_key_for_development")
@@ -37,6 +51,8 @@ class Settings(BaseSettings):
     # Logging configuration
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
+
+    IS_LAMBDA: bool = IS_LAMBDA
 
     model_config = SettingsConfigDict(
         # Only use env_file in local development

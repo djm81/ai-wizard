@@ -39,7 +39,8 @@ describe('useApi hook', () => {
         'Authorization': 'Bearer mock-token',
         'Content-Type': 'application/json'
       },
-      data: undefined
+      data: undefined,
+      withCredentials: true
     });
     expect(response).toBe('mock-response');
   });
