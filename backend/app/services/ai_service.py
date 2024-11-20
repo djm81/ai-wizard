@@ -2,9 +2,8 @@
 
 from typing import List, Optional
 
-from openai import AsyncOpenAI
-
 from app.core.logging_config import logger
+from openai import AsyncOpenAI
 
 
 class AIService:
@@ -12,7 +11,7 @@ class AIService:
 
     def __init__(self, db=None):
         """Initialize AI service.
-        
+
         Args:
             db (Session, optional): Database session. Defaults to None.
         """
@@ -43,7 +42,10 @@ class AIService:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that generates code."},
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant that generates code.",
+                    },
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=1000,
@@ -60,7 +62,12 @@ class AIService:
             raise ValueError("OpenAI client not initialized")
 
         try:
-            messages = [{"role": "system", "content": "You are a helpful assistant that refines project requirements."}]
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that refines project requirements.",
+                }
+            ]
             for message in conversation:
                 messages.append({"role": "user", "content": message})
 

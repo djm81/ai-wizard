@@ -89,7 +89,7 @@ export const useAIInteractions = () => {
     try {
       // Validate the interaction data before sending
       const validatedData = aiInteractionSchema.parse(interaction);
-      
+
       return await apiCall(`${API_URL}/projects/${projectId}/ai-interactions/`, {
         method: 'POST',
         data: validatedData,

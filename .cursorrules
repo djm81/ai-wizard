@@ -9,6 +9,92 @@ C5. Document all significant changes
 C6. Validate changes against existing tests and linting rules
 C7. Preserve existing identifiers and comments to maintain context
 
+## Response Format
+Every response must follow this structure:
+
+1. Analysis Phase
+   - Identify affected components and files
+   - List applicable rules from each relevant section
+   - Document potential impacts and dependencies
+   
+   Example:
+   ```
+   Affected Components:
+   - Backend API (backend/app/api/endpoints/projects.py)
+   - Frontend Component (frontend/src/components/ProjectList.tsx)
+   
+   Applicable Rules:
+   - B1: FastAPI patterns
+   - F1: React hooks patterns
+   - S2: Authorization practices
+   ```
+
+2. Solution Design
+   - Propose specific changes with rationale
+   - Reference relevant rules for each change
+   - Include code snippets with file paths
+   
+   Example:
+   ```
+   Proposed Changes:
+   1. Update API endpoint to follow RESTful conventions (A1)
+   2. Implement proper error handling (E1, E3)
+   3. Add TypeScript types (F3)
+   ```
+
+3. Implementation Details
+   - Provide code changes with file paths
+   - Include comments referencing rules
+   - Document any assumptions
+   
+   Example:
+   ```python:backend/app/api/endpoints/projects.py
+   @router.get("/{project_id}")  # A1: RESTful convention
+   async def get_project(
+       project_id: int,
+       current_user: User = Depends(get_current_user)  # S1: Auth flow
+   ):
+       try:
+           # E1: Error handling
+           project = await project_service.get_project(project_id)
+       except ProjectNotFound as e:
+           # E3: Error context
+           logger.error(f"Project {project_id} not found", exc_info=e)
+           raise HTTPException(status_code=404, detail="Project not found")
+   ```
+
+4. Validation Checklist
+   - Confirm all applicable rules are followed
+   - Verify test coverage (V1)
+   - Check security implications (S1-S8)
+   - Validate error handling (E1-E8)
+   
+   Example:
+   ```
+   ✓ FastAPI patterns (B1)
+   ✓ Error handling (E1, E3)
+   ✓ Authentication (S1)
+   ✓ Tests required for new endpoint
+   ```
+
+5. Documentation Updates
+   - Note required README changes (D1)
+   - Update .uncommitted_changes (D3)
+   - Document any learnings (D2)
+   
+   Example:
+   ```
+   Documentation Updates:
+   - Add new API endpoint to README.md
+   - Update .uncommitted_changes with new feature
+   - Document error handling pattern in .learnings
+   ```
+
+6. Final Confirmation
+   - "**AI Rules Applied**" confirmation
+   - "**Changelog Updated**" if applicable
+   - List any pending items or follow-ups
+
 ## Code Quality Standards
 Q1. Remove all unused code, imports, and variables
 Q2. Fix linting errors in proposed code changes

@@ -59,9 +59,7 @@ def setup_logging() -> None:
         logger.addHandler(file_handler)
 
     # Set logging level based on environment
-    logger.setLevel(
-        logging.DEBUG if not settings.IS_LAMBDA else logging.INFO
-    )
+    logger.setLevel(logging.DEBUG if not settings.IS_LAMBDA else logging.INFO)
 
 
 # Get logger instance

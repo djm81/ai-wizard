@@ -1,10 +1,10 @@
 """config module for AI Wizard backend."""
 
-import os
 import json
+import os
 from typing import List, Optional
 
-from pydantic import SecretStr, field_validator, Field
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Determine if we're running in AWS Lambda
@@ -12,9 +12,7 @@ IS_LAMBDA = bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
 IS_PYTEST = bool(os.getenv("PYTEST_CURRENT_TEST"))
 
 # Default origins for development
-DEFAULT_ORIGINS = [
-    "http://localhost:3000"  # React dev server
-]
+DEFAULT_ORIGINS = ["http://localhost:3000"]  # React dev server
 
 # Determine which env file to use for local development
 if IS_PYTEST:
@@ -43,13 +41,12 @@ class Settings(BaseSettings):
 
     # CORS settings - Accept string input and convert to list
     ALLOWED_ORIGINS_STR: str = Field(
-        default=",".join(DEFAULT_ORIGINS),
-        alias="ALLOWED_ORIGINS"
+        default=",".join(DEFAULT_ORIGINS), alias="ALLOWED_ORIGINS"
     )
     ALLOW_CREDENTIALS: bool = True
     ALLOW_METHODS: list[str] = ["*"]
     ALLOW_HEADERS: list[str] = ["*"]
-    
+
     # Database and Auth
     DATABASE_URL: str = "sqlite:///:memory:"
     SECRET_KEY: SecretStr = SecretStr("fallback_secret_key_for_development")
@@ -72,13 +69,17 @@ class Settings(BaseSettings):
         """Convert ALLOWED_ORIGINS_STR to list."""
         if not self.ALLOWED_ORIGINS_STR:
             return DEFAULT_ORIGINS
-        
+
         # Try parsing as JSON first
         try:
             return json.loads(self.ALLOWED_ORIGINS_STR)
         except json.JSONDecodeError:
             # Fall back to comma-separated string
-            return [origin.strip() for origin in self.ALLOWED_ORIGINS_STR.split(",") if origin.strip()]
+            return [
+                origin.strip()
+                for origin in self.ALLOWED_ORIGINS_STR.split(",")
+                if origin.strip()
+            ]
 
     model_config = SettingsConfigDict(
         env_file=env_file,
@@ -109,6 +110,7 @@ settings = Settings()
 
 # Log initial configuration
 import logging
+
 logger = logging.getLogger("ai-wizard")
 logger.info(f"Environment: {settings.ENVIRONMENT}")
 logger.info(f"Using env file: {env_file}")

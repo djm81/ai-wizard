@@ -5,8 +5,6 @@ import argparse
 import json
 import logging
 import subprocess
-import sys
-from pathlib import Path
 from shutil import which
 from typing import List, Optional
 

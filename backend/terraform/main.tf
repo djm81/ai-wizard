@@ -414,7 +414,7 @@ resource "aws_apigatewayv2_api" "api" {
       "Access-Control-Allow-Methods",
       "Access-Control-Allow-Headers"
     ]
-    max_age = 300
+    max_age           = 300
     allow_credentials = true
   }
 
@@ -504,14 +504,6 @@ resource "aws_apigatewayv2_api_mapping" "api" {
   lifecycle {
     create_before_destroy = true
   }
-}
-
-# Add a catch-all route
-resource "aws_apigatewayv2_route" "any" {
-  provider  = aws.assume_role
-  api_id    = aws_apigatewayv2_api.api.id
-  route_key = "ANY /{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
 # Also verify the Lambda execution role has necessary permissions

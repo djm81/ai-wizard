@@ -70,9 +70,9 @@ const AIInteractions: React.FC = () => {
 
   const isPromptValid = prompt.length >= MIN_PROMPT_LENGTH && prompt.length <= MAX_PROMPT_LENGTH;
   const remainingChars = MAX_PROMPT_LENGTH - prompt.length;
-  const helperText = prompt.length > 0 
-    ? `${remainingChars} characters remaining${prompt.length < MIN_PROMPT_LENGTH 
-      ? `, need ${MIN_PROMPT_LENGTH - prompt.length} more characters` 
+  const helperText = prompt.length > 0
+    ? `${remainingChars} characters remaining${prompt.length < MIN_PROMPT_LENGTH
+      ? `, need ${MIN_PROMPT_LENGTH - prompt.length} more characters`
       : ''}`
     : `Minimum ${MIN_PROMPT_LENGTH} characters required`;
 
@@ -101,9 +101,9 @@ const AIInteractions: React.FC = () => {
           helperText={helperText}
           sx={{ mb: 2 }}
         />
-        <Button 
-          type="submit" 
-          variant="contained" 
+        <Button
+          type="submit"
+          variant="contained"
           disabled={!isPromptValid}
         >
           Create Interaction

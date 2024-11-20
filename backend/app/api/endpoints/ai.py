@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Dict
 
+from app.core.config import settings
 from app.db.database import get_db
 from app.models.user import User
 from app.services.ai_service import AIService
@@ -10,7 +11,6 @@ from app.services.auth_service import AuthService
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.core.config import settings
 
 router = APIRouter()
 
