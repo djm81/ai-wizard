@@ -69,8 +69,7 @@ async def log_requests(request: Request, call_next):
         return response
     except Exception as e:
         logger.error(
-            f"Request failed: {request.method} {request.url} "
-            f"- Error: {str(e)}",
+            f"Request failed: {request.method} {request.url} " f"- Error: {str(e)}",
             exc_info=True,
         )
         raise
@@ -91,15 +90,11 @@ async def test_auth(request: Request):
     """Test endpoint to verify authorization header handling"""
     auth_header = request.headers.get("Authorization", "")
     logger.info(f"Auth test endpoint accessed")
-    logger.debug(
-        f"Authorization header present: {'Authorization' in request.headers}"
-    )
+    logger.debug(f"Authorization header present: {'Authorization' in request.headers}")
     return {
         "message": "Auth test endpoint",
         "auth_header_present": bool(auth_header),
-        "auth_scheme": auth_header.split()[0]
-        if " " in auth_header
-        else "No scheme",
+        "auth_scheme": auth_header.split()[0] if " " in auth_header else "No scheme",
     }
 
 
@@ -135,8 +130,7 @@ if __name__ == "__main__":
     logger.info("Starting server on %s:%d", host, port)
     if host == "0.0.0.0":
         logger.warning(
-            "Server is bound to all interfaces - "
-            "ensure this is intentional and properly secured"
+            "Server is bound to all interfaces - " "ensure this is intentional and properly secured"
         )
 
     uvicorn.run(

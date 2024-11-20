@@ -20,9 +20,7 @@ class UserProfile(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
     bio: Mapped[str | None] = mapped_column(String, nullable=True)
-    preferences: Mapped[Dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    preferences: Mapped[Dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Relationship with proper type hints
     user: Mapped["User"] = relationship("User", back_populates="profile")

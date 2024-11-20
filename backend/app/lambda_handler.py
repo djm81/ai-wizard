@@ -24,9 +24,7 @@ def log_request_details(event: Dict[str, Any]) -> None:
 
     # Log headers for debugging (excluding sensitive data)
     safe_headers = {
-        k: v
-        for k, v in headers.items()
-        if k.lower() not in {"authorization", "cookie"}
+        k: v for k, v in headers.items() if k.lower() not in {"authorization", "cookie"}
     }
     logger.debug("Headers: %s", safe_headers)
 

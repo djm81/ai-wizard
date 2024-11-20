@@ -23,9 +23,7 @@ class ProjectService:
 
     def create_project(self, user_id: int, project: ProjectCreate) -> Project:
         """Create a new project"""
-        db_project = Project(
-            user_id=user_id, name=project.name, description=project.description
-        )
+        db_project = Project(user_id=user_id, name=project.name, description=project.description)
         self.db.add(db_project)
         self.db.commit()
         self.db.refresh(db_project)
@@ -33,20 +31,14 @@ class ProjectService:
 
     def get_project(self, project_id: int) -> Project:
         """Get a specific project"""
-        project = (
-            self.db.query(Project).filter(Project.id == project_id).first()
-        )
+        project = self.db.query(Project).filter(Project.id == project_id).first()
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         return project
 
     def get_project_interactions(self, project_id: int) -> list[AIInteraction]:
         """Get all AI interactions for a project"""
-        return (
-            self.db.query(AIInteraction)
-            .filter(AIInteraction.project_id == project_id)
-            .all()
-        )
+        return self.db.query(AIInteraction).filter(AIInteraction.project_id == project_id).all()
 
     def create_ai_interaction(
         self, user_id: int, project_id: int, interaction: AIInteractionCreate
@@ -78,22 +70,16 @@ class ProjectService:
 
         try:
             # Delete associated AI interactions first
-            self.db.query(AIInteraction).filter(
-                AIInteraction.project_id == project_id
-            ).delete()
+            self.db.query(AIInteraction).filter(AIInteraction.project_id == project_id).delete()
             # Delete the project
             self.db.query(Project).filter(Project.id == project_id).delete()
             self.db.commit()
         except Exception as e:
             self.db.rollback()
             logger.error(f"Failed to delete project: {str(e)}")
-            raise HTTPException(
-                status_code=500, detail="Failed to delete project"
-            )
+            raise HTTPException(status_code=500, detail="Failed to delete project")
 
-    def get_project_interaction(
-        self, project_id: int, interaction_id: int
-    ) -> AIInteraction:
+    def get_project_interaction(self, project_id: int, interaction_id: int) -> AIInteraction:
         """Get a specific AI interaction for a project"""
         interaction = (
             self.db.query(AIInteraction)
@@ -104,7 +90,5 @@ class ProjectService:
             .first()
         )
         if not interaction:
-            raise HTTPException(
-                status_code=404, detail="AI Interaction not found"
-            )
+            raise HTTPException(status_code=404, detail="AI Interaction not found")
         return interaction

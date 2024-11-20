@@ -38,7 +38,19 @@ repos:
     hooks:
       - id: pylint
         name: pylint
-        entry: bash -c 'cd backend && mkdir -p logs && TIMESTAMP=$(date +%Y%m%d_%H%M%S) && echo "Linting Report - $(date)" > "../logs/linting_report_${TIMESTAMP}.log" && echo -e "\n================================================================================\nPyLint Results\n================================================================================\n" >> "../logs/linting_report_${TIMESTAMP}.log" && PYTHONPATH=. pylint app tests scripts >> "../logs/linting_report_${TIMESTAMP}.log"' --
+        entry: |
+          bash -c '
+            mkdir -p logs &&
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S) &&
+            echo "Linting Report - $(date)" > "logs/linting_report_${TIMESTAMP}.log" &&
+            echo -e "\n================================================================================\nPyLint Results\n================================================================================\n" >> "logs/linting_report_${TIMESTAMP}.log" &&
+            cd backend &&
+            PYTHONPATH=. pylint \
+              --output-format=text \
+              --msg-template="backend/{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
+              app tests \
+              >> "../logs/linting_report_${TIMESTAMP}.log"
+          '
         language: python
         types: [python]
         require_serial: true
@@ -54,12 +66,15 @@ repos:
           'mangum',
           'email-validator',
           'bcrypt',
-          'openai'
+          'openai',
+          'pytest',
+          'pytest-cov',
+          'pytest-asyncio',
+          'httpx'
         ]
         args: [
           "--rcfile=pyproject.toml",
           "--output-format=text",
-          "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}",
           "--reports=no"
         ]
         pass_filenames: false

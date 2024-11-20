@@ -22,9 +22,7 @@ def setup_logging() -> None:
 
     # Create formatters
     if not settings.IS_LAMBDA:
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     else:
         # JSON formatter for production
         class JsonFormatter(logging.Formatter):
@@ -52,9 +50,7 @@ def setup_logging() -> None:
         log_dir = Path("logs")
         log_dir.mkdir(exist_ok=True)
         log_file = log_dir / f"app_{datetime.now():%Y%m%d}.log"
-        file_handler = RotatingFileHandler(
-            log_file, maxBytes=10485760, backupCount=5
-        )
+        file_handler = RotatingFileHandler(log_file, maxBytes=10485760, backupCount=5)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 

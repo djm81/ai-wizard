@@ -16,9 +16,7 @@ def create_ai_interaction(
     current_user: User = Depends(AuthService.get_current_user),
     ai_interaction_service: AIInteractionService = Depends(),
 ):
-    return ai_interaction_service.create_ai_interaction(
-        current_user.id, project_id, interaction
-    )
+    return ai_interaction_service.create_ai_interaction(current_user.id, project_id, interaction)
 
 
 @router.get("/{interaction_id}", response_model=AIInteraction)

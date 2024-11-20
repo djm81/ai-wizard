@@ -48,9 +48,7 @@ def generate_openapi_spec():
 
     # Define paths relative to project root
     root_spec_path = app_dir / "openapi" / "specification.yaml"
-    terraform_spec_path = (
-        backend_dir / "terraform" / "api" / "specification.yaml"
-    )
+    terraform_spec_path = backend_dir / "terraform" / "api" / "specification.yaml"
 
     # Ensure terraform/api directory exists
     terraform_spec_path.parent.mkdir(parents=True, exist_ok=True)

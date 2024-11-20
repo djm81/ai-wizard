@@ -13,17 +13,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 logger = logging.getLogger(__name__)
 
 # Context variable to track database sessions per request
-request_session: ContextVar[Optional[Session]] = ContextVar(
-    "request_session", default=None
-)
+request_session: ContextVar[Optional[Session]] = ContextVar("request_session", default=None)
 
 # Create database engine with proper thread handling
 engine = create_engine(
     settings.DATABASE_URL,
     # Only add thread handling for SQLite
-    connect_args={"check_same_thread": False}
-    if settings.DATABASE_URL.startswith("sqlite")
-    else {},
+    connect_args={"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {},
     # Add pooling configuration for better thread handling
     pool_pre_ping=True,
     pool_recycle=3600,

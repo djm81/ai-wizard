@@ -3,12 +3,7 @@
 import pytest
 from app.models.user import User
 from app.models.user_profile import UserProfile
-from app.schemas.user import (
-    UserCreate,
-    UserProfileCreate,
-    UserProfileUpdate,
-    UserUpdate,
-)
+from app.schemas.user import UserCreate, UserProfileCreate, UserProfileUpdate, UserUpdate
 from app.services.user_service import UserService
 
 
@@ -46,9 +41,7 @@ class TestUserService:
 
     def test_create_user_profile(self, db_session, test_user):
         service = UserService(db_session)
-        profile_create = UserProfileCreate(
-            bio="Test bio", preferences={"theme": "dark"}
-        )
+        profile_create = UserProfileCreate(bio="Test bio", preferences={"theme": "dark"})
         profile = service.create_user_profile(test_user.id, profile_create)
         assert profile.bio == profile_create.bio
         assert profile.user_id == test_user.id
@@ -61,7 +54,5 @@ class TestUserService:
 
         # Then update it
         profile_update = UserProfileUpdate(bio="Updated bio")
-        updated_profile = service.update_user_profile(
-            test_user.id, profile_update
-        )
+        updated_profile = service.update_user_profile(test_user.id, profile_update)
         assert updated_profile.bio == "Updated bio"

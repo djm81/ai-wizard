@@ -30,9 +30,7 @@ def run_command(command: list[str], **kwargs) -> subprocess.CompletedProcess:
             **kwargs,
         )
     except subprocess.CalledProcessError as e:
-        logger.error(
-            "Command failed with exit code %d: %s", e.returncode, e.stderr
-        )
+        logger.error("Command failed with exit code %d: %s", e.returncode, e.stderr)
         raise
 
 
@@ -65,9 +63,7 @@ def validate_gh_cli() -> str:
 def get_workflow_name(run_id: str) -> Optional[str]:
     """Get workflow name from run ID."""
     try:
-        result = run_command(
-            ["gh", "run", "view", run_id, "--json", "workflowName"]
-        )
+        result = run_command(["gh", "run", "view", run_id, "--json", "workflowName"])
         workflow_data = json.loads(result.stdout)
         return workflow_data.get("workflowName")
     except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
@@ -87,9 +83,7 @@ def get_latest_run_logs(workflow_name=None):
         run_id = json.loads(result.stdout)[0]["databaseId"]
 
         # Get name of the workflow
-        result = run_command(
-            ["gh", "run", "view", str(run_id), "--json", "workflowName"]
-        )
+        result = run_command(["gh", "run", "view", str(run_id), "--json", "workflowName"])
         wf_name = json.loads(result.stdout)["workflowName"]
 
         # Get run logs
@@ -113,9 +107,7 @@ def analyze_workflow_error(workflow_logs: str) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Analyze workflow logs for common errors"
-    )
+    parser = argparse.ArgumentParser(description="Analyze workflow logs for common errors")
     parser.add_argument("-w", "--workflow", help="Specify the workflow name")
     args = parser.parse_args()
 

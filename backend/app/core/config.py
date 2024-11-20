@@ -40,9 +40,7 @@ class Settings(BaseSettings):
     ALLOW_ALL_INTERFACES: bool = False
 
     # CORS settings - Accept string input and convert to list
-    ALLOWED_ORIGINS_STR: str = Field(
-        default=",".join(DEFAULT_ORIGINS), alias="ALLOWED_ORIGINS"
-    )
+    ALLOWED_ORIGINS_STR: str = Field(default=",".join(DEFAULT_ORIGINS), alias="ALLOWED_ORIGINS")
     ALLOW_CREDENTIALS: bool = True
     ALLOW_METHODS: list[str] = ["*"]
     ALLOW_HEADERS: list[str] = ["*"]
@@ -76,9 +74,7 @@ class Settings(BaseSettings):
         except json.JSONDecodeError:
             # Fall back to comma-separated string
             return [
-                origin.strip()
-                for origin in self.ALLOWED_ORIGINS_STR.split(",")
-                if origin.strip()
+                origin.strip() for origin in self.ALLOWED_ORIGINS_STR.split(",") if origin.strip()
             ]
 
     model_config = SettingsConfigDict(

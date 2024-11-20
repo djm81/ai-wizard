@@ -17,9 +17,7 @@ class TestProjectService:
 
     def test_create_project(self, db_session, test_user):
         service = ProjectService(db_session)
-        project_create = ProjectCreate(
-            name="Test Project", description="Test Description"
-        )
+        project_create = ProjectCreate(name="Test Project", description="Test Description")
         project = service.create_project(test_user.id, project_create)
         assert project.name == "Test Project"
         assert project.description == "Test Description"
@@ -36,9 +34,7 @@ class TestProjectService:
             service.get_project(999)
         assert exc_info.value.status_code == 404
 
-    def test_get_project_interactions(
-        self, db_session, test_project, test_ai_interaction
-    ):
+    def test_get_project_interactions(self, db_session, test_project, test_ai_interaction):
         service = ProjectService(db_session)
         interactions = service.get_project_interactions(test_project.id)
         assert len(interactions) == 1

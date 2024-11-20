@@ -16,9 +16,7 @@ class TestAuthService:
     async def test_get_current_user_success(self, db_session, test_user):
         """Test successful user authentication"""
         service = AuthService(db_session)
-        mock_credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer", credentials="mock-token"
-        )
+        mock_credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="mock-token")
 
         with patch("firebase_admin.auth.verify_id_token") as mock_verify:
             mock_verify.return_value = {"email": test_user.email}
@@ -34,21 +32,15 @@ class TestAuthService:
         )
 
         with patch("firebase_admin.auth.verify_id_token") as mock_verify:
-            mock_verify.side_effect = firebase_admin.auth.InvalidIdTokenError(
-                "Invalid token"
-            )
+            mock_verify.side_effect = firebase_admin.auth.InvalidIdTokenError("Invalid token")
             with pytest.raises(HTTPException) as exc_info:
                 await service.get_current_user(mock_credentials)
             assert exc_info.value.status_code == 401
 
-    async def test_get_current_user_user_not_found_creates_user(
-        self, db_session
-    ):
+    async def test_get_current_user_user_not_found_creates_user(self, db_session):
         """Test authentication creates new user when not found"""
         service = AuthService(db_session)
-        mock_credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer", credentials="mock-token"
-        )
+        mock_credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="mock-token")
 
         with patch("firebase_admin.auth.verify_id_token") as mock_verify:
             mock_verify.return_value = {
@@ -62,9 +54,7 @@ class TestAuthService:
     async def test_get_current_user_existing_user(self, db_session, test_user):
         """Test authentication with existing user"""
         service = AuthService(db_session)
-        mock_credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer", credentials="mock-token"
-        )
+        mock_credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="mock-token")
 
         with patch("firebase_admin.auth.verify_id_token") as mock_verify:
             mock_verify.return_value = {
@@ -78,9 +68,7 @@ class TestAuthService:
     async def test_get_current_user_missing_email(self, db_session):
         """Test authentication with token missing email claim"""
         service = AuthService(db_session)
-        mock_credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer", credentials="mock-token"
-        )
+        mock_credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="mock-token")
 
         with patch("firebase_admin.auth.verify_id_token") as mock_verify:
             mock_verify.return_value = {"name": "Test User"}  # No email claim

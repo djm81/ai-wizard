@@ -27,9 +27,7 @@ def setup_logging(service_name: str = "ai-copilot"):
             root_logger.setLevel(logging.INFO)
             handler = logging.StreamHandler(sys.stdout)
             handler.setFormatter(
-                logging.Formatter(
-                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-                )
+                logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             )
             root_logger.addHandler(handler)
 
@@ -41,9 +39,7 @@ def setup_logging(service_name: str = "ai-copilot"):
     logger.handlers.clear()
 
     # Create formatter
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
     if is_lambda:
         # In Lambda, just use stream handler which automatically goes to CloudWatch

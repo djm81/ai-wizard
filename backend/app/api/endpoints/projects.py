@@ -56,9 +56,7 @@ async def read_project(
     service = ProjectService(db)
     project = service.get_project(project_id)
     if project.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized to access this project")
     return project
 
 
@@ -72,9 +70,7 @@ async def list_project_interactions(
     service = ProjectService(db)
     project = service.get_project(project_id)
     if project.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized to access this project")
     return service.get_project_interactions(project_id)
 
 
@@ -93,12 +89,8 @@ async def create_project_interaction(
     service = ProjectService(db)
     project = service.get_project(project_id)
     if project.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project"
-        )
-    return service.create_ai_interaction(
-        current_user.id, project_id, interaction
-    )
+        raise HTTPException(status_code=403, detail="Not authorized to access this project")
+    return service.create_ai_interaction(current_user.id, project_id, interaction)
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -111,9 +103,7 @@ async def delete_project(
     service = ProjectService(db)
     project = service.get_project(project_id)
     if project.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized to access this project")
     service.delete_project(project_id)
     return None
 
@@ -132,9 +122,7 @@ async def read_project_interaction(
     service = ProjectService(db)
     project = service.get_project(project_id)
     if project.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized to access this project")
 
     interaction = service.get_project_interaction(project_id, interaction_id)
     if not interaction:

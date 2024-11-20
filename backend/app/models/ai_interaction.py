@@ -21,9 +21,7 @@ class AIInteraction(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    project_id: Mapped[int] = mapped_column(
-        ForeignKey("projects.id"), nullable=False
-    )
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     prompt: Mapped[str] = mapped_column(String, nullable=False)
     response: Mapped[str] = mapped_column(String, nullable=False)
 

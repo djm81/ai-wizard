@@ -9,11 +9,7 @@ from app.models.user import User
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth as firebase_auth
-from firebase_admin.auth import (
-    ExpiredIdTokenError,
-    InvalidIdTokenError,
-    RevokedIdTokenError,
-)
+from firebase_admin.auth import ExpiredIdTokenError, InvalidIdTokenError, RevokedIdTokenError
 from sqlalchemy.orm import Session
 
 security = HTTPBearer()
@@ -45,9 +41,7 @@ class AuthService:
             try:
                 # Verify Firebase token
                 decoded_token = firebase_auth.verify_id_token(token)
-                logger.debug(
-                    f"Token decoded successfully. Claims: {decoded_token}"
-                )
+                logger.debug(f"Token decoded successfully. Claims: {decoded_token}")
             except InvalidIdTokenError as e:
                 logger.error(f"Invalid token error: {str(e)}")
                 raise HTTPException(
@@ -81,9 +75,7 @@ class AuthService:
                 )
 
             if "email" not in decoded_token:
-                logger.error(
-                    f"Token missing email claim. Available claims: {decoded_token.keys()}"
-                )
+                logger.error(f"Token missing email claim. Available claims: {decoded_token.keys()}")
                 raise HTTPException(
                     status_code=401,
                     detail="Token missing email claim",
@@ -112,9 +104,7 @@ class AuthService:
                 except Exception as e:
                     self.db.rollback()
                     logger.error(f"Failed to create user: {str(e)}")
-                    raise HTTPException(
-                        status_code=500, detail="Failed to create user account"
-                    )
+                    raise HTTPException(status_code=500, detail="Failed to create user account")
 
             return user
 

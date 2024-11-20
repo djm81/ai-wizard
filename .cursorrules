@@ -16,13 +16,13 @@ Every response must follow this structure:
    - Identify affected components and files
    - List applicable rules from each relevant section
    - Document potential impacts and dependencies
-   
+
    Example:
    ```
    Affected Components:
    - Backend API (backend/app/api/endpoints/projects.py)
    - Frontend Component (frontend/src/components/ProjectList.tsx)
-   
+
    Applicable Rules:
    - B1: FastAPI patterns
    - F1: React hooks patterns
@@ -33,7 +33,7 @@ Every response must follow this structure:
    - Propose specific changes with rationale
    - Reference relevant rules for each change
    - Include code snippets with file paths
-   
+
    Example:
    ```
    Proposed Changes:
@@ -46,7 +46,7 @@ Every response must follow this structure:
    - Provide code changes with file paths
    - Include comments referencing rules
    - Document any assumptions
-   
+
    Example:
    ```python:backend/app/api/endpoints/projects.py
    @router.get("/{project_id}")  # A1: RESTful convention
@@ -68,7 +68,7 @@ Every response must follow this structure:
    - Verify test coverage (V1)
    - Check security implications (S1-S8)
    - Validate error handling (E1-E8)
-   
+
    Example:
    ```
    ✓ FastAPI patterns (B1)
@@ -81,7 +81,7 @@ Every response must follow this structure:
    - Note required README changes (D1)
    - Update .uncommitted_changes (D3)
    - Document any learnings (D2)
-   
+
    Example:
    ```
    Documentation Updates:

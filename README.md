@@ -1,6 +1,6 @@
 # AI Wizard
 
-# D1: Project overview and status
+# Project overview and status
 AI Wizard is a rapid application assistant that helps developers quickly prototype and build applications through AI-powered conversations.
 
 ## Project Status
@@ -13,7 +13,7 @@ The project is currently in active development. The core functionality includes:
 - Real-time project collaboration
 - Secure API endpoints with JWT authentication
 
-# D1: Recent updates section for changelog tracking
+# Recent updates section for changelog tracking
 ### Recent Updates
 - Added comprehensive error handling and loading states
 - Implemented Material-UI components for consistent UI/UX
@@ -22,7 +22,7 @@ The project is currently in active development. The core functionality includes:
 - Added support for project descriptions and metadata
 - Implemented secure Firebase authentication flow
 
-# D1: Architecture details for technical documentation
+# Architecture details for technical documentation
 ## Architecture Overview
 
 ### Frontend

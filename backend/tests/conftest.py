@@ -22,9 +22,7 @@ from sqlalchemy.orm import Session, sessionmaker
 def pytest_configure(config):
     """Configure test environment"""
     os.environ["ENVIRONMENT"] = "test"
-    os.environ[
-        "ALLOWED_ORIGINS"
-    ] = "http://localhost:3000,http://localhost:5173"
+    os.environ["ALLOWED_ORIGINS"] = "http://localhost:3000,http://localhost:5173"
     os.environ["DATABASE_URL"] = "sqlite:///./test.db"
     os.environ["SECRET_KEY"] = "test-secret-key"
     os.environ["OPENAI_API_KEY"] = "test-api-key"
@@ -32,12 +30,8 @@ def pytest_configure(config):
 
 # Test database setup
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(
-    SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine
-)
+engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -85,9 +79,7 @@ def auth_headers() -> dict[str, str]:
 
 
 @pytest.fixture
-def client(
-    db_session: Session, test_user: User
-) -> Generator[TestClient, None, None]:
+def client(db_session: Session, test_user: User) -> Generator[TestClient, None, None]:
     """Test client fixture with auth and DB overrides"""
 
     def get_test_db():
@@ -97,9 +89,7 @@ def client(
         return test_user
 
     app.dependency_overrides[get_db] = get_test_db
-    app.dependency_overrides[
-        AuthService.get_current_user
-    ] = mock_get_current_user
+    app.dependency_overrides[AuthService.get_current_user] = mock_get_current_user
 
     try:
         yield TestClient(app)
