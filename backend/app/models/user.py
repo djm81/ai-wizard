@@ -1,12 +1,11 @@
-"""user module for AI Wizard backend."""
+"""User model for AI Wizard backend."""
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from app.models.base import Base
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
@@ -16,27 +15,36 @@ if TYPE_CHECKING:
 
 
 class User(Base):
-    """User model for storing user related details"""
+    """User model."""
 
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     full_name: Mapped[str] = mapped_column(String)
-    is_active: Mapped[bool] = mapped_column(default=True)
-    is_superuser: Mapped[bool] = mapped_column(default=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Relationships with proper type hints
-    projects: Mapped[List[Project]] = relationship(
-        "Project", back_populates="user", cascade="all, delete-orphan"
+    projects: Mapped[List["Project"]] = relationship(
+        "Project",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
-    ai_interactions: Mapped[List[AIInteraction]] = relationship(
-        "AIInteraction", back_populates="user", cascade="all, delete-orphan"
+
+    ai_interactions: Mapped[List["AIInteraction"]] = relationship(
+        "AIInteraction",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
-    profile: Mapped[UserProfile | None] = relationship(
+
+    profile: Mapped[Optional["UserProfile"]] = relationship(
         "UserProfile",
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",
+        lazy="selectin",
     )

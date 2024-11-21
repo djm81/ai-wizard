@@ -57,7 +57,8 @@ class UserProfileBase(BaseModel):
     """Base schema for UserProfile data"""
 
     bio: Optional[str] = None
-    preferences: Optional[Dict[str, Any]] = None
+    preferences: Dict[str, Any] = {}
+    name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -65,7 +66,8 @@ class UserProfileBase(BaseModel):
 class UserProfileCreate(UserProfileBase):
     """Schema for creating a new user profile"""
 
-    pass
+    name: str
+    preferences: Dict[str, Any]
 
 
 class UserProfileUpdate(UserProfileBase):

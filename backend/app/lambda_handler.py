@@ -1,9 +1,7 @@
 """lambda_handler module for AI Wizard backend."""
 
-import asyncio
-import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from app.main import app
 from app.utils.logging_config import setup_logging
@@ -49,17 +47,12 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Handle the request
         return mangum_handler(event, context)
 
+    except ValueError as e:
+        logger.error("Invalid input: %s", str(e))
+        return {"statusCode": 400, "body": str(e)}
+    except RuntimeError as e:
+        logger.error("Runtime error: %s", str(e))
+        return {"statusCode": 500, "body": str(e)}
     except Exception as e:
-        # Log error details
-        logger.error("Lambda handler error: %s", str(e), exc_info=True)
-
-        # Return error response
-        return {
-            "statusCode": 500,
-            "body": json.dumps(
-                {
-                    "error": "Internal server error",
-                    "detail": str(e) if app.debug else None,
-                }
-            ),
-        }
+        logger.critical("Unhandled error: %s", str(e))
+        return {"statusCode": 500, "body": "Internal server error"}

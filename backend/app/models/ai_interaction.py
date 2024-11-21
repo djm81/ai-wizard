@@ -1,12 +1,10 @@
 """ai_interaction module for AI Wizard backend."""
 
 from __future__ import annotations
-
-from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Dict
 
 from app.models.base import Base
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import JSON, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
@@ -23,7 +21,7 @@ class AIInteraction(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     prompt: Mapped[str] = mapped_column(String, nullable=False)
-    response: Mapped[str] = mapped_column(String, nullable=False)
+    response: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
 
     # Relationships with proper type hints and forward refs
     user: Mapped["User"] = relationship(

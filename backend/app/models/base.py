@@ -1,29 +1,21 @@
 """base module for AI Wizard backend."""
 
-from datetime import UTC, datetime
-from typing import Optional
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import Column, DateTime
-from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import DeclarativeBase, Mapped
+from sqlalchemy import DateTime, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
     """Base class for all models"""
 
-    @declared_attr
-    def created_at(cls) -> Mapped[datetime]:
-        return Column(
-            DateTime(timezone=True),
-            default=lambda: datetime.now(UTC),
-            nullable=False,
-        )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
 
-    @declared_attr
-    def updated_at(cls) -> Mapped[datetime]:
-        return Column(
-            DateTime(timezone=True),
-            default=lambda: datetime.now(UTC),
-            onupdate=lambda: datetime.now(UTC),
-            nullable=False,
-        )
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize a Base model instance."""
+        for key, value in kwargs.items():
+            setattr(self, key, value)

@@ -1,7 +1,5 @@
 """main module for AI Wizard backend."""
 
-import time
-from pathlib import Path
 from typing import Optional
 
 from app.api.router import router
@@ -12,7 +10,6 @@ from app.db.init_db import init_db
 from app.utils.logging_config import logger
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 
 # Initialize Firebase Admin SDK
 initialize_firebase()
@@ -47,24 +44,17 @@ app.add_middleware(
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """Log request and response details"""
-    start_time = time.time()
 
     # Log request details
-    logger.info(f"Request started: {request.method} {request.url}")
-    logger.debug(f"Headers: {dict(request.headers)}")
+    logger.info("Request: %s %s", request.method, request.url.path)
+    logger.debug("Headers: %s", request.headers)
 
     try:
         response = await call_next(request)
 
-        # Calculate request processing time
-        process_time = time.time() - start_time
-
         # Log response details
-        logger.info(
-            f"Request completed: {request.method} {request.url} "
-            f"- Status: {response.status_code} "
-            f"- Duration: {process_time:.3f}s"
-        )
+        logger.info("Response status: %s", response.status_code)
+        logger.debug("Response headers: %s", response.headers)
 
         return response
     except Exception as e:
@@ -81,21 +71,17 @@ app.include_router(router)
 
 @app.get("/")
 async def root():
+    """Root endpoint that returns a welcome message."""
     logger.info("Root endpoint accessed")
-    return {"message": "Welcome to the AI Wizard API"}
+    return {"message": "Welcome to the API"}
 
 
 @app.get("/test-auth")
-async def test_auth(request: Request):
-    """Test endpoint to verify authorization header handling"""
-    auth_header = request.headers.get("Authorization", "")
-    logger.info(f"Auth test endpoint accessed")
-    logger.debug(f"Authorization header present: {'Authorization' in request.headers}")
-    return {
-        "message": "Auth test endpoint",
-        "auth_header_present": bool(auth_header),
-        "auth_scheme": auth_header.split()[0] if " " in auth_header else "No scheme",
-    }
+async def test_auth():
+    """Test endpoint for authentication."""
+    logger.info("Auth test endpoint called")
+    logger.debug("Testing authentication...")
+    return {"message": "Authentication test endpoint"}
 
 
 def get_host() -> str:

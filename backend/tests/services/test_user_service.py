@@ -41,18 +41,26 @@ class TestUserService:
 
     def test_create_user_profile(self, db_session, test_user):
         service = UserService(db_session)
-        profile_create = UserProfileCreate(bio="Test bio", preferences={"theme": "dark"})
+        profile_create = UserProfileCreate(
+            name="Test User", bio="Test bio", preferences={"theme": "dark"}
+        )
         profile = service.create_user_profile(test_user.id, profile_create)
-        assert profile.bio == profile_create.bio
-        assert profile.user_id == test_user.id
+        assert profile.bio == "Test bio"
+        assert profile.preferences == {"theme": "dark"}
+        assert profile.name == "Test User"
 
     def test_update_user_profile(self, db_session, test_user):
         service = UserService(db_session)
         # First create a profile
-        profile_create = UserProfileCreate(bio="Initial bio")
-        service.create_user_profile(test_user.id, profile_create)
+        profile_create = UserProfileCreate(
+            name="Initial Name", bio="Initial bio", preferences={"theme": "light"}
+        )
+        profile = service.create_user_profile(test_user.id, profile_create)
 
         # Then update it
-        profile_update = UserProfileUpdate(bio="Updated bio")
+        profile_update = UserProfileUpdate(bio="Updated bio", preferences={"theme": "dark"})
         updated_profile = service.update_user_profile(test_user.id, profile_update)
         assert updated_profile.bio == "Updated bio"
+        assert updated_profile.preferences == {"theme": "dark"}
+        # Name should remain unchanged
+        assert updated_profile.name == "Initial Name"

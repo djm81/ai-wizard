@@ -4,12 +4,15 @@ info:
   description: AI Wizard Backend API for intelligent assistance
   version: 0.1.0
 paths:
-  /users/:
+  /users/users:
     post:
       tags:
       - users
       summary: Create User
-      operationId: create_user_users__post
+      description: "Create a new user.\n\nArgs:\n    user: User creation data\n  \
+        \  db: Database session\n    user_service: User service instance\n\nReturns:\n\
+        \    Created user object"
+      operationId: create_user_users_users_post
       requestBody:
         content:
           application/json:
@@ -29,12 +32,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /users/me:
+  /users/users/me:
     get:
       tags:
       - users
       summary: Read Users Me
-      operationId: read_users_me_users_me_get
+      description: "Get current authenticated user.\n\nArgs:\n    current_user: Current\
+        \ authenticated user\n    user_service: User service instance\n\nReturns:\n\
+        \    Current user object"
+      operationId: read_users_me_users_users_me_get
       security:
       - HTTPBearer: []
       parameters:
@@ -49,13 +55,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserWithProfile'
+                $ref: '#/components/schemas/User'
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /users/me:
     put:
       tags:
       - users
@@ -544,6 +551,7 @@ paths:
   /:
     get:
       summary: Root
+      description: Root endpoint that returns a welcome message.
       operationId: root__get
       responses:
         '200':
@@ -554,7 +562,7 @@ paths:
   /test-auth:
     get:
       summary: Test Auth
-      description: Test endpoint to verify authorization header handling
+      description: Test endpoint for authentication.
       operationId: test_auth_test_auth_get
       responses:
         '200':
@@ -761,10 +769,14 @@ components:
           - type: 'null'
           title: Bio
         preferences:
-          anyOf:
-          - type: object
-          - type: 'null'
+          type: object
           title: Preferences
+          default: {}
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
         id:
           type: integer
           title: Id
@@ -795,11 +807,15 @@ components:
           - type: 'null'
           title: Bio
         preferences:
-          anyOf:
-          - type: object
-          - type: 'null'
+          type: object
           title: Preferences
+        name:
+          type: string
+          title: Name
       type: object
+      required:
+      - preferences
+      - name
       title: UserProfileCreate
       description: Schema for creating a new user profile
     UserProfileUpdate:
@@ -810,10 +826,14 @@ components:
           - type: 'null'
           title: Bio
         preferences:
-          anyOf:
-          - type: object
-          - type: 'null'
+          type: object
           title: Preferences
+          default: {}
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
       type: object
       title: UserProfileUpdate
       description: Schema for updating a user profile
@@ -838,46 +858,6 @@ components:
       type: object
       title: UserUpdate
       description: Schema for updating a user
-    UserWithProfile:
-      properties:
-        email:
-          type: string
-          title: Email
-        full_name:
-          type: string
-          title: Full Name
-        id:
-          type: integer
-          title: Id
-        is_active:
-          type: boolean
-          title: Is Active
-        is_superuser:
-          type: boolean
-          title: Is Superuser
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        updated_at:
-          type: string
-          format: date-time
-          title: Updated At
-        profile:
-          anyOf:
-          - $ref: '#/components/schemas/UserProfile'
-          - type: 'null'
-      type: object
-      required:
-      - email
-      - full_name
-      - id
-      - is_active
-      - is_superuser
-      - created_at
-      - updated_at
-      title: UserWithProfile
-      description: Schema for user with profile response
     ValidationError:
       properties:
         loc:

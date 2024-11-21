@@ -2,9 +2,8 @@
 
 import json
 import os
-from typing import List, Optional
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Determine if we're running in AWS Lambda
