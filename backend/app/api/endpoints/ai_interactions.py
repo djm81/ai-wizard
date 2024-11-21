@@ -1,10 +1,11 @@
 """ai_interactions module for AI Wizard backend."""
 
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from app.models.user import User
 from app.schemas.ai_interaction import AIInteraction, AIInteractionCreate
 from app.services.ai_interaction_service import AIInteractionService
 from app.services.auth_service import AuthService
-from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter()
 

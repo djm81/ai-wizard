@@ -1,10 +1,11 @@
 """test_project_service module for AI Wizard backend."""
 
 import pytest
+from fastapi import HTTPException
+
 from app.schemas.ai_interaction import AIInteractionCreate
 from app.schemas.project import ProjectCreate
 from app.services.project_service import ProjectService
-from fastapi import HTTPException
 
 
 @pytest.mark.unit

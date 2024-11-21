@@ -41,14 +41,6 @@ paths:
         \ authenticated user\n    user_service: User service instance\n\nReturns:\n\
         \    Current user object"
       operationId: read_users_me_users_users_me_get
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: self
-        in: query
-        required: true
-        schema:
-          title: Self
       responses:
         '200':
           description: Successful Response
@@ -56,32 +48,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
   /users/me:
     put:
       tags:
       - users
       summary: Update User Me
       operationId: update_user_me_users_me_put
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: self
-        in: query
-        required: true
-        schema:
-          title: Self
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/UserUpdate'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -95,77 +75,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
     delete:
       tags:
       - users
       summary: Delete User Me
       operationId: delete_user_me_users_me_delete
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: self
-        in: query
-        required: true
-        schema:
-          title: Self
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /users/me/profile:
-    post:
-      tags:
-      - users
-      summary: Create User Profile
-      operationId: create_user_profile_users_me_profile_post
       security:
       - HTTPBearer: []
-      parameters:
-      - name: self
-        in: query
-        required: true
-        schema:
-          title: Self
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserProfileCreate'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserProfile'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+  /users/me/profile:
     get:
       tags:
       - users
       summary: Read User Profile
       operationId: read_user_profile_users_me_profile_get
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: self
-        in: query
-        required: true
-        schema:
-          title: Self
       responses:
         '200':
           description: Successful Response
@@ -173,31 +103,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProfile'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
     put:
       tags:
       - users
       summary: Update User Profile
       operationId: update_user_profile_users_me_profile_put
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: self
-        in: query
-        required: true
-        schema:
-          title: Self
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/UserProfileUpdate'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -211,6 +129,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+    post:
+      tags:
+      - users
+      summary: Create User Profile
+      operationId: create_user_profile_users_me_profile_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
   /ai/set-api-key:
     post:
       tags:
@@ -218,20 +164,12 @@ paths:
       summary: Set Api Key
       description: Set OpenAI API key for the service
       operationId: set_api_key_ai_set_api_key_post
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: self
-        in: query
-        required: true
-        schema:
-          title: Self
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/APIKeyUpdate'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -245,6 +183,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
   /ai/remove-api-key:
     post:
       tags:
@@ -252,14 +192,6 @@ paths:
       summary: Remove Api Key
       description: Remove OpenAI API key from the service
       operationId: remove_api_key_ai_remove_api_key_post
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: self
-        in: query
-        required: true
-        schema:
-          title: Self
       responses:
         '200':
           description: Successful Response
@@ -267,12 +199,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
   /ai/refine-requirements:
     post:
       tags:
@@ -280,23 +208,15 @@ paths:
       summary: Refine Requirements
       description: Refine project requirements based on conversation history
       operationId: refine_requirements_ai_refine_requirements_post
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: self
-        in: query
-        required: true
-        schema:
-          title: Self
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              type: array
               items:
                 type: string
+              type: array
               title: Conversation
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -309,6 +229,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
   /ai/generate-code:
     post:
       tags:
@@ -316,20 +238,12 @@ paths:
       summary: Generate Code
       description: Generate code based on the given prompt
       operationId: generate_code_ai_generate_code_post
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: self
-        in: query
-        required: true
-        schema:
-          title: Self
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/GenerateCodeRequest'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -342,6 +256,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
   /projects/:
     get:
       tags:
@@ -530,11 +446,6 @@ paths:
         schema:
           type: integer
           title: Interaction Id
-      - name: self
-        in: query
-        required: true
-        schema:
-          title: Self
       responses:
         '200':
           description: Successful Response

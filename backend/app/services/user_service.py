@@ -3,12 +3,13 @@
 import json
 
 import bcrypt
+from fastapi import Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.db.database import get_db
 from app.models.user import User
 from app.models.user_profile import UserProfile
 from app.schemas.user import UserCreate, UserProfileCreate, UserProfileUpdate, UserUpdate
-from fastapi import Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 
 class UserService:

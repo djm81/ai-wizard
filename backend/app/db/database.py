@@ -4,11 +4,12 @@ import logging
 from contextvars import ContextVar
 from typing import AsyncGenerator, Optional
 
-from app.core.config import settings
 from fastapi import FastAPI, Request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

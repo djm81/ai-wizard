@@ -19,14 +19,20 @@ Every response must follow this structure:
 
    Example:
    ```
-   Affected Components:
-   - Backend API (backend/app/api/endpoints/projects.py)
-   - Frontend Component (frontend/src/components/ProjectList.tsx)
+   📁 Affected Components:
+   - backend/app/api/endpoints/projects.py
+   - backend/app/services/project_service.py
 
-   Applicable Rules:
-   - B1: FastAPI patterns
-   - F1: React hooks patterns
-   - S2: Authorization practices
+   📋 Applicable Rules:
+   Primary Rules:
+   ✓ S1: Authentication flows (Security)
+   ✓ E9: HTTP status codes (Error Handling)
+   ⚠️ RC1: Rule conflict detected
+
+   Supporting Rules:
+   ℹ️ B1: FastAPI patterns
+   ℹ️ D1: SQLAlchemy patterns
+   ℹ️ P2: Code preservation
    ```
 
 2. Solution Design
@@ -36,10 +42,13 @@ Every response must follow this structure:
 
    Example:
    ```
-   Proposed Changes:
-   1. Update API endpoint to follow RESTful conventions (A1)
-   2. Implement proper error handling (E1, E3)
-   3. Add TypeScript types (F3)
+   💡 Proposed Changes:
+   1. ✨ Update error handling (E9, S1)
+   2. 🔒 Improve auth flow (S1, S3)
+   3. ⚠️ Preserve debug code (P1)
+
+   ❓ Clarification needed:
+   - Confirm if debug logging should be kept (P1 vs Q1)
    ```
 
 3. Implementation Details
@@ -49,17 +58,17 @@ Every response must follow this structure:
 
    Example:
    ```python:backend/app/api/endpoints/projects.py
-   @router.get("/{project_id}")  # A1: RESTful convention
+   @router.get("/{project_id}")  # ✓ A1: RESTful convention
    async def get_project(
        project_id: int,
-       current_user: User = Depends(get_current_user)  # S1: Auth flow
+       current_user: User = Depends(get_current_user)  # ✓ S1: Auth flow
    ):
        try:
-           # E1: Error handling
+           # ✓ E1: Error handling
            project = await project_service.get_project(project_id)
        except ProjectNotFound as e:
-           # E3: Error context
-           logger.error(f"Project {project_id} not found", exc_info=e)
+           # ✓ E3: Error context
+           logger.error("Project %s not found", project_id, exc_info=e)
            raise HTTPException(status_code=404, detail="Project not found")
    ```
 
@@ -68,35 +77,94 @@ Every response must follow this structure:
    - Verify test coverage (V1)
    - Check security implications (S1-S8)
    - Validate error handling (E1-E8)
+   - Check code preservation (P1-P5)
+   - Verify rule conflicts (RC1-RC4)
 
    Example:
    ```
-   ✓ FastAPI patterns (B1)
-   ✓ Error handling (E1, E3)
-   ✓ Authentication (S1)
-   ✓ Tests required for new endpoint
+   ✅ Security:
+   - ✓ S1: Authentication implemented
+   - ✓ S3: Sensitive data handled
+   - ⚠️ S4: CORS needs review
+
+   ✅ Error Handling:
+   - ✓ E1: Consistent patterns
+   - ✓ E9: Proper status codes
+   - ℹ️ E3: Added context
+
+   ✅ Code Preservation:
+   - ✓ P1: Comments preserved
+   - ✓ P2: No premature optimization
+   - ⚠️ P4: Technical debt documented
+
+   ✅ Rule Conflicts:
+   - ❓ RC1: Q1 vs P2 (keeping debug code)
+   - ✓ RC2: Priority order followed
+   - ✓ RC3: Override documented
+
+   ❌ Breaking Changes:
+   - None identified
+
+   ❓ Open Questions:
+   - Confirm CORS configuration
    ```
 
 5. Documentation Updates
    - Note required README changes (D1)
    - Update .uncommitted_changes (D3)
    - Document any learnings (D2)
+   - Technical debt documented in .learnings
+   - Rule override documented
 
    Example:
    ```
-   Documentation Updates:
-   - Add new API endpoint to README.md
-   - Update .uncommitted_changes with new feature
-   - Document error handling pattern in .learnings
+   📝 Documentation Updates:
+   ✓ README.md updated with new endpoint
+   ✓ .uncommitted_changes updated
+   ✓ Technical debt documented in .learnings
+   ℹ️ Added error handling pattern to .learnings
+   ⚠️ Rule override documented
    ```
 
 6. Final Confirmation
-   - "**AI Rules Applied**" confirmation
-   - "**Changelog Updated**" if applicable
+   - "**✅ AI Rules Applied**" confirmation
+   - "**📝 Changelog Updated**" if applicable
    - List any pending items or follow-ups
+   - Code preservation verified
+   - Rule conflicts resolved
+
+   Example:
+   ```
+   ✅ AI Rules Applied
+   📝 Changelog Updated
+   ✓ Code Preservation Verified
+   ✓ Rule Conflicts Resolved
+
+   ⚠️ Follow-ups:
+   1. Review CORS settings
+   2. Add integration tests
+   3. Document preserved code rationale
+   4. Review technical debt items
+   ```
+
+Icon Legend:
+✅ Passed/Completed
+❌ Failed/Missing
+⚠️ Warning/Needs Attention
+ℹ️ Information
+❓ Question/Needs Clarification
+📁 File/Component
+📋 List/Rules
+💡 Suggestion
+✨ New Feature/Change
+🔒 Security Related
+📝 Documentation
 
 ## Code Quality Standards
 Q1. Remove all unused code, imports, and variables
+    - Remove unreachable/dead code blocks
+    - Remove code that can never be executed
+    - Document removal of any significant code blocks
 Q2. Fix linting errors in proposed code changes
 Q3. Ensure proper error handling and logging
 Q4. Add/update docstrings for new/modified functions
@@ -236,6 +304,17 @@ E5. Use structured logging format
 E6. Handle async operation errors
 E7. Implement proper error boundaries
 E8. Follow error documentation standards
+E9. Maintain proper HTTP status codes
+    - 400 for client validation errors
+    - 401/403 for authentication/authorization errors
+    - 404 for not found
+    - 500 for unexpected server errors
+    - Never expose 500 errors for validation failures
+    - Pass through FastAPI HTTP exceptions with original status codes
+E10. Include appropriate error context in responses
+    - User-friendly messages for client errors
+    - Generic messages for server errors
+    - Maintain security by not exposing internal details
 
 ## State Management
 M1. Follow consistent state management patterns
@@ -272,3 +351,49 @@ ST6. Implement proper test isolation
     - Separate security critical tests
     - Use dedicated test credentials
     - Maintain test environment security
+
+## Code Preservation Guidelines
+P1. Preserve existing code comments and documentation
+    - Keep decision comments explaining "why" something was done
+    - Maintain TODO comments for future work
+    - Preserve debugging helpers and tools
+P2. Avoid premature optimization
+    - Don't remove code that might serve a future purpose
+    - Keep backward compatibility layers unless explicitly requested
+    - Maintain diagnostic and debugging capabilities
+P3. Document preservation decisions
+    - Note why certain "unused" code was kept
+    - Reference related issues or future requirements
+    - Mark intentionally preserved code sections
+P4. Handle technical debt carefully
+    - Don't remove workarounds without understanding their purpose
+    - Document known technical debt
+    - Keep fallback implementations until new solutions are proven
+P5. Preserve test support code
+    - Keep test utilities even if currently unused
+    - Maintain debugging helpers in tests
+    - Preserve test data generators
+
+## Rule Conflict Resolution
+RC1. Identify conflicting rules
+    - List all rules that conflict with the current request
+    - Explain the nature of each conflict
+    - Document potential impacts
+RC2. Conflict resolution priority
+    1. Security rules (S1-S8) always take precedence
+    2. Data integrity rules (D1-D8) come second
+    3. Error handling rules (E1-E10) are third
+    4. Other rules follow based on context
+RC3. Document override decisions
+    - Note which rule was overridden and why
+    - Document the temporary nature of overrides
+    - Reference the authorizing prompt
+RC4. Example conflict report format:
+    ```
+    Rule Conflict Detected:
+    - Conflicting Rules: Q1 (Remove unused code) vs P2 (Avoid premature optimization)
+    - Context: Unused but documented fallback implementation
+    - Recommendation: Keep code (P2 takes precedence)
+    - Rationale: Code serves as documented fallback mechanism
+    - Override Required: No
+    ```

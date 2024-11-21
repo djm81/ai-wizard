@@ -24,8 +24,9 @@ def generate_openapi_spec():
         sys.path.insert(0, str(app_dir))
 
     # Now we can safely import the FastAPI components
-    from app.core.config import settings  # type: ignore[import]
     from fastapi.openapi.utils import get_openapi
+
+    from app.core.config import settings  # type: ignore[import]
 
     # Import the app after setting up the paths
     try:

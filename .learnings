@@ -279,3 +279,12 @@ When working with FastAPI and frontend API calls:
 3. Add logging for redirect responses
 4. Consider disabling FastAPI's automatic redirects if not needed
 5. Add URL format validation in frontend API calls
+
+## Import Ordering
+
+To maintain consistent import ordering across the codebase:
+1. Standard library imports
+2. Third party imports
+3. First party imports (from app.*)
+
+This is enforced by isort and pylint configurations in pyproject.toml.

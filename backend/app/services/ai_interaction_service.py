@@ -1,10 +1,11 @@
 """ai_interaction_service module for AI Wizard backend."""
 
+from fastapi import Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.db.database import get_db
 from app.models.ai_interaction import AIInteraction
 from app.schemas.ai_interaction import AIInteractionCreate
-from fastapi import Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 
 class AIInteractionService:

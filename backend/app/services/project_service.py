@@ -2,13 +2,14 @@
 
 import logging
 
+from fastapi import Depends, HTTPException
+from sqlalchemy.orm import Session
+
 from app.db.database import get_db
 from app.models.ai_interaction import AIInteraction
 from app.models.project import Project
 from app.schemas.ai_interaction import AIInteractionCreate
 from app.schemas.project import ProjectCreate
-from fastapi import Depends, HTTPException
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

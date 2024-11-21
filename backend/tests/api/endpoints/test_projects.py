@@ -3,11 +3,12 @@
 from unittest.mock import patch
 
 import pytest
+from fastapi.testclient import TestClient
+
 from app.models.ai_interaction import AIInteraction
 from app.models.project import Project
 from app.models.user import User
 from app.services.auth_service import AuthService
-from fastapi.testclient import TestClient
 
 
 @pytest.mark.asyncio

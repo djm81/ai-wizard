@@ -1,6 +1,7 @@
 """test_user_service module for AI Wizard backend."""
 
 import pytest
+
 from app.models.user import User
 from app.models.user_profile import UserProfile
 from app.schemas.user import UserCreate, UserProfileCreate, UserProfileUpdate, UserUpdate

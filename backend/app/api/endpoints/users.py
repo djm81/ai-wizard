@@ -1,5 +1,8 @@
 """users module for AI Wizard backend."""
 
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
 from app.db.database import get_db
 from app.models.user import User as UserModel
 from app.schemas.user import (
@@ -12,8 +15,6 @@ from app.schemas.user import (
 )
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 

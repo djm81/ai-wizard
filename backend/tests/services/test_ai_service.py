@@ -3,8 +3,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from app.services.ai_service import AIService
 from openai import AsyncOpenAI
+
+from app.services.ai_service import AIService
 
 
 @pytest.fixture

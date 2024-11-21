@@ -4,6 +4,10 @@ import os
 from typing import Generator
 
 import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+
 from app.core.config import settings
 from app.db.database import get_db
 from app.main import app
@@ -13,9 +17,6 @@ from app.models.project import Project
 from app.models.user import User
 from app.services.ai_service import AIService
 from app.services.auth_service import AuthService
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
 
 
 # Set test environment variables before importing settings

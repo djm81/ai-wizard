@@ -2,15 +2,16 @@
 
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException, Security, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+
 from app.db.database import get_db
 from app.models.user import User
 from app.schemas.ai_interaction import AIInteraction, AIInteractionCreate
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate
 from app.services.auth_service import AuthService
 from app.services.project_service import ProjectService
-from fastapi import APIRouter, Depends, HTTPException, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 security = HTTPBearer()

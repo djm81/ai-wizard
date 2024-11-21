@@ -2,8 +2,9 @@
 
 from typing import List
 
-from app.core.logging_config import logger
 from openai import AsyncOpenAI
+
+from app.core.logging_config import logger
 
 
 class AIService:
