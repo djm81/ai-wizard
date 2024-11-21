@@ -28,7 +28,7 @@ describe('AuthContext', () => {
     await act(async () => {
       render(
         <AuthProvider>
-          <TestComponent setAuth={(auth) => { 
+          <TestComponent setAuth={(auth) => {
             authValue = auth;
             rendered = true;
           }} />
@@ -148,4 +148,4 @@ describe('AuthContext', () => {
     expect(token).toBe('mock-token');
     expect(getIdToken).toHaveBeenCalled();
   });
-}); 
+});

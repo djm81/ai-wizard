@@ -1,33 +1,34 @@
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
+
+interface ApiCallOptions {
+  method?: string;
+  data?: unknown;
+  headers?: Record<string, string>;
+}
 
 export const useApi = () => {
   const { getAuthToken } = useAuth();
 
-  const apiCall = async (url: string, options: any = {}) => {
-    const token = await getAuthToken();
-    const headers = {
-      ...options.headers,
-      'Authorization': `Bearer ${token}`
-    };
-
+  const apiCall = async (url: string, options: ApiCallOptions = {}) => {
     try {
-      console.log('API call to:', url);
-      console.log('Headers:', headers);
-      const response = await axios({
-        ...options,
+      const token = await getAuthToken();
+      const config: AxiosRequestConfig = {
         url,
-        headers
-      });
-      console.log('API response:', response.data);
+        method: options.method || 'GET',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        data: options.data,
+        withCredentials: true, // Enable sending cookies and auth headers
+      };
+
+      const response = await axios(config);
       return response.data;
     } catch (error) {
       console.error('API call error:', error);
-      if (axios.isAxiosError(error) && error.response) {
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
-        console.error('Response headers:', error.response.headers);
-      }
       throw error;
     }
   };

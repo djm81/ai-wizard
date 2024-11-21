@@ -1,40 +1,51 @@
+"""User model for AI Wizard backend."""
+
 from __future__ import annotations
-from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+
+from typing import TYPE_CHECKING, List, Optional
+
+from sqlalchemy import Boolean, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.models.base import Base
-from datetime import datetime
-from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from app.models.project import Project
     from app.models.ai_interaction import AIInteraction
+    from app.models.project import Project
     from app.models.user_profile import UserProfile
 
+
 class User(Base):
-    """User model for storing user related details"""
+    """User model."""
+
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     full_name: Mapped[str] = mapped_column(String)
-    is_active: Mapped[bool] = mapped_column(default=True)
-    is_superuser: Mapped[bool] = mapped_column(default=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Relationships with proper type hints
-    projects: Mapped[List[Project]] = relationship(
-        "Project", 
+    projects: Mapped[List["Project"]] = relationship(
+        "Project",
         back_populates="user",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
-    ai_interactions: Mapped[List[AIInteraction]] = relationship(
-        "AIInteraction", 
+
+    ai_interactions: Mapped[List["AIInteraction"]] = relationship(
+        "AIInteraction",
         back_populates="user",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
-    profile: Mapped[UserProfile | None] = relationship(
-        "UserProfile", 
-        back_populates="user", 
+
+    profile: Mapped[Optional["UserProfile"]] = relationship(
+        "UserProfile",
+        back_populates="user",
         uselist=False,
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )

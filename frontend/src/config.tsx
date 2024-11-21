@@ -6,14 +6,14 @@ const mockEnv = {
   PUBLIC_FIREBASE_MESSAGING_SENDER_ID: 'test-sender-id',
   PUBLIC_FIREBASE_APP_ID: 'test-app-id',
   PUBLIC_GOOGLE_CLIENT_ID: 'test-client-id',
-  PUBLIC_API_URL: 'http://localhost:8000/api'
+  PUBLIC_API_URL: 'http://localhost:8000'
 };
 
 // For tests, use mock values
 // For runtime, use import.meta.env
-export const ENV = 
-  (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') 
-    ? mockEnv 
+export const ENV =
+  (typeof process !== 'undefined' && process.env.NODE_ENV === 'test')
+    ? mockEnv
     : {
         PUBLIC_FIREBASE_API_KEY: import.meta.env.PUBLIC_FIREBASE_API_KEY,
         PUBLIC_FIREBASE_AUTH_DOMAIN: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,

@@ -3,19 +3,21 @@ name: Deploy Backend
 on:
   push:
     branches:
-      - dev
-      - test
-      - main
+    - dev
+    - test
+    - main
     paths:
-      - 'backend/terraform/**'
-      - '.github/workflows/ci-cd-deploy-backend.yml'
+    - backend/terraform/**
+    - backend/app/openapi/**
+    - .github/workflows/ci-cd-deploy-backend.yml
   pull_request:
     branches:
-      - test  # PR from dev to test
-      - main  # PR from test to main
+    - test    # PR from dev to test
+    - main    # PR from test to main
     paths:
-      - 'backend/terraform/**'
-      - '.github/workflows/ci-cd-deploy-backend.yml'
+    - backend/terraform/**
+    - backend/app/openapi/**
+    - .github/workflows/ci-cd-deploy-backend.yml
   workflow_dispatch:  # Manual trigger
 
 env:
@@ -23,6 +25,7 @@ env:
   WORKING_DIRECTORY: backend
   ENVIRONMENT: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || github.base_ref) || (github.ref_name == 'main' && 'prod' || github.ref_name) }}
   DOMAIN_NAME: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.base_ref, vars.TF_VAR_DOMAIN_NAME)) || (github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.ref_name, vars.TF_VAR_DOMAIN_NAME)) }}
+  DATABASE_URL: ${{ vars.PROD_DATABASE_URL }}
 
 permissions:
   contents: read
@@ -44,25 +47,25 @@ jobs:
       run_deployment: ${{ steps.check.outputs.run }}
       is_deployable: ${{ steps.check.outputs.deployable }}
     steps:
-      - uses: actions/checkout@v4
-      - id: check
-        run: |
-          # Always run for workflow_dispatch
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-            echo "deployable=true" >> $GITHUB_OUTPUT
-          # For PRs, run but don't deploy
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-            echo "deployable=false" >> $GITHUB_OUTPUT
-          # For pushes to main branches, run and deploy
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-            echo "deployable=true" >> $GITHUB_OUTPUT
-          else
-            echo "run=false" >> $GITHUB_OUTPUT
-            echo "deployable=false" >> $GITHUB_OUTPUT
-          fi
+    - uses: actions/checkout@v4
+    - id: check
+      run: |
+        # Always run for workflow_dispatch
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+          echo "deployable=true" >> $GITHUB_OUTPUT
+        # For PRs, run but don't deploy
+        elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+          echo "deployable=false" >> $GITHUB_OUTPUT
+        # For pushes to main branches, run and deploy
+        elif [[ "${{ github.event_name }}" == "push" ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+          echo "deployable=true" >> $GITHUB_OUTPUT
+        else
+          echo "run=false" >> $GITHUB_OUTPUT
+          echo "deployable=false" >> $GITHUB_OUTPUT
+        fi
 
   plan_and_estimate:
     needs: should_run
@@ -80,7 +83,7 @@ jobs:
         aws-region: ${{ vars.TF_VAR_AWS_REGION }}
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
-          
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
@@ -99,6 +102,7 @@ jobs:
     - name: Create Lambda package
       run: |
         chmod +x create_lambda_package.sh
+        echo "DATABASE_URL=${DATABASE_URL}" >> .env
         ./create_lambda_package.sh
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
 
@@ -132,6 +136,40 @@ jobs:
           aws_cloudwatch_log_group.lambda_logs \
           "/aws/lambda/${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}-${{ env.ENVIRONMENT }}" || true
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+
+    - name: Import API Gateway Certificate
+      run: |
+        # First try to import existing certificate if it exists
+        terraform import \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="domain_name=${{ env.DOMAIN_NAME }}" \
+          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
+          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
+          -var="environment=${{ env.ENVIRONMENT }}" \
+          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
+          aws_acm_certificate.backend_api \
+          "arn:aws:acm:${{ vars.TF_VAR_AWS_REGION }}:${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:certificate/*" || true
+
+    - name: Import API Gateway Certificate Validation Records
+      run: |
+        # Try to import existing validation records if they exist
+        terraform import \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="domain_name=${{ env.DOMAIN_NAME }}" \
+          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
+          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
+          -var="environment=${{ env.ENVIRONMENT }}" \
+          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
+          aws_route53_record.backend_api_cert_validation \
+          "${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}_api.${{ env.DOMAIN_NAME }}" || true
 
     - name: Check API Gateway Service Role
       id: check_apigw_role
@@ -236,6 +274,7 @@ jobs:
           -target=aws_apigatewayv2_stage.lambda \
           -target=aws_apigatewayv2_domain_name.api \
           -target=aws_apigatewayv2_api_mapping.api \
+          -target=aws_route53_record.api \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
@@ -277,7 +316,7 @@ jobs:
         aws-region: ${{ vars.TF_VAR_AWS_REGION }}
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
-  
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
@@ -312,138 +351,31 @@ jobs:
         echo "lambda_hash=${HASH}" >> $GITHUB_OUTPUT
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/lambda
 
-    # First apply CloudWatch Log Group
-    - name: Plan and Apply CloudWatch Log Group
-      id: apply_cloudwatch_log_group
+    - name: Check Lambda Function Status
+      id: check_lambda
       run: |
-        # Create new plan for CloudWatch Log Group
-        terraform plan \
-          -target=aws_cloudwatch_log_group.lambda_logs \
-          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
-          -var="domain_name=${{ env.DOMAIN_NAME }}" \
-          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
-          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
-          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
-          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
-          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
-          -var="environment=${{ env.ENVIRONMENT }}" \
-          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
-          -out=tfplan-cloudwatch-new-${{ env.ENVIRONMENT }}
-
-        # Apply CloudWatch Log Group
-        terraform apply -auto-approve tfplan-cloudwatch-new-${{ env.ENVIRONMENT }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
-
-    # Then handle API Gateway service role
-    - name: Plan and Apply API Gateway Service Role
-      id: apply_apigw_role
-      run: |
-        # Create new plan for API Gateway Service Role
-        terraform plan \
-          -target=aws_iam_service_linked_role.apigw \
-          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
-          -var="domain_name=${{ env.DOMAIN_NAME }}" \
-          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
-          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
-          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
-          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
-          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
-          -var="environment=${{ env.ENVIRONMENT }}" \
-          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
-          -out=tfplan-apigw-role-new-${{ env.ENVIRONMENT }}
-
-        # Apply API Gateway Service Role
-        APPLY_OUTPUT=$(terraform apply -auto-approve tfplan-apigw-role-new-${{ env.ENVIRONMENT }} 2>&1)
-        echo "$APPLY_OUTPUT"
-        if echo "$APPLY_OUTPUT" | grep -q "Apply complete! Resources: [1-9]"; then
-          echo "changes_made=true" >> $GITHUB_OUTPUT
+        # Try to get Lambda function info
+        if aws lambda get-function \
+          --function-name "${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}-${{ env.ENVIRONMENT }}-v2" \
+          --query 'Configuration.Handler' \
+          --output text 2>/dev/null | grep -q "app.lambda_handler.mangum_handler"; then
+          echo "Lambda function exists with app package"
+          echo "skip_initial_package=true" >> $GITHUB_OUTPUT
         else
-          echo "changes_made=false" >> $GITHUB_OUTPUT
+          echo "Lambda function needs initial package or has placeholder"
+          echo "skip_initial_package=false" >> $GITHUB_OUTPUT
         fi
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
-
-    - name: Wait for API Gateway Role Propagation
-      if: steps.apply_apigw_role.outputs.changes_made == 'true'
-      run: |
-        echo "Changes were made to API Gateway service role. Waiting for propagation..."
-        sleep 60
-
-    # Then handle IAM and Logging resources
-    - name: Plan and Apply IAM and Logging
-      id: apply_iam_logging
-      run: |
-        # Create new plan for IAM and Logging
-        terraform plan \
-          -target=aws_iam_role_policy.api_gateway_logging \
-          -target=aws_iam_role_policy_attachment.api_gateway_cloudwatch \
-          -target=aws_cloudwatch_log_group.api_gw \
-          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
-          -var="domain_name=${{ env.DOMAIN_NAME }}" \
-          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
-          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
-          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
-          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
-          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
-          -var="environment=${{ env.ENVIRONMENT }}" \
-          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
-          -out=tfplan-iam-logging-new-${{ env.ENVIRONMENT }}
-
-        # Apply IAM and Logging
-        APPLY_OUTPUT=$(terraform apply -auto-approve tfplan-iam-logging-new-${{ env.ENVIRONMENT }} 2>&1)
-        echo "$APPLY_OUTPUT"
-        if echo "$APPLY_OUTPUT" | grep -q "Apply complete! Resources: [1-9]"; then
-          echo "changes_made=true" >> $GITHUB_OUTPUT
-        else
-          echo "changes_made=false" >> $GITHUB_OUTPUT
-        fi
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
-
-    - name: Wait for IAM Role Propagation
-      if: steps.apply_iam_logging.outputs.changes_made == 'true'
-      run: |
-        echo "Changes were made to IAM roles/policies. Waiting for propagation..."
-        sleep 45
-
-    # Finally handle Lambda and API Gateway resources
-    - name: Plan and Apply Lambda and API Gateway Resources
-      id: apply_lambda_api
-      run: |
-        # Create new plan for Lambda and API Gateway
-        terraform plan \
-          -target=aws_lambda_function.api_v2 \
-          -target=aws_lambda_alias.api_alias_v2 \
-          -target=aws_apigatewayv2_api.api \
-          -target=aws_apigatewayv2_integration.lambda \
-          -target=aws_apigatewayv2_stage.lambda \
-          -target=aws_apigatewayv2_domain_name.api \
-          -target=aws_apigatewayv2_api_mapping.api \
-          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
-          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
-          -var="domain_name=${{ env.DOMAIN_NAME }}" \
-          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
-          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
-          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
-          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
-          -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
-          -var="environment=${{ env.ENVIRONMENT }}" \
-          -var="lambda_source_code_hash=${{ steps.lambda_hash.outputs.lambda_hash }}" \
-          -out=tfplan-lambda-api-new-${{ env.ENVIRONMENT }}
-
-        # Apply Lambda and API Gateway
-        terraform apply -auto-approve tfplan-lambda-api-new-${{ env.ENVIRONMENT }}
+      continue-on-error: true
       working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     - name: Terraform Output Application URL
       id: output_application_url
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
       run: |
         echo "Your application for ${{ env.ENVIRONMENT }} stage is accessible at: $(terraform output -raw website_url)"
         echo "Your API for ${{ env.ENVIRONMENT }} stage is accessible at: https://$(terraform output -raw api_domain)"
         echo "application_url=$(terraform output -raw website_url)" >> $GITHUB_OUTPUT
         echo "api_url=https://$(terraform output -raw api_domain)" >> $GITHUB_OUTPUT
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
 
     outputs:
       application_url: ${{ steps.output_application_url.outputs.application_url }}
@@ -475,4 +407,3 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-

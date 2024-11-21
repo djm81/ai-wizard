@@ -1,11 +1,16 @@
+"""user_service module for AI Wizard backend."""
+
+import json
+
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
-import bcrypt
+
 from app.db.database import get_db
 from app.models.user import User
 from app.models.user_profile import UserProfile
-from app.schemas.user import UserCreate, UserUpdate, UserProfileCreate, UserProfileUpdate
-import json
+from app.schemas.user import UserCreate, UserProfileCreate, UserProfileUpdate, UserUpdate
+
 
 class UserService:
     def __init__(self, db: Session = Depends(get_db)):
@@ -15,14 +20,11 @@ class UserService:
     def get_password_hash(self, password: str) -> str:
         """Hash password using bcrypt"""
         salt = bcrypt.gensalt()
-        return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+        return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify password using bcrypt"""
-        return bcrypt.checkpw(
-            plain_password.encode('utf-8'),
-            hashed_password.encode('utf-8')
-        )
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
     def create_user(self, user: UserCreate) -> User:
         """Create a new user"""
@@ -79,7 +81,9 @@ class UserService:
         """Update an existing user profile"""
         db_profile = self.get_user_profile(user_id)
         if db_profile:
-            update_data = profile.model_dump(exclude_unset=True)  # Changed from dict() to model_dump()
+            update_data = profile.model_dump(
+                exclude_unset=True
+            )  # Changed from dict() to model_dump()
             if "preferences" in update_data:
                 update_data["preferences"] = json.dumps(update_data["preferences"])
             for key, value in update_data.items():

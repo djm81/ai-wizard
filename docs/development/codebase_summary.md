@@ -11,7 +11,7 @@ graph TB
     D --> E[CloudFront]
     B --> F[DynamoDB]
     B --> G[S3 Buckets]
-    
+
     subgraph "Per Stage"
         B
         C
@@ -26,7 +26,7 @@ graph TB
 graph LR
     A[Development] --> B[Testing]
     B --> C[Production]
-    
+
     subgraph "dev"
         A
     end
@@ -60,17 +60,17 @@ graph TB
         B --> C[Build Package]
         C --> D[Upload to S3]
     end
-    
+
     subgraph "Infrastructure"
         E[Terraform Plan] --> F[Create Resources]
         F --> G[Configure DNS]
     end
-    
+
     subgraph "Deployment"
         H[Zappa Deploy] --> I[Update Lambda]
         I --> J[Configure API Gateway]
     end
-    
+
     D --> H
     G --> H
 ```
@@ -139,7 +139,7 @@ graph TB
     A[Resource Name] --> B[Project Prefix]
     B --> C[Resource Type]
     C --> D[Stage]
-    
+
     subgraph "Example"
         E[ai-wizard-backend-dev]
     end
@@ -152,7 +152,7 @@ graph TB
         A[Deployment Role] --> B[Lambda Execution Role]
         B --> C[Service Permissions]
     end
-    
+
     subgraph "Access Control"
         D[API Gateway] --> E[Lambda Authorizer]
         E --> F[JWT Validation]
@@ -166,7 +166,7 @@ graph TB
         A[Environment Variables] --> B[Stage Settings]
         B --> C[Resource Config]
     end
-    
+
     subgraph "Domain Structure"
         D[Production] --> E[domain.com]
         F[Testing] --> G[test.domain.com]

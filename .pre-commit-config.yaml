@@ -1,0 +1,160 @@
+repos:
+  # First: Basic file cleanup
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: detect-private-key
+
+  # Second: Code formatters
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        name: isort
+        args: [--settings-path=pyproject.toml]
+        files: \.py$
+        types: [python]
+        additional_dependencies: [
+          'toml'
+        ]
+
+  # Third: Security checks with logging
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        name: bandit
+        entry: bash -c 'mkdir -p logs && bandit -r . -c pyproject.toml -f txt -o logs/bandit.log --severity-level all --confidence-level all --ignore-nosec'
+        language: python
+        types: [python]
+        pass_filenames: false
+        exclude: ^(tests/|venv/|\.venv/|\.git/|\.pytest_cache/|__pycache__/)
+
+  # Fourth: Linters and validators with logging
+  - repo: local
+    hooks:
+      - id: pylint
+        name: pylint
+        entry: |
+          bash -c '
+            mkdir -p logs &&
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S) &&
+            echo "Linting Report - $(date)" > "logs/linting_report_${TIMESTAMP}.log" &&
+            echo -e "\n================================================================================\nPyLint Results\n================================================================================\n" >> "logs/linting_report_${TIMESTAMP}.log" &&
+            cd backend &&
+            PYTHONPATH=. pylint \
+              --output-format=text \
+              --msg-template="backend/{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
+              app tests \
+              >> "../logs/linting_report_${TIMESTAMP}.log"
+          '
+        language: python
+        types: [python]
+        require_serial: true
+        additional_dependencies: [
+          'pylint',
+          'pyyaml',
+          'fastapi',
+          'pydantic',
+          'pydantic-settings',
+          'sqlalchemy',
+          'firebase-admin',
+          'uvicorn',
+          'mangum',
+          'email-validator',
+          'bcrypt',
+          'openai',
+          'pytest',
+          'pytest-cov',
+          'pytest-asyncio',
+          'httpx'
+        ]
+        args: [
+          "--rcfile=pyproject.toml",
+          "--output-format=text",
+          "--reports=no"
+        ]
+        pass_filenames: false
+        exclude: |
+          (?x)^(
+            tests/.*|
+            setup\.py|
+            docs/.*|
+            migrations/.*
+          )$
+
+      # Add dependency update and test check
+      - id: update-dependencies
+        name: Update and Test Dependencies
+        entry: python scripts/update_dependencies.py
+        language: python
+        pass_filenames: false
+        require_serial: true
+        stages: [push]  # Only run on push, not on every commit
+
+  # Fifth: File type specific checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-json
+        exclude: ^frontend/tsconfig.*\.json$
+      - id: check-added-large-files
+      - id: debug-statements
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+
+  # Sixth: Infrastructure formatters and validators
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.83.5
+    hooks:
+      - id: terraform_fmt
+        args: [--args=-write=true]
+
+  # Last: Custom validation hooks
+  - repo: local
+    hooks:
+      - id: validate-working-directories
+        name: Validate Pipeline Working Directories
+        entry: python scripts/validate_pipeline_dirs.py
+        language: python
+        files: ^\.github/workflows/.*\.yml$
+        additional_dependencies: ['pyyaml']
+
+      # Add log file aggregator
+      - id: add-missing-docstrings
+        name: Add Missing Docstrings
+        entry: python scripts/add_missing_docstrings.py
+        language: python
+        types: [python]
+
+      - id: generate-openapi-spec
+        name: Generate OpenAPI Specification
+        entry: python scripts/generate_openapi_spec.py
+        language: python
+        files: ^backend/app/.*\.py$
+        pass_filenames: false
+        additional_dependencies: [
+          'pyyaml',
+          'fastapi',
+          'pydantic',
+          'pydantic-settings',
+          'sqlalchemy',
+          'firebase-admin',
+          'uvicorn',
+          'mangum',
+          'email-validator',
+          'bcrypt',
+          'openai'
+        ]
+
+      - id: check-openapi-version
+        name: Check OpenAPI Version
+        entry: python scripts/check_openapi_version.py
+        language: python
+        files: ^backend/app/openapi/specification\.yaml$
+        additional_dependencies: ['pyyaml']

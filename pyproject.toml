@@ -1,0 +1,147 @@
+[tool.black]
+line-length = 100
+target-version = ['py312']
+include = '\.pyi?$'
+extend-exclude = '''
+# A regex preceded with ^/ will apply only to files and directories
+# in the root of the project.
+^/docs
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+known_first_party = ["app"]
+known_third_party = ["fastapi", "pydantic", "sqlalchemy", "firebase_admin", "mangum", "openai"]
+skip = ["docs"]
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503"]
+max-complexity = 10
+docstring-convention = "google"
+per-file-ignores = [
+    "__init__.py:F401",
+    "tests/*:D100,D101,D102,D103",
+]
+exclude = [
+    ".git",
+    "__pycache__",
+    "docs/",
+    "*.pyc",
+    "*.egg-info",
+    ".eggs",
+]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --cov=app --cov-report=term-missing"
+testpaths = ["tests"]
+
+[tool.poetry]
+name = "ai-wizard"
+version = "0.1.0"
+description = "AI Wizard Application Assistant"
+authors = ["Dominikus Nold"]
+license = "MIT License"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pyyaml = "^6.0.2"
+email-validator = "^2.2.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+isort = "^5.13.2"
+flake8 = "^7.1.1"
+flake8-docstrings = "^1.7.0"
+flake8-bugbear = "^24.10.31"
+flake8-comprehensions = "^3.16.0"
+flake8-simplify = "^0.21.0"
+flake8-annotations = "^3.1.1"
+pep8-naming = "^0.14.1"
+pytest = "^8.3.3"
+pytest-cov = "^6.0.0"
+bandit = "^1.7.10"
+checkov = "^3.2.301"
+pylint = "^3.3.1"
+pyyaml = "^6.0.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.bandit]
+exclude_dirs = ["tests", "venv", ".venv"]
+targets = ["backend/app", "scripts", ".github/scripts"]
+ignore_nosec = true
+
+[tool.bandit.assert_used]
+skips = ["*/test_*.py", "*/tests/*.py"]
+
+[tool.bandit.skips]
+B104 = ["backend/app/main.py"]  # Allow binding to all interfaces in development
+B404 = [".github/scripts/analyze-workflow-error.py"]  # Allow subprocess module
+B603 = [".github/scripts/analyze-workflow-error.py"]  # Allow subprocess usage
+
+[tool.bandit.settings]
+# Properly format nosec comments
+nosec_indicator = "nosec"
+
+[tool.bandit.settings.B104]
+# Allow binding to all interfaces in development with proper warnings
+custom_message = "Binding to all interfaces detected - ensure this is intentional and properly secured"
+
+[tool.bandit.settings.B603]
+# Allow subprocess usage with explicit security controls
+custom_message = "Subprocess usage detected - ensure proper input validation and security controls are in place"
+
+[tool.pylint]
+max-line-length = 100  # Match black
+disable = [
+    "C0111",  # missing-docstring (handled by other tools)
+    "C0103",  # invalid-name (too strict)
+    "R0903",  # too-few-public-methods
+    "W0511",  # fixme (allow TODOs)
+    "R0903",  # too-few-public-methods (allow private methods)
+]
+extension-pkg-whitelist = ["pydantic"]
+ignore = ["CVS", ".git", ".pytest_cache", "__pycache__", "venv", ".venv"]
+output-format = "text"
+reports = "no"
+score = "no"
+
+[tool.pylint.format]
+max-line-length = 100
+const-naming-style = "any"  # Allow both UPPER_CASE and snake_case for constants
+
+[tool.pylint.basic]
+good-names = ["i", "j", "k", "ex", "Run", "_", "id", "db"]
+
+[tool.pylint.messages_control]
+disable = [
+    "C0111",  # missing-docstring
+    "C0103",  # invalid-name
+    "R0903",  # too-few-public-methods
+    "W0511",  # fixme
+]
+
+[tool.pylint.imports]
+known_third_party = "fastapi,pydantic,sqlalchemy,firebase_admin,mangum,openai"
+known_first_party = "app"
+default_section = "FIRSTPARTY"

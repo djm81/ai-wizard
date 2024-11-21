@@ -1,7 +1,7 @@
-import { 
-  getAuth, 
-  signInWithCredential, 
-  signOut, 
+import {
+  getAuth,
+  signInWithCredential,
+  signOut,
   GoogleAuthProvider,
   Auth
 } from 'firebase/auth';
@@ -11,7 +11,7 @@ import { authMock, mockAuthUser, mockFirebaseUser } from '../__mocks__/auth';
 describe('fedcmAuth', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Use authMock.auth instead of creating new mock
     if (authMock.auth?.updateCurrentUser) {
       authMock.auth.updateCurrentUser(null);
@@ -21,10 +21,10 @@ describe('fedcmAuth', () => {
   test('signInWithGoogle calls Google OAuth and Firebase signInWithCredential', async () => {
     // Set longer timeout for this test if needed
     jest.setTimeout(10000);
-    
+
     // Reset the mock to ensure clean state
     (window.google.accounts.oauth2.initTokenClient as jest.Mock).mockClear();
-    
+
     const user = await signInWithGoogle();
 
     // Verify Google OAuth flow
@@ -42,10 +42,10 @@ describe('fedcmAuth', () => {
 
   test('signOut calls Firebase signOut and revokes Google token', async () => {
     jest.setTimeout(10000);
-    
+
     // Mock successful sign-in first
     await signInWithGoogle();
-    
+
     // Then attempt sign out
     await signOutFunction();
 
@@ -62,7 +62,7 @@ describe('fedcmAuth', () => {
     (getAuth as jest.Mock).mockReturnValueOnce({
       currentUser: null
     } as unknown as Auth);
-    
+
     const token = await signInWithGoogle();
     expect(token).toBeDefined();
   });

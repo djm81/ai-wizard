@@ -36,4 +36,4 @@ interface Window {
 // Extend global for Firebase mock
 declare global {
   var mockFirebaseUser: import('firebase/auth').User;
-} 
+}

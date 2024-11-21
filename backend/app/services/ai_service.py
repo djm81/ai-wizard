@@ -1,79 +1,84 @@
-from typing import List, Optional
-import openai
-from sqlalchemy.orm import Session
-from app.core.config import settings
+"""AI service module for OpenAI API interactions."""
+
+from typing import List
+
+from openai import AsyncOpenAI
+
+from app.core.logging_config import logger
+
 
 class AIService:
-    def __init__(self, db_session: Session):
-        """Initialize AIService with database session and OpenAI client
+    """Service for AI-related operations."""
+
+    def __init__(self, db=None):
+        """Initialize AI service.
 
         Args:
-            db_session (Session): SQLAlchemy database session
+            db (Session, optional): Database session. Defaults to None.
         """
-        self.db = db_session
-        self.client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        self.model = settings.OPENAI_MODEL
+        self.db = db
+        self.client = None
+        self.model = "gpt-4-turbo-preview"
 
-    def set_api_key(self, api_key: str) -> bool:
-        """Set OpenAI API key"""
+    async def set_api_key(self, api_key: str) -> None:
+        """Set OpenAI API key and initialize client."""
         try:
-            self.client = openai.AsyncOpenAI(api_key=api_key)
-            return True
-        except Exception:
-            return False
-
-    def remove_api_key(self) -> bool:
-        """Remove OpenAI API key"""
-        try:
-            self.client = openai.AsyncOpenAI(api_key=None)
-            return True
-        except Exception:
-            return False
-
-    async def refine_requirements(self, conversation_history: List[str]) -> str:
-        """Refine project requirements based on conversation history"""
-        try:
-            messages = [
-                {"role": "system", "content": "You are a helpful assistant that refines project requirements."},
-            ]
-            
-            # Add conversation history as alternating user/assistant messages
-            for i, message in enumerate(conversation_history):
-                role = "user" if i % 2 == 0 else "assistant"
-                messages.append({"role": role, "content": message})
-            
-            # Add final instruction
-            messages.append({
-                "role": "user", 
-                "content": "Please refine these requirements into a clear project specification."
-            })
-
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=1000
-            )
-
-            return response.choices[0].message.content
-
+            self.client = AsyncOpenAI(api_key=api_key)
+            logger.info("OpenAI client initialized")
         except Exception as e:
-            print(f"Error in refine_requirements: {str(e)}")
-            return "An error occurred while refining requirements."
+            logger.error(f"Error initializing OpenAI client: {str(e)}")
+            raise
+
+    async def remove_api_key(self) -> None:
+        """Remove OpenAI API key and clear client."""
+        self.client = None
+        logger.info("OpenAI client removed")
 
     async def generate_code(self, prompt: str) -> str:
-        """Generate code based on the given prompt"""
+        """Generate code based on prompt."""
+        if not self.client:
+            raise ValueError("OpenAI client not initialized")
+
         try:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that generates code."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant that generates code.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 max_tokens=1000,
                 temperature=0.7,
             )
-            return response.choices[0].message.content.strip()
+            return response.choices[0].message.content
         except Exception as e:
-            print(f"Error generating code: {str(e)}")
-            return "An error occurred while generating code."
+            logger.error(f"Error generating code: {str(e)}")
+            raise
+
+    async def refine_requirements(self, conversation: List[str]) -> str:
+        """Refine requirements based on conversation history."""
+        if not self.client:
+            raise ValueError("OpenAI client not initialized")
+
+        try:
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that refines project requirements.",
+                }
+            ]
+            for message in conversation:
+                messages.append({"role": "user", "content": message})
+
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=1000,
+                temperature=0.7,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"Error refining requirements: {str(e)}")
+            raise

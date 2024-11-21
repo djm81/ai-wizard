@@ -18,4 +18,4 @@ database_url                    = "postgresql://user:pass@host:5432/dbname"
 environment                     = "dev"
 
 # This will be set by the CI/CD pipeline
-lambda_source_code_hash         = "base64_encoded_hash" 
+lambda_source_code_hash         = "base64_encoded_hash"

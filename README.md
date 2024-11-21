@@ -1,27 +1,47 @@
 # AI Wizard
 
+# Project overview and status
 AI Wizard is a rapid application assistant that helps developers quickly prototype and build applications through AI-powered conversations.
 
 ## Project Status
 
 The project is currently in active development. The core functionality includes:
 - User authentication via Firebase
-- Project management
+- Project management with CRUD operations
 - AI-powered conversations for requirement gathering
-- Code generation through OpenAI integration
+- Code generation through OpenAI integration (GPT-4 Turbo)
+- Real-time project collaboration
+- Secure API endpoints with JWT authentication
 
+# Recent updates section for changelog tracking
+### Recent Updates
+- Added comprehensive error handling and loading states
+- Implemented Material-UI components for consistent UI/UX
+- Added TypeScript support with strict type checking
+- Integrated test suites for both frontend and backend
+- Added support for project descriptions and metadata
+- Implemented secure Firebase authentication flow
+
+# Architecture details for technical documentation
 ## Architecture Overview
 
 ### Frontend
-- Single Page Application (SPA) built with React
+- Single Page Application (SPA) built with React 18 and TypeScript
+- Material-UI (MUI) for component design
 - Firebase Authentication for user management
+- React Router v6 for navigation
+- Jest and React Testing Library for testing
+- RSBuild for modern build tooling
 - Deployed to AWS CloudFront/S3
 
 ### Backend
-- FastAPI-based REST API
+- FastAPI-based REST API with Python 3.12+
+- SQLAlchemy ORM with PostgreSQL
 - AWS Lambda for serverless execution
 - API Gateway for request handling
-- DynamoDB for data storage
+- OpenAI integration for AI capabilities
+- Poetry for dependency management
+- Pytest for testing
 - Terraform for infrastructure management
 
 ## Prerequisites
@@ -50,15 +70,14 @@ The project is currently in active development. The core functionality includes:
 2. Backend Setup:
    ```bash
    cd backend
-   
+
    # Install dependencies
    poetry install
-   
+
    # Create environment file
    cp .env.example .env
-   
+
    # Set up Firebase credentials
-   # Copy your Firebase Admin SDK JSON to:
    mkdir -p app/config
    cp path/to/your/firebase-adminsdk.json app/config/
    ```
@@ -77,7 +96,7 @@ The project is currently in active development. The core functionality includes:
    ```bash
    cd frontend
    npm install
-   
+
    # Create environment file
    cp .env.example .env
    ```
@@ -103,21 +122,6 @@ The project is currently in active development. The core functionality includes:
    cd frontend
    npm run dev
    ```
-
-## Deployment
-
-The project uses GitHub Actions for CI/CD with separate pipelines for backend and frontend.
-
-### Backend Deployment
-1. AWS resources are managed through Terraform
-2. Lambda function is packaged with dependencies
-3. API Gateway provides the REST API interface
-4. DynamoDB stores application data
-
-### Frontend Deployment
-1. Built React application is deployed to S3
-2. CloudFront provides CDN and HTTPS
-3. Route53 manages DNS
 
 ## Testing
 

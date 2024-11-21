@@ -7,6 +7,7 @@ import Header from './components/Header';
 import Home from './pages/Home';
 import Projects from './pages/Projects';
 import AIInteractions from './pages/AIInteractions';
+import Account from './pages/Account';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -33,12 +34,16 @@ const AppContent: React.FC = () => {
             <Projects />
           </PrivateRoute>
         } />
-        <Route path="/ai-interactions" element={
+        <Route path="/projects/:projectId/ai-interactions" element={
           <PrivateRoute>
             <AIInteractions />
           </PrivateRoute>
         } />
-        {/* Default Route */}
+        <Route path="/account" element={
+          <PrivateRoute>
+            <Account />
+          </PrivateRoute>
+        } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

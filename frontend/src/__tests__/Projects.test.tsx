@@ -1,9 +1,7 @@
-// import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Projects from '../pages/Projects';
 import { useProjects } from '../api';
 
-// Mock the API hook
 jest.mock('../api', () => ({
   useProjects: jest.fn(),
 }));
@@ -22,12 +20,10 @@ describe('Projects component', () => {
     });
   });
 
-  afterEach(() => {
-    jest.resetAllMocks();
-  });
-
   test('renders projects list', async () => {
-    render(<Projects />);
+    await act(async () => {
+      render(<Projects />);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('Project 1')).toBeInTheDocument();
@@ -36,16 +32,23 @@ describe('Projects component', () => {
   });
 
   test('creates a new project', async () => {
-    render(<Projects />);
-
-    const input = screen.getByLabelText('New Project Name');
-    const button = screen.getByText('Create Project');
-
-    fireEvent.change(input, { target: { value: 'New Project' } });
-    fireEvent.click(button);
+    await act(async () => {
+      render(<Projects />);
+    });
 
     await waitFor(() => {
-      expect(useProjects().createProject).toHaveBeenCalledWith({ name: 'New Project', description: '' });
+      const input = screen.getByLabelText('New Project Name *');
+      const button = screen.getByText('Create Project');
+
+      fireEvent.change(input, { target: { value: 'New Project' } });
+      fireEvent.click(button);
+    });
+
+    await waitFor(() => {
+      expect(useProjects().createProject).toHaveBeenCalledWith({
+        name: 'New Project',
+        description: ''
+      });
     });
   });
 });

@@ -1,66 +1,155 @@
+"""lambda_handler module for AI Wizard backend."""
+
+# Standard library imports
 import json
 import logging
+from typing import Any, Dict
+
+# Third party imports
+from fastapi import HTTPException
 from mangum import Mangum
+
+# Local application imports
 from app.main import app
-import os
+from app.utils.logging_config import setup_logging
 
-# Configure logging with more detailed format
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
+setup_logging()
 
-# Ensure environment variables are set
-os.environ.setdefault('STAGE', 'dev')
-os.environ.setdefault('ALLOWED_ORIGINS', '*')
 
-# Create Mangum handler for AWS Lambda
-mangum_handler = Mangum(app, lifespan="off")  # Disable lifespan events
+def create_error_response(
+    status_code: int,
+    message: str,
+    error_type: str,
+    request_id: str,
+    headers: Dict[str, str] = None,
+) -> Dict[str, Any]:
+    """Create standardized error response.
 
-def log_request_details(event):
-    """Helper function to log detailed request information"""
-    logger.info("=== Request Details ===")
-    logger.info(f"Request Path: {event.get('path', 'No path')}")
-    logger.info(f"HTTP Method: {event.get('httpMethod', 'No method')}")
-    logger.info(f"Resource Path: {event.get('resource', 'No resource')}")
-    logger.info(f"API Gateway ARN: {event.get('requestContext', {}).get('apiId', 'No API ID')}")
-    logger.info(f"Stage: {event.get('requestContext', {}).get('stage', 'No stage')}")
-    
-    # Add specific logging for Authorization header
-    headers = event.get('headers', {})
-    auth_header = headers.get('Authorization', 'No Authorization header')
-    logger.info(f"Authorization Header: {auth_header}")
-    
-    # Log other headers without sensitive info
-    safe_headers = {
-        k: v for k, v in headers.items() 
-        if k.lower() not in ["authorization", "cookie"]
+    Args:
+        status_code: HTTP status code
+        message: Error message
+        error_type: Type of error
+        request_id: Request correlation ID
+        headers: Additional headers
+
+    Returns:
+        Formatted error response
+    """
+    error_body = {"error": {"type": error_type, "message": message, "request_id": request_id}}
+
+    return {
+        "statusCode": status_code,
+        "body": json.dumps(error_body),
+        "headers": {
+            "Content-Type": "application/json",
+            "X-Request-ID": request_id,
+            **(headers or {}),
+        },
     }
-    logger.info(f"Request Headers: {json.dumps(safe_headers, indent=2)}")
-    logger.info("=====================")
 
-def lambda_handler(event, context):
-    """
-    AWS Lambda handler function that wraps the FastAPI application.
-    Uses Mangum to translate between AWS Lambda events and ASGI.
-    """
-    logger.info("Lambda function invoked")
-    log_request_details(event)
 
+def log_request_details(event: Dict[str, Any]) -> str:
+    """Log request details from event for debugging.
+
+    Args:
+        event: Lambda event
+
+    Returns:
+        Request ID for correlation
+    """
+    request_context = event.get("requestContext", {})
+    request_id = request_context.get("requestId", "unknown")
+    http = request_context.get("http", {})
+
+    logger.info(
+        "Request received",
+        extra={"request_id": request_id, "method": http.get("method"), "path": http.get("path")},
+    )
+
+    return request_id
+
+
+mangum_handler = Mangum(app)
+
+
+def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """AWS Lambda handler function with detailed logging.
+
+    Args:
+        event: AWS Lambda event
+        context: AWS Lambda context
+
+    Returns:
+        API Gateway response
+    """
     try:
+        # Log request and get correlation ID
+        request_id = log_request_details(event)
+
+        # Handle the request
         response = mangum_handler(event, context)
-        logger.info(f"Response: {json.dumps(response, indent=2)}")
+
+        # Add correlation ID to successful responses
+        if isinstance(response.get("body"), str):
+            try:
+                body = json.loads(response["body"])
+                if isinstance(body, dict):
+                    body["request_id"] = request_id
+                    response["body"] = json.dumps(body)
+            except json.JSONDecodeError:
+                pass
+
+        response["headers"] = {**(response.get("headers", {})), "X-Request-ID": request_id}
+
         return response
 
-    except Exception as e:
-        logger.error(f"Error handling request: {str(e)}", exc_info=True)
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": "Internal Server Error", "details": str(e)}),
-            "headers": {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Credentials": True
-            }
-        } 
+    except ValueError as e:
+        return create_error_response(
+            status_code=400, message=str(e), error_type="validation_error", request_id=request_id
+        )
+    except HTTPException as e:
+        return create_error_response(
+            status_code=e.status_code,
+            message=e.detail,
+            error_type="http_error",
+            request_id=request_id,
+            headers=e.headers,
+        )
+    except (RuntimeError, KeyError, AttributeError) as e:  # Specific exceptions that could occur
+        logger.error(
+            "Runtime error in lambda handler",
+            extra={
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "request_id": request_id,
+                "event_path": event.get("path"),
+                "event_method": event.get("requestContext", {}).get("http", {}).get("method"),
+            },
+            exc_info=True,
+        )
+        return create_error_response(
+            status_code=500,
+            message="Internal server error",
+            error_type="internal_error",
+            request_id=request_id,
+        )
+    except Exception as e:  # pylint: disable=broad-except
+        # Keep broad exception as last resort safety net, but document why
+        logger.critical(
+            "Unhandled error in lambda handler",
+            extra={
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "request_id": request_id,
+                "event_path": event.get("path"),
+                "event_method": event.get("requestContext", {}).get("http", {}).get("method"),
+            },
+            exc_info=True,
+        )
+        return create_error_response(
+            status_code=500,
+            message="Internal server error",
+            error_type="internal_error",
+            request_id=request_id,
+        )

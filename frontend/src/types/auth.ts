@@ -3,4 +3,4 @@ export interface User {
     email: string | null;
     photoURL: string | null;
     uid: string;
-} 
+}
