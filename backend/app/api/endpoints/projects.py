@@ -1,6 +1,6 @@
 """projects module for AI Wizard backend."""
 
-from typing import List
+from typing import List, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -10,20 +10,23 @@ from app.db.database import get_db
 from app.models.user import User
 from app.schemas.ai_interaction import AIInteraction, AIInteractionCreate
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate
-from app.services.auth_service import AuthService
+from app.services.auth_service import AuthService, AuthCredentials
 from app.services.project_service import ProjectService
 
 router = APIRouter()
 security = HTTPBearer()
 
+# Add DBSession type alias if not already present
+DBSession = Annotated[Session, Depends(get_db)]
+
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Security(security),
-    db: Session = Depends(get_db),
+    credentials: AuthCredentials,
+    db: DBSession,
 ) -> User:
     """Get current authenticated user"""
     auth_service = AuthService(db)
-    return await auth_service.get_current_user(credentials)
+    return await auth_service.get_current_user(credentials, db)
 
 
 @router.get("/", response_model=List[Project])
