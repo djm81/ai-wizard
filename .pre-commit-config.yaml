@@ -29,7 +29,7 @@ repos:
         entry: bash -c 'mkdir -p logs && bandit -r . -c pyproject.toml -f txt -o logs/bandit.log --severity-level all --confidence-level all --ignore-nosec'
         language: python
         types: [python]
-        pass_filenames: false  # Don't pass filenames, let bandit scan recursively
+        pass_filenames: false
         exclude: ^(tests/|venv/|\.venv/|\.git/|\.pytest_cache/|__pycache__/)
 
   # Fourth: Linters and validators with logging
@@ -84,6 +84,15 @@ repos:
             docs/.*|
             migrations/.*
           )$
+
+      # Add dependency update and test check
+      - id: update-dependencies
+        name: Update and Test Dependencies
+        entry: python scripts/update_dependencies.py
+        language: python
+        pass_filenames: false
+        require_serial: true
+        stages: [push]  # Only run on push, not on every commit
 
   # Fifth: File type specific checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
