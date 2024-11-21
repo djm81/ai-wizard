@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 """generate_openapi_spec module for AI Wizard backend."""
 
-#!/usr/bin/env python3
 import os
 import sys
 from pathlib import Path

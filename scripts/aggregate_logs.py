@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 """aggregate_logs module for AI Wizard backend."""
 
-#!/usr/bin/env python
 import logging
 from datetime import datetime
 from pathlib import Path

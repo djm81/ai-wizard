@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 """add_missing_docstrings module for AI Wizard backend."""
 
-#!/usr/bin/env python
 import ast
 import sys
 from pathlib import Path

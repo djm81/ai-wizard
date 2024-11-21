@@ -1,9 +1,8 @@
+#!/usr/bin/env python3
 """check_openapi_version module for AI Wizard backend."""
 
-#!/usr/bin/env python
 import sys
 from pathlib import Path
-
 import yaml
 
 
