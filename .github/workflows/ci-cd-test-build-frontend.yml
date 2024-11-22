@@ -1,5 +1,10 @@
 name: Test and Build Frontend
 
+# Add concurrency group based on environment
+concurrency:
+  group: frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel in-progress runs
+
 on:
   push:
     branches:
