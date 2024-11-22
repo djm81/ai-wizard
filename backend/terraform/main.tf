@@ -167,27 +167,7 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
   restrict_public_buckets = true
 }
 
-# S3 bucket policy to allow access only from CloudFront
-resource "aws_s3_bucket_policy" "frontend" {
-  provider = aws.assume_role
-  bucket   = aws_s3_bucket.frontend.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowCloudFrontOAI"
-        Effect = "Allow"
-        Principal = {
-          AWS = aws_cloudfront_origin_access_identity.frontend.iam_arn
-        }
-        Action   = "s3:GetObject"
-        Resource = "${aws_s3_bucket.frontend.arn}/*"
-      }
-    ]
-  })
-}
-
+# Keep existing certificate resources
 resource "aws_acm_certificate" "frontend" {
   provider          = aws.assume_role_us_east_1
   domain_name       = var.domain_name
@@ -203,7 +183,6 @@ resource "aws_acm_certificate" "frontend" {
   }
 }
 
-# Route 53 record for ACM certificate validation
 resource "aws_route53_record" "acm_validation" {
   provider = aws.assume_role
   for_each = {
@@ -222,29 +201,55 @@ resource "aws_route53_record" "acm_validation" {
   zone_id         = var.route53_hosted_zone_id
 }
 
-# Certificate validation
 resource "aws_acm_certificate_validation" "frontend" {
   provider                = aws.assume_role_us_east_1
   certificate_arn         = aws_acm_certificate.frontend.arn
   validation_record_fqdns = [for record in aws_route53_record.acm_validation : record.fqdn]
 }
 
-# CloudFront Origin Access Identity
-resource "aws_cloudfront_origin_access_identity" "frontend" {
+# Update S3 bucket policy for OAC
+resource "aws_s3_bucket_policy" "frontend" {
   provider = aws.assume_role
-  comment  = "OAI for ${var.domain_name}"
+  bucket   = aws_s3_bucket.frontend.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowCloudFrontServicePrincipal"
+        Effect    = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.frontend.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.frontend.arn
+          }
+        }
+      }
+    ]
+  })
 }
 
-# CloudFront distribution
+# CloudFront Origin Access Control
+resource "aws_cloudfront_origin_access_control" "frontend" {
+  provider                          = aws.assume_role
+  name                             = "frontend-${var.environment}-oac"
+  description                      = "Origin Access Control for ${var.domain_name}"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                 = "always"
+  signing_protocol                 = "sigv4"
+}
+
+# Update CloudFront distribution to use OAC
 resource "aws_cloudfront_distribution" "frontend" {
   provider = aws.assume_role
   origin {
-    domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
-    origin_id   = "S3-${aws_s3_bucket.frontend.id}"
-
-    s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.frontend.cloudfront_access_identity_path
-    }
+    domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
+    origin_id                = "S3-${aws_s3_bucket.frontend.id}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
   }
 
   enabled             = true

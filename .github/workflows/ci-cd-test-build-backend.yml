@@ -348,34 +348,9 @@ jobs:
     outputs:
       lambda_function_name: ${{ steps.terraform_apply.outputs.lambda_function_name }}
 
-  notify_build:
-    needs: [should_run, test, build]
-    if: always() && needs.should_run.outputs.run_deployment == 'false'
-    runs-on: ubuntu-latest
-    steps:
-    - name: Check job status
-      id: check
-      run: |
-        if [[ ${{ needs.test.result }} == 'success' && ${{ needs.build.result }} == 'success' ]]; then
-          echo "status=success" >> $GITHUB_OUTPUT
-        else
-          echo "status=failure" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Notify Slack
-      uses: 8398a7/action-slack@v3
-      with:
-        status: ${{ steps.check.outputs.status }}
-        text: |
-          ${{ steps.check.outputs.status == 'success' && format('{0} Test and Build succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Test or Build failed! :x:', env.ENVIRONMENT) }}
-        fields: repo,message,commit,author,action,eventName,ref,workflow
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-  notify_deployment:
+  notify:
     needs: [should_run, test, build, deploy]
-    if: always() && needs.should_run.outputs.run_deployment == 'true'
+    if: always()
     runs-on: ubuntu-latest
     steps:
     - name: Check job status
@@ -392,7 +367,7 @@ jobs:
       with:
         status: ${{ steps.check.outputs.status }}
         text: |
-          ${{ steps.check.outputs.status == 'success' && format('{0} Test and Build succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Test or Build failed! :x:', env.ENVIRONMENT) }}
+          ${{ steps.check.outputs.status == 'success' && format('{0} Backend deployment succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Backend deployment failed! :x:', env.ENVIRONMENT) }}
           ${{ steps.check.outputs.status == 'success' && format('Lambda function for {0} stage deployed to: {1}', env.ENVIRONMENT, needs.deploy.outputs.lambda_function_name) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
