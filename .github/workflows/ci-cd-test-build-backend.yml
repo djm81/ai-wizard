@@ -292,16 +292,39 @@ jobs:
         echo "lambda_package_hash=${HASH}" >> $GITHUB_OUTPUT
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
+    - name: Check API Gateway Service Role
+      id: check_apigw_role
+      run: |
+        if ! aws iam get-role --role-name "AWSServiceRoleForAPIGateway" 2>/dev/null; then
+          echo "API Gateway service role does not exist, including in terraform plan"
+          echo "include_apigw_role=true" >> $GITHUB_OUTPUT
+        else
+          echo "API Gateway service role exists, skipping"
+          echo "include_apigw_role=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Terraform Plan
       id: terraform_plan
       run: |
+        TARGETS=(
+          "-target=aws_lambda_function.api_v2"
+          "-target=aws_lambda_alias.api_alias_v2"
+          "-target=aws_apigatewayv2_integration.lambda"
+          "-target=aws_apigatewayv2_domain_name.api"
+          "-target=aws_apigatewayv2_stage.lambda"
+          "-target=aws_route53_record.api"
+          "-target=aws_acm_certificate.backend_api"
+          "-target=aws_route53_record.backend_api_cert_validation"
+          "-target=aws_acm_certificate_validation.backend_api"
+        )
+        
+        # Add service-linked role target if needed
+        if [[ "${{ steps.check_apigw_role.outputs.include_apigw_role }}" == "true" ]]; then
+          TARGETS+=("-target=aws_iam_service_linked_role.apigw")
+        fi
+        
         terraform plan \
-          -target=aws_lambda_function.api_v2 \
-          -target=aws_lambda_alias.api_alias_v2 \
-          -target=aws_apigatewayv2_integration.lambda \
-          -target=aws_apigatewayv2_domain_name.api \
-          -target=aws_apigatewayv2_stage.lambda \
-          -target=aws_iam_service_linked_role.apigw \
+          ${TARGETS[@]} \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \

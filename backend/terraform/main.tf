@@ -627,7 +627,8 @@ resource "aws_apigatewayv2_domain_name" "api" {
   }
 
   depends_on = [
-    aws_acm_certificate_validation.backend_api
+    aws_acm_certificate_validation.backend_api,
+    aws_route53_record.backend_api_cert_validation
   ]
 }
 
@@ -727,6 +728,11 @@ resource "aws_route53_record" "api" {
     zone_id                = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].hosted_zone_id
     evaluate_target_health = false
   }
+
+  depends_on = [
+    aws_apigatewayv2_domain_name.api,
+    aws_acm_certificate_validation.backend_api
+  ]
 }
 
 # API Gateway Custom Domain Certificate (in the same region as API Gateway)
