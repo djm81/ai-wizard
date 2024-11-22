@@ -1,5 +1,10 @@
 name: Test and Build Frontend
 
+# Ensure serial execution of this workflow across all branches/triggers
+concurrency:
+  group: frontend-deployment  # Remove ref to make it workflow-specific only
+  cancel-in-progress: false  # Wait for running workflow to complete
+
 on:
   push:
     branches:
