@@ -24,8 +24,10 @@ on:
   workflow_dispatch:  # Manual trigger
 
 env:
+  TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_AWS_REGION }}
   WORKING_DIRECTORY: frontend
   ENVIRONMENT: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || github.base_ref) || (github.ref_name == 'main' && 'prod' || github.ref_name) }}
+  DOMAIN_NAME: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.base_ref, vars.TF_VAR_DOMAIN_NAME)) || (github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.ref_name, vars.TF_VAR_DOMAIN_NAME)) }}
 
 jobs:
   should_run:
@@ -131,7 +133,7 @@ jobs:
         PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}
         PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
         PUBLIC_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}
-        PUBLIC_API_URL=https://api.${{ env.ENVIRONMENT == 'prod' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', env.ENVIRONMENT, vars.TF_VAR_DOMAIN_NAME) }}
+        PUBLIC_API_URL=https://api.${{ env.DOMAIN_NAME }}
         EOL
       working-directory: ${{ env.WORKING_DIRECTORY }}
 
@@ -161,6 +163,39 @@ jobs:
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
 
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.0.0
+
+    - name: Terraform Init
+      id: terraform_init
+      run: |
+        terraform init \
+          -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+          -backend-config="key=terraform.tfstate-${{ env.ENVIRONMENT }}" \
+          -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -reconfigure
+      working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
+
+    - name: Terraform Plan
+      id: terraform_plan
+      run: |
+        terraform plan \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="domain_name=${{ env.DOMAIN_NAME }}" \
+          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}-${{ env.ENVIRONMENT }}" \
+          -out=tfplan-frontend-${{ env.ENVIRONMENT }}
+      working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
+
+    - name: Terraform Apply Frontend Resources
+      id: terraform_apply
+      run: |
+        terraform apply -auto-approve tfplan-frontend-${{ env.ENVIRONMENT }}
+      working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
+
     - name: Download build artifact
       uses: actions/download-artifact@v4
       with:
@@ -173,7 +208,7 @@ jobs:
 
     - name: Invalidate CloudFront cache
       run: |
-        DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?contains(@, '${{ env.ENVIRONMENT == 'prod' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', env.ENVIRONMENT, vars.TF_VAR_DOMAIN_NAME) }}')]].Id" --output text)
+        DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?contains(@, '${{ env.DOMAIN_NAME }}')]].Id" --output text)
         aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
 
   notify:
@@ -196,7 +231,7 @@ jobs:
         status: ${{ steps.check.outputs.status }}
         text: |
           ${{ steps.check.outputs.status == 'success' && format('{0} Frontend deployment succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Frontend deployment failed! :x:', env.ENVIRONMENT) }}
-          ${{ steps.check.outputs.status == 'success' && format('Frontend for {0} stage deployed to: https://{1}', env.ENVIRONMENT, env.ENVIRONMENT == 'prod' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', env.ENVIRONMENT, vars.TF_VAR_DOMAIN_NAME)) || '' }}
+          ${{ steps.check.outputs.status == 'success' && format('Frontend for {0} stage deployed to: https://{1}', env.ENVIRONMENT, env.DOMAIN_NAME) || '' }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

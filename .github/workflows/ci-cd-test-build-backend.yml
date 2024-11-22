@@ -13,7 +13,8 @@ on:
     - main
     paths:
     - backend/app/**
-    - backend/terraform/**
+    - backend/terraform/modules/**
+    - backend/terraform/environments/**
     - .github/workflows/ci-cd-test-build-backend.yml
   pull_request:
     branches:
@@ -21,7 +22,8 @@ on:
     - main    # PR from test to main
     paths:
     - backend/app/**
-    - backend/terraform/**
+    - backend/terraform/modules/**
+    - backend/terraform/environments/**
     - .github/workflows/ci-cd-test-build-backend.yml
   workflow_dispatch:  # Manual trigger
 env:
@@ -178,68 +180,51 @@ jobs:
           exit 1
         fi
 
-    - name: Package Lambda function
-      working-directory: ${{ env.WORKING_DIRECTORY }}
+    - name: Create Lambda package
       run: |
-        # Create a temporary build directory
-        mkdir -p build
+        # Create necessary directories
+        mkdir -p terraform/modules/backend/lambda/app
 
-        # Copy application code
-        cp -r app build/
+        # Copy application files to Lambda directory
+        cp -r app/* terraform/modules/backend/lambda/app/
 
-        # Create requirements file excluding development dependencies
-        poetry export --only main -f requirements.txt --without-hashes --output requirements.txt
+        # Create Firebase config directory and file in Lambda package location
+        mkdir -p terraform/modules/backend/lambda/app/config
+        echo -n '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > terraform/modules/backend/lambda/app/config/firebase-adminsdk.json
 
-        # Install dependencies
-        pip install \
-          --target=build \
-          --implementation cp \
-          --python-version 3.12 \
-          --only-binary=:all: \
-          --platform manylinux2014_x86_64 \
-          --upgrade pydantic \
-          -r requirements.txt
+        # Verify Firebase config
+        if [ ! -f "terraform/modules/backend/lambda/app/config/firebase-adminsdk.json" ]; then
+          echo "Firebase config file not created correctly"
+          exit 1
+        fi
 
-        # Remove unnecessary files to reduce package size
-        cd build
+        # Make script executable and run it from its directory
+        chmod +x terraform/modules/backend/lambda/create_lambda_package.sh
+        cd terraform/modules/backend/lambda
+        poetry install  # Ensure poetry is available
+        ./create_lambda_package.sh
 
-        # Clean up
-        find . -type d -name "tests" -exec rm -rf {} +
-        find . -type d -name "__pycache__" -exec rm -rf {} +
-        find . -type f -name "*.pyc" -delete
-        find . -type f -name "*.pyo" -delete
-        find . -type f -name "*.pyd" -delete
-        # Preserve email-validator dist-info while cleaning others
-        find . -type d -name "*.dist-info" ! -name "email_validator*.dist-info" -exec rm -rf {} +
-        find . -type d -name "*.egg-info" -exec rm -rf {} +
+        # Verify package creation
+        if [ ! -f "lambda_package.zip" ]; then
+          echo "Lambda package not created correctly"
+          exit 1
+        fi
 
-        # Create deployment package
-        zip -r9 ../lambda_package.zip .
-        cd ..
-
-        # Create lambda directory if it doesn't exist
-        mkdir -p terraform/lambda
-
-        # Move package to terraform lambda directory
-        mv lambda_package.zip terraform/lambda/
-
-        # Show package size and contents
-        ls -lh terraform/lambda/lambda_package.zip
-        echo "Lambda package contents:"
-        unzip -l terraform/lambda/lambda_package.zip | grep -i "email_validator"
-
-    - name: Calculate Lambda package hash
-      id: lambda_package_hash
+        cd ../../../..
       working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: |
-        HASH=$(openssl dgst -sha256 -binary terraform/lambda/lambda_package.zip | openssl base64)
-        echo "lambda_package_hash=${HASH}" >> $GITHUB_OUTPUT
 
     - name: Upload Lambda package
       uses: actions/upload-artifact@v4
       with:
         name: lambda_app_package
-        path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda/lambda_package.zip
+        path: ${{ env.WORKING_DIRECTORY }}/terraform/modules/backend/lambda/lambda_package.zip
+
+    - name: Calculate Lambda package hash
+      id: lambda_package_hash
+      run: |
+        HASH=$(openssl dgst -sha256 -binary terraform/modules/backend/lambda/lambda_package.zip | openssl base64)
+        echo "lambda_package_hash=${HASH}" >> $GITHUB_OUTPUT
+      working-directory: ${{ env.WORKING_DIRECTORY }}
 
   deploy:
     needs: [should_run, test, build]
@@ -273,59 +258,30 @@ jobs:
           -backend-config="key=terraform.tfstate-${{ env.ENVIRONMENT }}" \
           -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
           -reconfigure
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/environments/${{ env.ENVIRONMENT }}
 
     - name: Download Lambda package
       uses: actions/download-artifact@v4
       with:
         name: lambda_app_package
-        path: ${{ env.WORKING_DIRECTORY }}/terraform/lambda/
+        path: ${{ env.WORKING_DIRECTORY }}/terraform/modules/backend/lambda/
 
     - name: Show Lambda package files
       working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
-        ls -lh terraform/lambda/
+        ls -lh terraform/modules/backend/lambda/
 
     - name: Calculate Lambda package hash
       id: lambda_package_hash
       run: |
-        HASH=$(openssl dgst -sha256 -binary terraform/lambda/lambda_package.zip | openssl base64)
+        HASH=$(openssl dgst -sha256 -binary terraform/modules/backend/lambda/lambda_package.zip | openssl base64)
         echo "lambda_package_hash=${HASH}" >> $GITHUB_OUTPUT
       working-directory: ${{ env.WORKING_DIRECTORY }}
-
-    - name: Check API Gateway Service Role
-      id: check_apigw_role
-      run: |
-        if ! aws iam get-role --role-name "AWSServiceRoleForAPIGateway" 2>/dev/null; then
-          echo "API Gateway service role does not exist, including in terraform plan"
-          echo "include_apigw_role=true" >> $GITHUB_OUTPUT
-        else
-          echo "API Gateway service role exists, skipping"
-          echo "include_apigw_role=false" >> $GITHUB_OUTPUT
-        fi
 
     - name: Terraform Plan
       id: terraform_plan
       run: |
-        TARGETS=(
-          "-target=aws_lambda_function.api_v2"
-          "-target=aws_lambda_alias.api_alias_v2"
-          "-target=aws_apigatewayv2_integration.lambda"
-          "-target=aws_apigatewayv2_domain_name.api"
-          "-target=aws_apigatewayv2_stage.lambda"
-          "-target=aws_route53_record.api"
-          "-target=aws_acm_certificate.backend_api"
-          "-target=aws_route53_record.backend_api_cert_validation"
-          "-target=aws_acm_certificate_validation.backend_api"
-        )
-        
-        # Add service-linked role target if needed
-        if [[ "${{ steps.check_apigw_role.outputs.include_apigw_role }}" == "true" ]]; then
-          TARGETS+=("-target=aws_iam_service_linked_role.apigw")
-        fi
-        
         terraform plan \
-          ${TARGETS[@]} \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
@@ -334,16 +290,15 @@ jobs:
           -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
           -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
           -var="database_url=${{ vars.PROD_DATABASE_URL }}" \
-          -var="environment=${{ env.ENVIRONMENT }}" \
           -var="lambda_source_code_hash=${{ steps.lambda_package_hash.outputs.lambda_package_hash }}" \
           -out=tfplan-${{ env.ENVIRONMENT }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/environments/${{ env.ENVIRONMENT }}
 
     - name: Terraform Apply
       id: terraform_apply
       run: |
         terraform apply -auto-approve tfplan-${{ env.ENVIRONMENT }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform
+      working-directory: ${{ env.WORKING_DIRECTORY }}/terraform/environments/${{ env.ENVIRONMENT }}
 
     outputs:
       lambda_function_name: ${{ steps.terraform_apply.outputs.lambda_function_name }}
