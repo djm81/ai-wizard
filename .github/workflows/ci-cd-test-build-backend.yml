@@ -8,9 +8,7 @@ on:
     - main
     paths:
     - backend/app/**
-    - '!backend/app/openapi/**'
-    - '!backend/terraform/**'
-    - '!backend/aws-setup/**'
+    - backend/terraform/**
     - .github/workflows/ci-cd-test-build-backend.yml
   pull_request:
     branches:
@@ -18,9 +16,7 @@ on:
     - main    # PR from test to main
     paths:
     - backend/app/**
-    - '!backend/app/openapi/**'
-    - '!backend/terraform/**'
-    - '!backend/aws-setup/**'
+    - backend/terraform/**
     - .github/workflows/ci-cd-test-build-backend.yml
   workflow_dispatch:  # Manual trigger
 env:
