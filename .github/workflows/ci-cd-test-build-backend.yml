@@ -1,9 +1,9 @@
 name: Test and Build Backend API
 
-# Add concurrency group based on environment
+# Ensure serial execution of this workflow across all branches/triggers
 concurrency: 
-  group: backend-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false  # Don't cancel in-progress runs
+  group: backend-deployment  # Remove ref to make it workflow-specific only
+  cancel-in-progress: false  # Wait for running workflow to complete
 
 on:
   push:
