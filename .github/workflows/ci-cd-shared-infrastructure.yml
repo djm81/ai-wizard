@@ -52,6 +52,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.TF_VAR_AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
+        mask-aws-account-id: 'false'
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:

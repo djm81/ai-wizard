@@ -43,6 +43,15 @@ jobs:
     outputs:
       can_proceed: ${{ steps.check.outputs.can_proceed }}
     steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.TF_VAR_AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
+        mask-aws-account-id: 'false'
+
     - name: Check shared infrastructure
       id: check
       run: |
@@ -57,7 +66,9 @@ jobs:
           fi
         else
           # For other triggers, verify shared infrastructure exists
-          aws cloudformation describe-stacks --stack-name shared-infrastructure-${{ env.ENVIRONMENT }} || {
+          aws cloudformation describe-stacks \
+            --stack-name shared-infrastructure-${{ env.ENVIRONMENT }} \
+            --region ${{ vars.TF_VAR_AWS_REGION }} || {
             echo "Shared infrastructure not found"
             echo "can_proceed=false" >> $GITHUB_OUTPUT
             exit 1
@@ -138,6 +149,15 @@ jobs:
         PUBLIC_FIREBASE_PROJECT_ID=test-project
         EOL
 
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.TF_VAR_AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
+        mask-aws-account-id: 'false'
+  
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
