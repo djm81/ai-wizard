@@ -21,7 +21,7 @@ on:
     - main
     paths:
     - backend/app/**
-    - backend/terraform/modules/**
+    - backend/terraform/modules/backend/**
     - backend/terraform/environments/**
     - .github/workflows/ci-cd-test-build-backend.yml
   pull_request:
@@ -30,7 +30,7 @@ on:
     - main
     paths:
     - backend/app/**
-    - backend/terraform/modules/**
+    - backend/terraform/modules/backend/**
     - backend/terraform/environments/**
     - .github/workflows/ci-cd-test-build-backend.yml
   workflow_dispatch:

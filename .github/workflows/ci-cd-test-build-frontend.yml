@@ -21,6 +21,8 @@ on:
     - main
     paths:
     - frontend/**
+    - backend/terraform/modules/frontend/**
+    - backend/terraform/environments/**
     - .github/workflows/ci-cd-test-build-frontend.yml
   pull_request:
     branches:
@@ -28,6 +30,8 @@ on:
     - main
     paths:
     - frontend/**
+    - backend/terraform/modules/frontend/**
+    - backend/terraform/environments/**
     - .github/workflows/ci-cd-test-build-frontend.yml
   workflow_dispatch:
 
