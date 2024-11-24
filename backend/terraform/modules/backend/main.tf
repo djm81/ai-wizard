@@ -61,9 +61,13 @@ resource "aws_apigatewayv2_api" "api" {
   protocol_type = "HTTP"
 
   body = replace(
-    file("${path.module}/api/specification.yaml"),
-    "title: ai-wizard-backend-api",
-    "title: ai-wizard-backend-api-${var.environment}"
+    replace(
+      file("${path.module}/api/specification.yaml"),
+      "title: ai-wizard-backend-api",
+      "title: ai-wizard-backend-api-${var.environment}"
+    ),
+    "$${lambda_uri}",
+    aws_lambda_alias.api_alias_v2.invoke_arn
   )
 
   route_selection_expression = "$request.method $request.path"
@@ -204,9 +208,13 @@ resource "aws_apigatewayv2_deployment" "api" {
     redeployment = sha1(jsonencode([
       aws_apigatewayv2_integration.lambda,
       replace(
-        file("${path.module}/api/specification.yaml"),
-        "title: ai-wizard-backend-api",
-        "title: ai-wizard-backend-api-${var.environment}"
+        replace(
+          file("${path.module}/api/specification.yaml"),
+          "title: ai-wizard-backend-api",
+          "title: ai-wizard-backend-api-${var.environment}"
+        ),
+        "$${lambda_uri}",
+        aws_lambda_alias.api_alias_v2.invoke_arn
       )
     ]))
   }
