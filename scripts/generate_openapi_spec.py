@@ -47,9 +47,23 @@ def generate_openapi_spec():
     # Force OpenAPI version to 3.0.4 for AWS compatibility
     openapi_schema["openapi"] = settings.OPENAPI_VERSION
 
+    # Add AWS API Gateway extensions
+    openapi_schema["x-amazon-apigateway-api-key-source"] = "HEADER"
+    openapi_schema["x-amazon-apigateway-binary-media-types"] = ["*/*"]
+    
+    # Add default integration
+    openapi_schema["x-amazon-apigateway-integration"] = {
+        "uri": "${lambda_uri}",
+        "payloadFormatVersion": "2.0",
+        "type": "AWS_PROXY",
+        "httpMethod": "POST",
+        "timeoutInMillis": 30000,
+        "connectionType": "INTERNET"
+    }
+
     # Define paths relative to project root
     root_spec_path = app_dir / "openapi" / "specification.yaml"
-    terraform_spec_path = backend_dir / "terraform" / "api" / "specification.yaml"
+    terraform_spec_path = backend_dir / "terraform" / "modules" / "backend" / "api" / "specification.yaml"
 
     # Ensure terraform/api directory exists
     terraform_spec_path.parent.mkdir(parents=True, exist_ok=True)

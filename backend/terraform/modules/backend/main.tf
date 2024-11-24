@@ -67,7 +67,6 @@ resource "aws_apigatewayv2_api" "api" {
   )
 
   route_selection_expression = "$request.method $request.path"
-  target = aws_lambda_alias.api_alias_v2.invoke_arn
 
   cors_configuration {
     allow_origins = [
@@ -97,10 +96,6 @@ resource "aws_apigatewayv2_api" "api" {
     max_age           = 300
     allow_credentials = true
   }
-
-  depends_on = [
-    aws_lambda_alias.api_alias_v2
-  ]
 
   lifecycle {
     create_before_destroy = true
@@ -185,11 +180,53 @@ resource "aws_iam_role_policy" "lambda_cloudwatch" {
   })
 }
 
+# API Gateway integration
+resource "aws_apigatewayv2_integration" "lambda" {
+  provider           = aws.assume_role
+  api_id             = aws_apigatewayv2_api.api.id
+  integration_type   = "AWS_PROXY"
+  integration_uri    = aws_lambda_alias.api_alias_v2.invoke_arn
+  integration_method = "POST"
+  description        = "Lambda integration"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# API Gateway deployment
+resource "aws_apigatewayv2_deployment" "api" {
+  provider    = aws.assume_role
+  api_id      = aws_apigatewayv2_api.api.id
+  description = "Deployment for ${var.environment}"
+
+  triggers = {
+    redeployment = sha1(jsonencode([
+      aws_apigatewayv2_integration.lambda,
+      replace(
+        file("${path.module}/api/specification.yaml"),
+        "title: ai-wizard-backend-api",
+        "title: ai-wizard-backend-api-${var.environment}"
+      )
+    ]))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  depends_on = [
+    aws_apigatewayv2_api.api,
+    aws_apigatewayv2_integration.lambda
+  ]
+}
+
 # API Gateway stage with logging
 resource "aws_apigatewayv2_stage" "lambda" {
   provider    = aws.assume_role
   api_id      = aws_apigatewayv2_api.api.id
   name        = var.environment
+  deployment_id = aws_apigatewayv2_deployment.api.id
   auto_deploy = true
 
   access_log_settings {
@@ -217,15 +254,15 @@ resource "aws_apigatewayv2_stage" "lambda" {
   stage_variables = {
     lambdaAlias = var.environment
   }
-}
 
-# API Gateway integration
-resource "aws_apigatewayv2_integration" "lambda" {
-  provider           = aws.assume_role
-  api_id             = aws_apigatewayv2_api.api.id
-  integration_type   = "AWS_PROXY"
-  integration_uri    = aws_lambda_alias.api_alias_v2.invoke_arn
-  integration_method = "POST"
+  depends_on = [
+    aws_apigatewayv2_deployment.api,
+    aws_cloudwatch_log_group.api_gw
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Lambda permission for API Gateway

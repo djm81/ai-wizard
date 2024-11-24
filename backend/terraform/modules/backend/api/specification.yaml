@@ -794,3 +794,13 @@ components:
     HTTPBearer:
       type: http
       scheme: bearer
+x-amazon-apigateway-api-key-source: HEADER
+x-amazon-apigateway-binary-media-types:
+- '*/*'
+x-amazon-apigateway-integration:
+  uri: ${lambda_uri}
+  payloadFormatVersion: '2.0'
+  type: AWS_PROXY
+  httpMethod: POST
+  timeoutInMillis: 30000
+  connectionType: INTERNET
