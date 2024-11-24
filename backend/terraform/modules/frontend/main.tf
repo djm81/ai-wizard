@@ -1,3 +1,13 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.72"
+      configuration_aliases = [aws.assume_role, aws.assume_role_us_east_1]
+    }
+  }
+}
+
 # Frontend infrastructure resources
 resource "aws_s3_bucket" "frontend" {
   provider = aws.assume_role

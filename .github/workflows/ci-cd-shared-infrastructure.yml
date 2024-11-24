@@ -1,0 +1,152 @@
+name: Deploy Shared Infrastructure
+
+concurrency: 
+  group: shared-infrastructure
+  cancel-in-progress: false
+
+on:
+  push:
+    branches:
+    - dev
+    - test
+    - main
+    paths:
+    - backend/terraform/modules/shared/**
+    - .github/workflows/ci-cd-shared-infrastructure.yml
+  workflow_dispatch:
+
+env:
+  TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_AWS_REGION }}
+  ENVIRONMENT: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || github.base_ref) || (github.ref_name == 'main' && 'prod' || github.ref_name) }}
+  DOMAIN_NAME: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.base_ref, vars.TF_VAR_DOMAIN_NAME)) || (github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.ref_name, vars.TF_VAR_DOMAIN_NAME)) }}
+
+jobs:
+  should_run:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && (
+        github.ref == 'refs/heads/dev' ||
+        github.ref == 'refs/heads/test' ||
+        github.ref == 'refs/heads/main'
+      ))
+    outputs:
+      run_deployment: ${{ steps.check.outputs.run }}
+    steps:
+    - uses: actions/checkout@v4
+    - id: check
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.event_name }}" == "push" ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+        else
+          echo "run=false" >> $GITHUB_OUTPUT
+        fi
+
+  test:
+    needs: should_run
+    if: needs.should_run.outputs.run_deployment == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.0.0
+  
+    - name: Terraform Init
+      id: terraform_init
+      run: |
+        terraform init \
+          -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+          -backend-config="key=terraform.tfstate-${{ env.ENVIRONMENT }}" \
+          -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -reconfigure
+      working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
+  
+    - name: Terraform Validate
+      id: terraform_validate
+      run: |
+        terraform validate
+      working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
+
+  deploy_shared:
+    needs: [should_run, test]
+    if: needs.should_run.outputs.run_deployment == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.TF_VAR_AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
+        mask-aws-account-id: 'false'
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.0.0
+
+    - name: Terraform Init
+      id: terraform_init
+      run: |
+        terraform init \
+          -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+          -backend-config="key=terraform.tfstate-${{ env.ENVIRONMENT }}" \
+          -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -reconfigure
+      working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
+
+    - name: Terraform Plan
+      id: terraform_plan
+      run: |
+        terraform plan \
+          -target=module.shared \
+          -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
+          -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -var="domain_name=${{ env.DOMAIN_NAME }}" \
+          -var="route53_hosted_zone_id=${{ vars.TF_VAR_ROUTE53_HOSTED_ZONE_ID }}" \
+          -var="frontend_bucket_name=${{ vars.TF_VAR_FRONTEND_BUCKET_NAME }}" \
+          -var="lambda_function_name_prefix=${{ vars.TF_VAR_LAMBDA_FUNCTION_NAME_PREFIX }}" \
+          -var="dynamodb_table_name=${{ vars.TF_VAR_DYNAMODB_TABLE_NAME }}" \
+          -out=tfplan-shared-${{ env.ENVIRONMENT }}
+      working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
+
+    - name: Terraform Apply
+      id: terraform_apply
+      run: |
+        terraform apply -auto-approve tfplan-shared-${{ env.ENVIRONMENT }}
+      working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
+
+  notify:
+    needs: [should_run, test, deploy_shared]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check job status
+      id: check
+      run: |
+        if [[ ${{ needs.test.result }} == 'success' && ${{ needs.deploy_shared.result }} == 'success' ]]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "status=failure" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ steps.check.outputs.status }}
+        text: |
+          ${{ steps.check.outputs.status == 'success' && format('{0} Shared Infrastructure deployment succeeded! :rocket:', env.ENVIRONMENT) || format('{0} Shared Infrastructure deployment failed! :x:', env.ENVIRONMENT) }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

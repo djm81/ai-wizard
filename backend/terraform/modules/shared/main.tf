@@ -1,3 +1,13 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.72"
+      configuration_aliases = [aws.assume_role]
+    }
+  }
+}
+
 # DynamoDB table
 resource "aws_dynamodb_table" "ai_wizard" {
   provider         = aws.assume_role
@@ -65,10 +75,7 @@ resource "aws_iam_service_linked_role" "apigw" {
       description,
       tags,
       custom_suffix,
-      id,
-      unique_id,
-      path,
-      arn
+      id
     ]
     create_before_destroy = false
   }

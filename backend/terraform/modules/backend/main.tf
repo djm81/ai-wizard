@@ -1,3 +1,13 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.72"
+      configuration_aliases = [aws.assume_role]
+    }
+  }
+}
+
 # Backend infrastructure resources
 resource "aws_lambda_function" "api_v2" {
   provider         = aws.assume_role

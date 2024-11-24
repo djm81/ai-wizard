@@ -2,10 +2,18 @@ name: Test and Build Frontend
 
 # Ensure serial execution of this workflow across all branches/triggers
 concurrency:
-  group: frontend-deployment  # Remove ref to make it workflow-specific only
-  cancel-in-progress: false  # Wait for running workflow to complete
+  group: frontend-deployment
+  cancel-in-progress: false
 
 on:
+  workflow_run:
+    workflows: ["Deploy Shared Infrastructure"]
+    types:
+      - completed
+    branches:
+      - dev
+      - test
+      - main
   push:
     branches:
     - dev
@@ -16,12 +24,12 @@ on:
     - .github/workflows/ci-cd-test-build-frontend.yml
   pull_request:
     branches:
-    - test    # PR from dev to test
-    - main    # PR from test to main
+    - test
+    - main
     paths:
     - frontend/**
     - .github/workflows/ci-cd-test-build-frontend.yml
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:
 
 env:
   TF_STATE_BUCKET: ai-wizard-terraform-state-${{ vars.TF_VAR_AWS_REGION }}
@@ -30,16 +38,47 @@ env:
   DOMAIN_NAME: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.base_ref, vars.TF_VAR_DOMAIN_NAME)) || (github.ref_name == 'main' && vars.TF_VAR_DOMAIN_NAME || format('{0}.{1}', github.ref_name, vars.TF_VAR_DOMAIN_NAME)) }}
 
 jobs:
+  check_dependencies:
+    runs-on: ubuntu-latest
+    outputs:
+      can_proceed: ${{ steps.check.outputs.can_proceed }}
+    steps:
+    - name: Check shared infrastructure
+      id: check
+      run: |
+        # Check if triggered by workflow_run
+        if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+          if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
+            echo "can_proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "can_proceed=false" >> $GITHUB_OUTPUT
+            echo "Shared infrastructure deployment failed or not completed"
+            exit 1
+          fi
+        else
+          # For other triggers, verify shared infrastructure exists
+          aws cloudformation describe-stacks --stack-name shared-infrastructure-${{ env.ENVIRONMENT }} || {
+            echo "Shared infrastructure not found"
+            echo "can_proceed=false" >> $GITHUB_OUTPUT
+            exit 1
+          }
+          echo "can_proceed=true" >> $GITHUB_OUTPUT
+        fi
+
   should_run:
+    needs: check_dependencies
     runs-on: ubuntu-latest
     if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
-      (github.event_name == 'push' && (
-        github.ref == 'refs/heads/dev' ||
-        github.ref == 'refs/heads/test' ||
-        github.ref == 'refs/heads/main'
-      ))
+      needs.check_dependencies.outputs.can_proceed == 'true' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'pull_request' && github.event.action != 'closed') ||
+        (github.event_name == 'push' && (
+          github.ref == 'refs/heads/dev' ||
+          github.ref == 'refs/heads/test' ||
+          github.ref == 'refs/heads/main'
+        ))
+      )
     outputs:
       run_deployment: ${{ steps.check.outputs.run }}
       is_deployable: ${{ steps.check.outputs.deployable }}
@@ -99,6 +138,27 @@ jobs:
         PUBLIC_FIREBASE_PROJECT_ID=test-project
         EOL
 
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.0.0
+  
+    - name: Terraform Init
+      id: terraform_init
+      run: |
+        terraform init \
+          -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+          -backend-config="key=terraform.tfstate-${{ env.ENVIRONMENT }}" \
+          -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
+          -reconfigure
+      working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
+  
+    - name: Terraform Validate
+      id: terraform_validate
+      run: |
+        terraform validate
+      working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
+    
   build:
     needs: [should_run, test]
     if: needs.should_run.outputs.run_deployment == 'true'
@@ -182,6 +242,7 @@ jobs:
       id: terraform_plan
       run: |
         terraform plan \
+          -target=module.frontend \
           -var="aws_account_id=${{ vars.TF_VAR_AWS_ACCOUNT_ID }}" \
           -var="aws_region=${{ vars.TF_VAR_AWS_REGION }}" \
           -var="domain_name=${{ env.DOMAIN_NAME }}" \
