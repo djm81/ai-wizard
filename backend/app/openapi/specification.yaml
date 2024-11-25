@@ -32,6 +32,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
   /users/users/me:
     get:
       tags:
@@ -50,6 +57,43 @@ paths:
                 $ref: '#/components/schemas/User'
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
+    options:
+      summary: CORS support
+      description: Enable CORS by returning correct headers
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: Content-Type,Authorization,X-Amz-Date,X-Api-Key
+              method.response.header.Access-Control-Allow-Methods: '*'
+              method.response.header.Access-Control-Allow-Origin: '*'
+            responseTemplates:
+              application/json: '{}'
   /users/me:
     put:
       tags:
@@ -77,6 +121,13 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
     delete:
       tags:
       - users
@@ -90,6 +141,43 @@ paths:
               schema: {}
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
+    options:
+      summary: CORS support
+      description: Enable CORS by returning correct headers
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: Content-Type,Authorization,X-Amz-Date,X-Api-Key
+              method.response.header.Access-Control-Allow-Methods: '*'
+              method.response.header.Access-Control-Allow-Origin: '*'
+            responseTemplates:
+              application/json: '{}'
   /users/me/profile:
     get:
       tags:
@@ -105,6 +193,13 @@ paths:
                 $ref: '#/components/schemas/UserProfile'
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
     put:
       tags:
       - users
@@ -131,6 +226,13 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
     post:
       tags:
       - users
@@ -157,6 +259,43 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
+    options:
+      summary: CORS support
+      description: Enable CORS by returning correct headers
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: Content-Type,Authorization,X-Amz-Date,X-Api-Key
+              method.response.header.Access-Control-Allow-Methods: '*'
+              method.response.header.Access-Control-Allow-Origin: '*'
+            responseTemplates:
+              application/json: '{}'
   /ai/set-api-key:
     post:
       tags:
@@ -185,6 +324,43 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
+    options:
+      summary: CORS support
+      description: Enable CORS by returning correct headers
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: Content-Type,Authorization,X-Amz-Date,X-Api-Key
+              method.response.header.Access-Control-Allow-Methods: '*'
+              method.response.header.Access-Control-Allow-Origin: '*'
+            responseTemplates:
+              application/json: '{}'
   /ai/remove-api-key:
     post:
       tags:
@@ -201,6 +377,43 @@ paths:
                 $ref: '#/components/schemas/MessageResponse'
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
+    options:
+      summary: CORS support
+      description: Enable CORS by returning correct headers
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: Content-Type,Authorization,X-Amz-Date,X-Api-Key
+              method.response.header.Access-Control-Allow-Methods: '*'
+              method.response.header.Access-Control-Allow-Origin: '*'
+            responseTemplates:
+              application/json: '{}'
   /ai/refine-requirements:
     post:
       tags:
@@ -231,6 +444,43 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
+    options:
+      summary: CORS support
+      description: Enable CORS by returning correct headers
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: Content-Type,Authorization,X-Amz-Date,X-Api-Key
+              method.response.header.Access-Control-Allow-Methods: '*'
+              method.response.header.Access-Control-Allow-Origin: '*'
+            responseTemplates:
+              application/json: '{}'
   /ai/generate-code:
     post:
       tags:
@@ -258,6 +508,43 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
+    options:
+      summary: CORS support
+      description: Enable CORS by returning correct headers
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: Content-Type,Authorization,X-Amz-Date,X-Api-Key
+              method.response.header.Access-Control-Allow-Methods: '*'
+              method.response.header.Access-Control-Allow-Origin: '*'
+            responseTemplates:
+              application/json: '{}'
   /projects/:
     get:
       tags:
@@ -277,6 +564,13 @@ paths:
                 title: Response List Projects Projects  Get
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
     post:
       tags:
       - projects
@@ -304,6 +598,43 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
       - HTTPBearer: []
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
+    options:
+      summary: CORS support
+      description: Enable CORS by returning correct headers
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: Content-Type,Authorization,X-Amz-Date,X-Api-Key
+              method.response.header.Access-Control-Allow-Methods: '*'
+              method.response.header.Access-Control-Allow-Origin: '*'
+            responseTemplates:
+              application/json: '{}'
   /projects/{project_id}:
     get:
       tags:
@@ -333,6 +664,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
     delete:
       tags:
       - projects
@@ -357,6 +695,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
+    options:
+      summary: CORS support
+      description: Enable CORS by returning correct headers
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: Content-Type,Authorization,X-Amz-Date,X-Api-Key
+              method.response.header.Access-Control-Allow-Methods: '*'
+              method.response.header.Access-Control-Allow-Origin: '*'
+            responseTemplates:
+              application/json: '{}'
   /projects/{project_id}/ai-interactions:
     get:
       tags:
@@ -390,6 +765,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
     post:
       tags:
       - projects
@@ -424,6 +806,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
+    options:
+      summary: CORS support
+      description: Enable CORS by returning correct headers
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: Content-Type,Authorization,X-Amz-Date,X-Api-Key
+              method.response.header.Access-Control-Allow-Methods: '*'
+              method.response.header.Access-Control-Allow-Origin: '*'
+            responseTemplates:
+              application/json: '{}'
   /projects/{project_id}/ai-interactions/{interaction_id}:
     get:
       tags:
@@ -459,6 +878,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
+    options:
+      summary: CORS support
+      description: Enable CORS by returning correct headers
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: Content-Type,Authorization,X-Amz-Date,X-Api-Key
+              method.response.header.Access-Control-Allow-Methods: '*'
+              method.response.header.Access-Control-Allow-Origin: '*'
+            responseTemplates:
+              application/json: '{}'
   /:
     get:
       summary: Root
@@ -470,6 +926,13 @@ paths:
           content:
             application/json:
               schema: {}
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
   /test-auth:
     get:
       summary: Test Auth
@@ -481,6 +944,13 @@ paths:
           content:
             application/json:
               schema: {}
+      x-amazon-apigateway-integration:
+        uri: ${lambda_uri}
+        payloadFormatVersion: '2.0'
+        type: AWS_PROXY
+        httpMethod: POST
+        timeoutInMillis: 30000
+        connectionType: INTERNET
 components:
   schemas:
     AIInteraction:
@@ -797,10 +1267,3 @@ components:
 x-amazon-apigateway-api-key-source: HEADER
 x-amazon-apigateway-binary-media-types:
 - '*/*'
-x-amazon-apigateway-integration:
-  uri: ${lambda_uri}
-  payloadFormatVersion: '2.0'
-  type: AWS_PROXY
-  httpMethod: POST
-  timeoutInMillis: 30000
-  connectionType: INTERNET

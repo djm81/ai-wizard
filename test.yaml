@@ -1,0 +1,181 @@
+openapi: "3.0.1"
+info:
+  title: "ai-wizard-backend-api-dev"
+  description: "AI Wizard Backend API for intelligent assistance"
+  version: "0.1.0"
+servers:
+- url: "https://q3hv2c9i17.execute-api.eu-west-1.amazonaws.com/{basePath}"
+  variables:
+    basePath:
+      default: ""
+paths:
+  /projects/{project_id}:
+    get:
+      operationId: "read_project_projects__project_id__get"
+      responses:
+        default:
+          description: "Default response for GET /projects/{project_id}"
+    delete:
+      operationId: "delete_project_projects__project_id__delete"
+      responses:
+        default:
+          description: "Default response for DELETE /projects/{project_id}"
+    parameters:
+    - name: "project_id"
+      in: "path"
+      description: "Generated path parameter for project_id"
+      required: true
+      schema:
+        type: "string"
+  /users/me:
+    put:
+      operationId: "update_user_me_users_me_put"
+      responses:
+        default:
+          description: "Default response for PUT /users/me"
+    delete:
+      operationId: "delete_user_me_users_me_delete"
+      responses:
+        default:
+          description: "Default response for DELETE /users/me"
+  /:
+    get:
+      operationId: "root__get"
+      responses:
+        default:
+          description: "Default response for GET /"
+  /projects/{project_id}/ai-interactions:
+    get:
+      operationId: "list_project_interactions_projects__project_id__ai_interactions_get"
+      responses:
+        default:
+          description: "Default response for GET /projects/{project_id}/ai-interactions"
+    post:
+      operationId: "create_project_interaction_projects__project_id__ai_interactions_post"
+      responses:
+        default:
+          description: "Default response for POST /projects/{project_id}/ai-interactions"
+    parameters:
+    - name: "project_id"
+      in: "path"
+      description: "Generated path parameter for project_id"
+      required: true
+      schema:
+        type: "string"
+  /projects/{project_id}/ai-interactions/{interaction_id}:
+    get:
+      operationId: "read_project_interaction_projects__project_id__ai_interactions__interaction_id__get"
+      responses:
+        default:
+          description: "Default response for GET /projects/{project_id}/ai-interactions/{interaction_id}"
+    parameters:
+    - name: "project_id"
+      in: "path"
+      description: "Generated path parameter for project_id"
+      required: true
+      schema:
+        type: "string"
+    - name: "interaction_id"
+      in: "path"
+      description: "Generated path parameter for interaction_id"
+      required: true
+      schema:
+        type: "string"
+  /test-auth:
+    get:
+      operationId: "test_auth_test_auth_get"
+      responses:
+        default:
+          description: "Default response for GET /test-auth"
+  /users/me/profile:
+    get:
+      operationId: "read_user_profile_users_me_profile_get"
+      responses:
+        default:
+          description: "Default response for GET /users/me/profile"
+    put:
+      operationId: "update_user_profile_users_me_profile_put"
+      responses:
+        default:
+          description: "Default response for PUT /users/me/profile"
+    post:
+      operationId: "create_user_profile_users_me_profile_post"
+      responses:
+        default:
+          description: "Default response for POST /users/me/profile"
+  /users/users/me:
+    get:
+      operationId: "read_users_me_users_users_me_get"
+      responses:
+        default:
+          description: "Default response for GET /users/users/me"
+  /ai/generate-code:
+    post:
+      operationId: "generate_code_ai_generate_code_post"
+      responses:
+        default:
+          description: "Default response for POST /ai/generate-code"
+  /ai/refine-requirements:
+    post:
+      operationId: "refine_requirements_ai_refine_requirements_post"
+      responses:
+        default:
+          description: "Default response for POST /ai/refine-requirements"
+  /ai/remove-api-key:
+    post:
+      operationId: "remove_api_key_ai_remove_api_key_post"
+      responses:
+        default:
+          description: "Default response for POST /ai/remove-api-key"
+  /ai/set-api-key:
+    post:
+      operationId: "set_api_key_ai_set_api_key_post"
+      responses:
+        default:
+          description: "Default response for POST /ai/set-api-key"
+  /users/users:
+    post:
+      operationId: "create_user_users_users_post"
+      responses:
+        default:
+          description: "Default response for POST /users/users"
+components:
+  x-amazon-apigateway-integrations:
+    unusedIntegration_qchq1ur:
+      payloadFormatVersion: "1.0"
+      type: "aws_proxy"
+      httpMethod: "POST"
+      uri: "arn:aws:apigateway:eu-west-1:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-1:720534672987:function:ai-wizard-backend-dev-v2:dev-v2/invocations"
+      connectionType: "INTERNET"
+x-amazon-apigateway-cors:
+  allowMethods:
+  - "DELETE"
+  - "GET"
+  - "HEAD"
+  - "OPTIONS"
+  - "PATCH"
+  - "POST"
+  - "PUT"
+  allowHeaders:
+  - "accept"
+  - "access-control-request-headers"
+  - "access-control-request-method"
+  - "authorization"
+  - "content-type"
+  - "origin"
+  - "x-amz-date"
+  - "x-amz-security-token"
+  - "x-api-key"
+  - "x-requested-with"
+  exposeHeaders:
+  - "access-control-allow-headers"
+  - "access-control-allow-methods"
+  - "access-control-allow-origin"
+  - "authorization"
+  - "content-type"
+  maxAge: 300
+  allowCredentials: true
+  allowOrigins:
+  - "https://api.dev.ai-wizard.apps.noldmedia.com"
+  - "https://dev.ai-wizard.apps.noldmedia.com"
+x-amazon-apigateway-importexport-version: "1.0"

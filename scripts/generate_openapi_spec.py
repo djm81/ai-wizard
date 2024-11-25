@@ -47,19 +47,72 @@ def generate_openapi_spec():
     # Force OpenAPI version to 3.0.4 for AWS compatibility
     openapi_schema["openapi"] = settings.OPENAPI_VERSION
 
-    # Add AWS API Gateway extensions
+    # Add AWS API Gateway extensions at root level
     openapi_schema["x-amazon-apigateway-api-key-source"] = "HEADER"
     openapi_schema["x-amazon-apigateway-binary-media-types"] = ["*/*"]
-    
-    # Add default integration
-    openapi_schema["x-amazon-apigateway-integration"] = {
-        "uri": "${lambda_uri}",
-        "payloadFormatVersion": "2.0",
-        "type": "AWS_PROXY",
-        "httpMethod": "POST",
-        "timeoutInMillis": 30000,
-        "connectionType": "INTERNET"
-    }
+
+    # Collect paths that need OPTIONS methods
+    options_to_add = {}
+
+    # Add integration settings to each path operation
+    for path in openapi_schema["paths"]:
+        for method, operation in dict(openapi_schema["paths"][path]).items():
+            if method.lower() != 'options':  # Skip OPTIONS methods
+                # Add AWS integration
+                operation["x-amazon-apigateway-integration"] = {
+                    "uri": "${lambda_uri}",
+                    "payloadFormatVersion": "2.0",
+                    "type": "AWS_PROXY",
+                    "httpMethod": "POST",
+                    "timeoutInMillis": 30000,
+                    "connectionType": "INTERNET"
+                }
+                # Collect paths that need OPTIONS
+                if 'security' in operation and path not in options_to_add:
+                    options_to_add[path] = {
+                        "summary": "CORS support",
+                        "description": "Enable CORS by returning correct headers",
+                        "responses": {
+                            "200": {
+                                "description": "Default response for CORS method",
+                                "headers": {
+                                    "Access-Control-Allow-Origin": {
+                                        "schema": {"type": "string"}
+                                    },
+                                    "Access-Control-Allow-Methods": {
+                                        "schema": {"type": "string"}
+                                    },
+                                    "Access-Control-Allow-Headers": {
+                                        "schema": {"type": "string"}
+                                    }
+                                },
+                                "content": {}
+                            }
+                        },
+                        "x-amazon-apigateway-integration": {
+                            "type": "mock",
+                            "requestTemplates": {
+                                "application/json": "{\"statusCode\": 200}"
+                            },
+                            "responses": {
+                                "default": {
+                                    "statusCode": "200",
+                                    "responseParameters": {
+                                        "method.response.header.Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Api-Key",
+                                        "method.response.header.Access-Control-Allow-Methods": "*",
+                                        "method.response.header.Access-Control-Allow-Origin": "*"
+                                    },
+                                    "responseTemplates": {
+                                        "application/json": "{}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+    # Add OPTIONS methods after iteration
+    for path, options_method in options_to_add.items():
+        openapi_schema["paths"][path]["options"] = options_method
 
     # Define paths relative to project root
     root_spec_path = app_dir / "openapi" / "specification.yaml"
