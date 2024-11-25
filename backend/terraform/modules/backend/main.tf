@@ -206,7 +206,7 @@ resource "aws_apigatewayv2_deployment" "api" {
 
   triggers = {
     redeployment = sha1(jsonencode([
-      aws_apigatewayv2_integration.lambda,
+      aws_apigatewayv2_integration.lambda.id,
       replace(
         replace(
           file("${path.module}/api/specification.yaml"),
