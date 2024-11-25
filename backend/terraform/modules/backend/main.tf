@@ -237,7 +237,7 @@ resource "aws_apigatewayv2_stage" "lambda" {
   auto_deploy = true
 
   stage_variables = {
-    lambdaAlias = var.environment
+    lambdaAlias = "${var.environment}-v2"
   }
 
   default_route_settings {
