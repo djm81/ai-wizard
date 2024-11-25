@@ -13,11 +13,27 @@ from app.utils.logging_config import setup_logging
 logger = logging.getLogger(__name__)
 setup_logging()
 
+# Initialize default handler without stage prefix
 mangum_handler = Mangum(app)
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    """AWS Lambda handler to interface with API Gateway using Mangum."""
+    """AWS Lambda handler to interface with API Gateway using Mangum.
+
+    Args:
+        event: AWS Lambda event from API Gateway
+        context: AWS Lambda context
+
+    Returns:
+        Dict[str, Any]: Response dictionary for API Gateway
+
+    Note:
+        root_path is a valid Mangum parameter used for API Gateway stage handling
+    """
     try:
+        stage = event.get('requestContext', {}).get('stage', '')
+        # pylint: disable=unexpected-keyword-arg
+        mangum_handler = Mangum(app, root_path=f'/{stage}')
+        # pylint: enable=unexpected-keyword-arg
         response = mangum_handler(event, context)
 
         # Add correlation ID to successful responses
