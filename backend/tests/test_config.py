@@ -6,7 +6,7 @@ from app.core.config import DEFAULT_ORIGINS, Settings
 
 
 def test_settings_allowed_origins():
-    """Test ALLOWED_ORIGINS configuration"""
+    """Test ALLOWED_ORIGINS configuration with single origin"""
     # Set test environment variable
     os.environ["ALLOWED_ORIGINS"] = "http://localhost:3000"
 
@@ -17,16 +17,16 @@ def test_settings_allowed_origins():
     assert settings.ALLOWED_ORIGINS == ["http://localhost:3000"]
 
 
-def test_settings_allowed_origins_json():
-    """Test ALLOWED_ORIGINS configuration with JSON format"""
-    # Set test environment variable with JSON format
-    os.environ["ALLOWED_ORIGINS"] = '["http://localhost:3000"]'
+def test_settings_allowed_origins_multiple():
+    """Test ALLOWED_ORIGINS configuration with multiple origins"""
+    # Set test environment variable with comma-separated values
+    os.environ["ALLOWED_ORIGINS"] = "http://localhost:3000,http://example.com"
 
     # Create new settings instance
     settings = Settings()
 
     # Verify ALLOWED_ORIGINS is properly parsed
-    assert settings.ALLOWED_ORIGINS == ["http://localhost:3000"]
+    assert settings.ALLOWED_ORIGINS == ["http://localhost:3000", "http://example.com"]
 
 
 def test_settings_default_allowed_origins():
@@ -40,3 +40,15 @@ def test_settings_default_allowed_origins():
 
     # Verify default values are used
     assert settings.ALLOWED_ORIGINS == DEFAULT_ORIGINS
+
+
+def test_settings_allowed_origins_whitespace():
+    """Test ALLOWED_ORIGINS handles whitespace correctly"""
+    # Set test environment variable with whitespace
+    os.environ["ALLOWED_ORIGINS"] = " http://localhost:3000 , http://example.com "
+
+    # Create new settings instance
+    settings = Settings()
+
+    # Verify ALLOWED_ORIGINS is properly parsed with whitespace removed
+    assert settings.ALLOWED_ORIGINS == ["http://localhost:3000", "http://example.com"]
