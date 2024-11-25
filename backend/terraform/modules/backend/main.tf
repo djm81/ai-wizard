@@ -231,46 +231,40 @@ resource "aws_apigatewayv2_deployment" "api" {
 
 # API Gateway stage with logging
 resource "aws_apigatewayv2_stage" "lambda" {
-  provider    = aws.assume_role
-  api_id      = aws_apigatewayv2_api.api.id
-  name        = var.environment
+  provider      = aws.assume_role
+  api_id        = aws_apigatewayv2_api.api.id
+  name          = var.environment
   deployment_id = aws_apigatewayv2_deployment.api.id
-  auto_deploy = true
+  auto_deploy   = true
 
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.api_gw.arn
-    format = jsonencode({
-      requestId      = "$context.requestId"
-      ip             = "$context.identity.sourceIp"
-      requestTime    = "$context.requestTime"
-      httpMethod     = "$context.httpMethod"
-      routeKey       = "$context.routeKey"
-      status         = "$context.status"
-      protocol       = "$context.protocol"
-      responseLength = "$context.responseLength"
-      path           = "$context.path"
-      authorization  = "$context.authorizer.error"
-    })
-  }
-
-  default_route_settings {
-    detailed_metrics_enabled = true
-    throttling_burst_limit   = var.api_gateway_throttling_burst_limit
-    throttling_rate_limit    = var.api_gateway_throttling_rate_limit
-  }
-
+  # Add stage variables for base path mapping
   stage_variables = {
     lambdaAlias = var.environment
   }
 
+  # Add base path mapping to remove stage prefix
+  default_route_settings {
+    detailed_metrics_enabled = true
+    throttling_burst_limit  = var.api_gateway_throttling_burst_limit
+    throttling_rate_limit   = var.api_gateway_throttling_rate_limit
+  }
+
+  # Add custom domain mapping
   depends_on = [
     aws_apigatewayv2_deployment.api,
-    aws_cloudwatch_log_group.api_gw
+    aws_cloudwatch_log_group.api_gw,
+    aws_apigatewayv2_domain_name.api
   ]
+}
 
-  lifecycle {
-    create_before_destroy = true
-  }
+# API Gateway domain name with base path mapping
+resource "aws_apigatewayv2_api_mapping" "api" {
+  provider    = aws.assume_role
+  api_id      = aws_apigatewayv2_api.api.id
+  domain_name = aws_apigatewayv2_domain_name.api.id
+  stage       = aws_apigatewayv2_stage.lambda.id
+  # Add this to remove stage prefix from path
+  api_mapping_key = ""
 }
 
 # Lambda permission for API Gateway
@@ -295,14 +289,6 @@ resource "aws_apigatewayv2_domain_name" "api" {
     endpoint_type   = "REGIONAL"
     security_policy = "TLS_1_2"
   }
-}
-
-# API Gateway mapping
-resource "aws_apigatewayv2_api_mapping" "api" {
-  provider    = aws.assume_role
-  api_id      = aws_apigatewayv2_api.api.id
-  domain_name = aws_apigatewayv2_domain_name.api.id
-  stage       = aws_apigatewayv2_stage.lambda.id
 }
 
 # Backend API certificate
