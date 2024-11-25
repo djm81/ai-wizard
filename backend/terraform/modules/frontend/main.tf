@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.72"
+      source                = "hashicorp/aws"
+      version               = "~> 5.72"
       configuration_aliases = [aws.assume_role, aws.assume_role_us_east_1]
     }
   }
@@ -37,8 +37,8 @@ resource "aws_s3_bucket_policy" "frontend" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowCloudFrontServicePrincipalReadOnly"
-        Effect    = "Allow"
+        Sid    = "AllowCloudFrontServicePrincipalReadOnly"
+        Effect = "Allow"
         Principal = {
           Service = "cloudfront.amazonaws.com"
         }
@@ -102,11 +102,11 @@ resource "aws_route53_record" "cert_validation" {
 
 resource "aws_cloudfront_origin_access_control" "frontend" {
   provider                          = aws.assume_role
-  name                             = "frontend-${var.environment}-oac"
-  description                      = "Origin Access Control for ${var.domain_name}"
+  name                              = "frontend-${var.environment}-oac"
+  description                       = "Origin Access Control for ${var.domain_name}"
   origin_access_control_origin_type = "s3"
-  signing_behavior                 = "always"
-  signing_protocol                 = "sigv4"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
 }
 
 resource "aws_cloudfront_distribution" "frontend" {
@@ -185,4 +185,4 @@ resource "aws_route53_record" "frontend" {
     zone_id                = aws_cloudfront_distribution.frontend.hosted_zone_id
     evaluate_target_health = false
   }
-} 
+}

@@ -13,4 +13,4 @@ dynamodb_table_name = "ai-wizard-table"
 
 # Lambda Configuration
 database_url = "postgresql://user:pass@host:5432/dbname"
-lambda_source_code_hash = "base64_encoded_hash" 
+lambda_source_code_hash = "base64_encoded_hash"

@@ -1,6 +1,6 @@
 """projects module for AI Wizard backend."""
 
-from typing import List, Annotated
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -10,7 +10,7 @@ from app.db.database import get_db
 from app.models.user import User
 from app.schemas.ai_interaction import AIInteraction, AIInteractionCreate
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate
-from app.services.auth_service import AuthService, AuthCredentials
+from app.services.auth_service import AuthCredentials, AuthService
 from app.services.project_service import ProjectService
 
 router = APIRouter()

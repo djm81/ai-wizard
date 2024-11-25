@@ -1,7 +1,7 @@
 name: Test and Build Backend API
 
 # Ensure serial execution of this workflow across all branches/triggers
-concurrency: 
+concurrency:
   group: backend-deployment  # Remove ref to make it workflow-specific only
   cancel-in-progress: false  # Wait for running workflow to complete
 
@@ -228,7 +228,7 @@ jobs:
         aws-region: ${{ vars.TF_VAR_AWS_REGION }}
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
-  
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:

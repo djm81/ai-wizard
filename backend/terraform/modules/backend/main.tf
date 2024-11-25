@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.72"
+      source                = "hashicorp/aws"
+      version               = "~> 5.72"
       configuration_aliases = [aws.assume_role]
     }
   }
@@ -231,29 +231,39 @@ resource "aws_apigatewayv2_deployment" "api" {
 
 # API Gateway stage with logging
 resource "aws_apigatewayv2_stage" "lambda" {
-  provider      = aws.assume_role
-  api_id        = aws_apigatewayv2_api.api.id
-  name          = var.environment
-  deployment_id = aws_apigatewayv2_deployment.api.id
-  auto_deploy   = true
+  provider    = aws.assume_role
+  api_id      = aws_apigatewayv2_api.api.id
+  name        = var.environment
+  auto_deploy = true
 
-  # Add stage variables for base path mapping
   stage_variables = {
     lambdaAlias = var.environment
   }
 
-  # Add base path mapping to remove stage prefix
   default_route_settings {
     detailed_metrics_enabled = true
-    throttling_burst_limit  = var.api_gateway_throttling_burst_limit
-    throttling_rate_limit   = var.api_gateway_throttling_rate_limit
+    throttling_burst_limit   = var.api_gateway_throttling_burst_limit
+    throttling_rate_limit    = var.api_gateway_throttling_rate_limit
   }
 
-  # Add custom domain mapping
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gw.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      protocol       = "$context.protocol"
+      responseLength = "$context.responseLength"
+      path           = "$context.path"
+      authorization  = "$context.authorizer.error"
+    })
+  }
+
   depends_on = [
-    aws_apigatewayv2_deployment.api,
-    aws_cloudwatch_log_group.api_gw,
-    aws_apigatewayv2_domain_name.api
+    aws_cloudwatch_log_group.api_gw
   ]
 }
 

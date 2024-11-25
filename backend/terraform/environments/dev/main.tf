@@ -12,9 +12,9 @@ module "shared" {
 
   environment         = local.environment
   dynamodb_table_name = var.dynamodb_table_name
-  common_tags        = local.common_tags
-  aws_region         = var.aws_region
-  aws_account_id     = var.aws_account_id
+  common_tags         = local.common_tags
+  aws_region          = var.aws_region
+  aws_account_id      = var.aws_account_id
 
   providers = {
     aws.assume_role = aws.assume_role
@@ -24,15 +24,15 @@ module "shared" {
 module "backend" {
   source = "../../modules/backend"
 
-  environment                = local.environment
-  domain_name               = var.domain_name
+  environment                 = local.environment
+  domain_name                 = var.domain_name
   lambda_function_name_prefix = var.lambda_function_name_prefix
-  lambda_source_code_hash   = var.lambda_source_code_hash
-  database_url             = var.database_url
-  route53_hosted_zone_id   = var.route53_hosted_zone_id
-  common_tags             = local.common_tags
-  aws_region              = var.aws_region
-  aws_account_id          = var.aws_account_id
+  lambda_source_code_hash     = var.lambda_source_code_hash
+  database_url                = var.database_url
+  route53_hosted_zone_id      = var.route53_hosted_zone_id
+  common_tags                 = local.common_tags
+  aws_region                  = var.aws_region
+  aws_account_id              = var.aws_account_id
 
   providers = {
     aws.assume_role = aws.assume_role
@@ -44,16 +44,16 @@ module "backend" {
 module "frontend" {
   source = "../../modules/frontend"
 
-  environment          = local.environment
-  domain_name         = var.domain_name
-  frontend_bucket_name = var.frontend_bucket_name
+  environment            = local.environment
+  domain_name            = var.domain_name
+  frontend_bucket_name   = var.frontend_bucket_name
   route53_hosted_zone_id = var.route53_hosted_zone_id
-  common_tags         = local.common_tags
-  aws_region          = var.aws_region
-  aws_account_id      = var.aws_account_id
+  common_tags            = local.common_tags
+  aws_region             = var.aws_region
+  aws_account_id         = var.aws_account_id
 
   providers = {
-    aws.assume_role = aws.assume_role
+    aws.assume_role           = aws.assume_role
     aws.assume_role_us_east_1 = aws.assume_role_us_east_1
   }
-} 
+}

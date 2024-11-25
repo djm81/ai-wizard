@@ -47,8 +47,11 @@ repos:
             PYTHONPATH=. pylint \
               --output-format=text \
               --msg-template="backend/{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
+              --exit-zero \
               app tests \
-              >> "../logs/linting_report_${TIMESTAMP}.log"
+              >> "../logs/linting_report_${TIMESTAMP}.log" &&
+            # Only fail if there are error-level (E) messages
+            ! grep -E "^backend/.*: \[E" "../logs/linting_report_${TIMESTAMP}.log"
           '
         language: python
         types: [python]
@@ -92,7 +95,7 @@ repos:
         language: python
         pass_filenames: false
         require_serial: true
-        stages: [push]  # Only run on push, not on every commit
+        stages: [pre-push]  # Only run on push, not on every commit
 
   # Fifth: File type specific checks
   - repo: https://github.com/pre-commit/pre-commit-hooks

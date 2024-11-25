@@ -7,7 +7,7 @@
 graph TB
     subgraph "Terraform Modules"
         direction TB
-        
+
         subgraph "Shared Module"
             S1[VPC & Networking]
             S2[IAM Roles]
@@ -49,7 +49,7 @@ graph TB
     subgraph "Infrastructure Deployment"
         S1[Shared Infrastructure] --> B1[Backend Deployment]
         S1 --> F1[Frontend Deployment]
-        
+
         subgraph "Shared Pipeline"
             S1 --> S2[Terraform Validate]
             S2 --> S3[Plan Shared Module]
@@ -120,10 +120,10 @@ graph TB
     subgraph "Pipeline Dependencies"
         S1[Shared Infrastructure] --> |Required For| B1[Backend Pipeline]
         S1 --> |Required For| F1[Frontend Pipeline]
-        
+
         B1 --> |Independent| F1
         F1 --> |Independent| B1
-        
+
         subgraph "Validation Steps"
             V1[Terraform Validate]
             V2[Infrastructure Check]
@@ -131,7 +131,7 @@ graph TB
             V1 --> V2
             V2 --> V3
         end
-        
+
         S1 --> V1
         B1 --> V2
         F1 --> V2
@@ -143,25 +143,25 @@ graph TB
 graph TB
     subgraph "Multi-Environment Setup"
         direction TB
-        
+
         subgraph "Development"
             D1[dev.domain.com]
             D2[Lambda dev]
             D3[DynamoDB dev]
         end
-        
+
         subgraph "Testing"
             T1[test.domain.com]
             T2[Lambda test]
             T3[DynamoDB test]
         end
-        
+
         subgraph "Production"
             P1[domain.com]
             P2[Lambda prod]
             P3[DynamoDB prod]
         end
-        
+
         D1 --> T1
         T1 --> P1
         D2 --> T2

@@ -71,4 +71,4 @@ variable "lambda_timeout" {
   type        = number
   description = "Lambda function timeout in seconds"
   default     = 30
-} 
+}

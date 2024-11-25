@@ -56,4 +56,4 @@ output "api_certificate_arn" {
 output "api_certificate_validation_record_fqdns" {
   description = "List of FQDNs for the API certificate validation records"
   value       = [for record in aws_route53_record.backend_api_cert_validation : record.fqdn]
-} 
+}

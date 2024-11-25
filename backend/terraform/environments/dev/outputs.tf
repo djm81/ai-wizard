@@ -44,4 +44,4 @@ output "dynamodb_table_name" {
 output "api_gateway_cloudwatch_role_arn" {
   description = "ARN of the API Gateway CloudWatch role"
   value       = module.shared.api_gateway_cloudwatch_role_arn
-} 
+}

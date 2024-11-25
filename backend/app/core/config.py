@@ -39,7 +39,12 @@ class Settings(BaseSettings):
     ALLOW_ALL_INTERFACES: bool = False
 
     # CORS settings - Accept string input and convert to list
-    ALLOWED_ORIGINS_STR: str = Field(default=",".join(DEFAULT_ORIGINS), alias="ALLOWED_ORIGINS")
+    ALLOWED_ORIGINS_STR: str = Field(
+        default=",".join(DEFAULT_ORIGINS),
+        alias="ALLOWED_ORIGINS",
+        description="Comma-separated list of allowed origins"
+    )
+
     ALLOW_CREDENTIALS: bool = True
     ALLOW_METHODS: list[str] = ["*"]
     ALLOW_HEADERS: list[str] = ["*"]
@@ -63,18 +68,10 @@ class Settings(BaseSettings):
 
     @property
     def ALLOWED_ORIGINS(self) -> list[str]:
-        """Convert ALLOWED_ORIGINS_STR to list."""
-        if not self.ALLOWED_ORIGINS_STR:
-            return DEFAULT_ORIGINS
-
-        # Try parsing as JSON first
-        try:
-            return json.loads(self.ALLOWED_ORIGINS_STR)
-        except json.JSONDecodeError:
-            # Fall back to comma-separated string
-            return [
-                origin.strip() for origin in self.ALLOWED_ORIGINS_STR.split(",") if origin.strip()
-            ]
+        """Get list of allowed origins."""
+        if isinstance(self.ALLOWED_ORIGINS_STR, str):
+            return [origin.strip() for origin in str(self.ALLOWED_ORIGINS_STR).split(",")]
+        return DEFAULT_ORIGINS
 
     model_config = SettingsConfigDict(
         env_file=env_file,

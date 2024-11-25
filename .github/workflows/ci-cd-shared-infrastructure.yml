@@ -1,6 +1,6 @@
 name: Deploy Shared Infrastructure
 
-concurrency: 
+concurrency:
   group: shared-infrastructure
   cancel-in-progress: false
 
@@ -65,7 +65,7 @@ jobs:
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.0.0
-  
+
     - name: Terraform Init
       id: terraform_init
       run: |
@@ -75,7 +75,7 @@ jobs:
           -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
           -reconfigure
       working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
-  
+
     - name: Terraform Validate
       id: terraform_validate
       run: |

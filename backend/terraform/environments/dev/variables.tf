@@ -41,4 +41,4 @@ variable "database_url" {
 variable "lambda_source_code_hash" {
   type        = string
   description = "Base64-encoded SHA256 hash of the Lambda function source code package"
-} 
+}

@@ -184,12 +184,12 @@ jobs:
         aws-region: ${{ vars.TF_VAR_AWS_REGION }}
         role-to-assume: arn:aws:iam::${{ vars.TF_VAR_AWS_ACCOUNT_ID }}:role/AIWizardDeploymentRole
         mask-aws-account-id: 'false'
-  
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.0.0
-  
+
     - name: Terraform Init
       id: terraform_init
       run: |
@@ -199,13 +199,13 @@ jobs:
           -backend-config="region=${{ vars.TF_VAR_AWS_REGION }}" \
           -reconfigure
       working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
-  
+
     - name: Terraform Validate
       id: terraform_validate
       run: |
         terraform validate
       working-directory: backend/terraform/environments/${{ env.ENVIRONMENT }}
-    
+
   build:
     needs: [should_run, test]
     if: needs.should_run.outputs.run_deployment == 'true'

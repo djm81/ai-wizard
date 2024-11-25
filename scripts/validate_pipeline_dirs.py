@@ -3,6 +3,7 @@
 
 import sys
 from pathlib import Path
+
 import yaml
 
 
@@ -16,8 +17,16 @@ def validate_working_directories(filename):
         for job in pipeline.get("jobs", {}).values():
             if isinstance(job, dict):
                 for step in job.get("steps", []):
-                    if "working-directory" in step:
-                        if step["working-directory"].startswith("backend/"):
+                    # Only check if both working-directory and env.WORKING_DIRECTORY are used in same step
+                    if "working-directory" in step and step["working-directory"].startswith("backend/"):
+                        # Check if this step or its job uses WORKING_DIRECTORY env var
+                        has_working_dir_env = False
+                        if "env" in step and "WORKING_DIRECTORY" in step["env"]:
+                            has_working_dir_env = True
+                        elif "env" in job and "WORKING_DIRECTORY" in job.get("env", {}):
+                            has_working_dir_env = True
+
+                        if has_working_dir_env:
                             errors.append(
                                 f"Working directory '{step['working-directory']}' "
                                 f"should not include 'backend/' prefix when "

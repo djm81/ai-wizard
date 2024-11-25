@@ -66,10 +66,10 @@ def get_last_log_stream(log_group: str) -> Optional[str]:
         "--descending",
         "--output", "json"
     ])
-    
+
     if not result or not result.get("logStreams"):
         return None
-    
+
     return result["logStreams"][0]["logStreamName"]
 
 def get_log_events(log_group: str, log_stream: str) -> List[Dict]:
@@ -80,7 +80,7 @@ def get_log_events(log_group: str, log_stream: str) -> List[Dict]:
         "--log-stream-name", log_stream,
         "--output", "json"
     ])
-    
+
     return result.get("events", []) if result else []
 
 def format_log_message(message: str) -> str:
@@ -90,34 +90,34 @@ def format_log_message(message: str) -> str:
 def main() -> int:
     """Main function to check AWS log events for errors."""
     LOG_GROUP = "/aws/lambda/ai-wizard-backend-dev-v2"
-    
+
     # Get the last log stream
     logger.info("Checking log stream for errors...")
     log_stream = get_last_log_stream(LOG_GROUP)
     if not log_stream:
         logger.error("Failed to get log stream")
         return 1
-    
+
     logger.info("Checking log stream: %s", log_stream)
-    
+
     # Get log events
     events = get_log_events(LOG_GROUP, log_stream)
     logger.info("Retrieved %d log events", len(events))
-    
+
     # Filter error events
     error_events = [
-        event for event in events 
+        event for event in events
         if "[ERROR]" in event.get("message", "")
     ]
-    
+
     if not error_events:
         logger.info("No errors found")
         return 0
-    
+
     # Print error events
     print(f"\nFound {len(error_events)} error events in selected log stream:")
     print("-" * 60)
-    
+
     print_normal = False
     for event in events:
         message = event.get("message", "")
@@ -132,9 +132,9 @@ def main() -> int:
                 print("-" * 60)
             else:
                 print(format_log_message(message))
-    
+
     print(f"\nSummary: Found {len(error_events)} error events in selected log stream.")
     return 1 if error_events else 0
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())

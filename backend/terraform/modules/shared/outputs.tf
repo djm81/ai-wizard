@@ -21,4 +21,4 @@ output "api_gateway_cloudwatch_role_name" {
 output "api_gateway_service_linked_role_arn" {
   description = "ARN of the API Gateway service-linked role"
   value       = aws_iam_service_linked_role.apigw.arn
-} 
+}

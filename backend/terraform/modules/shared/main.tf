@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.72"
+      source                = "hashicorp/aws"
+      version               = "~> 5.72"
       configuration_aliases = [aws.assume_role]
     }
   }
@@ -85,4 +85,4 @@ resource "aws_iam_service_linked_role" "apigw" {
 resource "aws_api_gateway_account" "main" {
   provider            = aws.assume_role
   cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
-} 
+}

@@ -7,6 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 # Set up logging with color support
 class ColoredFormatter(logging.Formatter):
     """Custom formatter that preserves ANSI color codes."""
@@ -76,7 +77,7 @@ def run_command(cmd: list[str], cwd: str) -> bool:
 
         # Get return code
         return_code = process.wait()
-        
+
         if return_code != 0:
             logger.error("Command failed with exit code %d", return_code)
             return False
@@ -147,4 +148,4 @@ def main() -> int:
     return 0
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())
