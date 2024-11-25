@@ -19,7 +19,7 @@ from app.services.user_service import UserService
 router = APIRouter()
 
 
-@router.post("/users", response_model=User)
+@router.post("/", response_model=User)
 async def create_user(
     user: UserCreate,
     db: Session = Depends(get_db),
@@ -38,7 +38,7 @@ async def create_user(
     return user_service.create_user(db=db, user=user)
 
 
-@router.get("/users/me", response_model=User)
+@router.get("/me", response_model=User)
 async def read_users_me(
     current_user: User = Depends(AuthService.get_current_user),
     user_service: UserService = Depends(),

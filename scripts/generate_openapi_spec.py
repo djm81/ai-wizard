@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """generate_openapi_spec module for AI Wizard backend."""
 
-import os
 import sys
 from pathlib import Path
 
 import yaml
+from yaml import SafeDumper
 
 
 def generate_openapi_spec():
@@ -36,6 +36,18 @@ def generate_openapi_spec():
         print(f"Python path: {sys.path}")
         sys.exit(1)
 
+    # Define a custom string class to enforce quoting
+    class QuotedString(str):
+        """String subclass to enforce double quotes in YAML serialization."""
+        pass
+
+    # Define a custom representer for QuotedString
+    def quoted_str_representer(dumper, data):
+        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
+
+    # Register the custom representer with SafeDumper
+    yaml.add_representer(QuotedString, quoted_str_representer, Dumper=SafeDumper)
+
     # Generate OpenAPI spec with explicit version
     openapi_schema = get_openapi(
         title=settings.API_TITLE,
@@ -53,6 +65,17 @@ def generate_openapi_spec():
 
     # Collect paths that need OPTIONS methods
     options_to_add = {}
+
+    # Sanitize paths by removing trailing slashes
+    sanitized_paths = {}
+    for path, path_item in openapi_schema["paths"].items():
+        if path != "/" and path.endswith("/"):
+            new_path = path.rstrip("/")
+        else:
+            new_path = path
+        sanitized_paths[new_path] = path_item
+
+    openapi_schema["paths"] = sanitized_paths
 
     # Add integration settings to each path operation
     for path in openapi_schema["paths"]:
@@ -92,15 +115,15 @@ def generate_openapi_spec():
                         "x-amazon-apigateway-integration": {
                             "type": "mock",
                             "requestTemplates": {
-                                "application/json": "{\"statusCode\": 200}"
+                                "application/json": '{"statusCode": 200}'
                             },
                             "responses": {
                                 "default": {
                                     "statusCode": "200",
                                     "responseParameters": {
-                                        "method.response.header.Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Api-Key",
-                                        "method.response.header.Access-Control-Allow-Methods": "*",
-                                        "method.response.header.Access-Control-Allow-Origin": "*"
+                                        "method.response.header.Access-Control-Allow-Headers": QuotedString("Content-Type,Authorization,X-Amz-Date,X-Api-Key"),
+                                        "method.response.header.Access-Control-Allow-Methods": QuotedString("*"),
+                                        "method.response.header.Access-Control-Allow-Origin": QuotedString("*")
                                     },
                                     "responseTemplates": {
                                         "application/json": "{}"
@@ -124,7 +147,7 @@ def generate_openapi_spec():
     # Write specs to both locations
     for spec_path in [root_spec_path, terraform_spec_path]:
         with open(spec_path, "w") as f:
-            yaml.dump(openapi_schema, f, sort_keys=False)
+            yaml.dump(openapi_schema, f, sort_keys=False, Dumper=yaml.SafeDumper)
         print(f"OpenAPI specification written to {spec_path}")
 
 
