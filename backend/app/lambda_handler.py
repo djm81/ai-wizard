@@ -30,6 +30,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         root_path is a valid Mangum parameter used for API Gateway stage handling
     """
     try:
+        logger.info("event: %s", event)
+        logger.info("context: %s", context)
+
         stage = event.get('requestContext', {}).get('stage', '')
         # pylint: disable=unexpected-keyword-arg
         mangum_handler = Mangum(app, root_path=f'/{stage}')
