@@ -11,14 +11,15 @@ from typing import Any, Dict
 from app.core.config import settings
 
 
-def setup_logging() -> None:
+def setup_logging(service_name: str = "ai-wizard") -> None:
     """Configure logging based on environment."""
     # Create logger instance
-    logger = logging.getLogger("ai-wizard")
+    logger = logging.getLogger(service_name)
     logger.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
 
     # Clear any existing handlers
-    logger.handlers.clear()
+    if logger.hasHandlers():
+        logger.handlers.clear()
 
     # Create formatters
     if settings.IS_LAMBDA:

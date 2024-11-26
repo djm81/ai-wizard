@@ -10,9 +10,6 @@ from mangum import Mangum
 from app.main import app
 from app.utils.logging_config import setup_logging
 
-logger = logging.getLogger(__name__)
-setup_logging()
-
 # Initialize default handler without stage prefix
 mangum_handler = Mangum(app)
 
@@ -26,6 +23,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Response dictionary for API Gateway
     """
+    setup_logging()
+    logger = logging.getLogger(__name__)
+
     try:
         logger.info("event: %s", json.dumps(event, default=str))
         logger.info("context: %s", json.dumps(context, default=str))
