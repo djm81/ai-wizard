@@ -25,22 +25,30 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     Returns:
         Dict[str, Any]: Response dictionary for API Gateway
-
-    Note:
-        root_path is a valid Mangum parameter used for API Gateway stage handling
     """
     try:
-        logger.info("event: %s", event)
-        logger.info("context: %s", context)
+        logger.info("event: %s", json.dumps(event, default=str))
+        logger.info("context: %s", json.dumps(context, default=str))
 
-        stage = event.get('requestContext', {}).get('stage', '')
+        # Get stage from different possible locations
+        request_context = event.get('requestContext', {})
+        stage = request_context.get('stage', '')
+
+        # If stage is not found in requestContext, try to extract from path
+        if not stage and 'path' in event:
+            path_parts = event['path'].split('/')
+            if len(path_parts) > 1 and path_parts[1]:  # Check if path has segments
+                stage = path_parts[1]  # Extract stage from path (e.g. /dev/projects -> dev)
+
+        # Create Mangum handler with stage prefix
+        root_path = f'/{stage}' if stage else ''
         # pylint: disable=unexpected-keyword-arg
-        mangum_handler = Mangum(app, root_path=f'/{stage}')
+        mangum_handler = Mangum(app, root_path=root_path)
         # pylint: enable=unexpected-keyword-arg
+
         response = mangum_handler(event, context)
 
         # Add correlation ID to successful responses
-        request_context = event.get("requestContext", {})
         request_id = request_context.get("requestId", "unknown")
 
         if isinstance(response.get("body"), str):
