@@ -8,17 +8,9 @@ from fastapi import HTTPException
 from mangum import Mangum
 
 from app.core.config import settings
-from app.core.logging_config import logger, setup_logging
+from app.core.logging_config import logger
 from app.main import app
 
-# Initialize logging once at module load
-setup_logging()
-
-# Ensure we add the base path if we are running in Lambda
-if settings.IS_LAMBDA:
-    mangum_handler = Mangum(app, api_gateway_base_path=f"/{settings.ENVIRONMENT}")
-else:
-    mangum_handler = Mangum(app)
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """AWS Lambda handler to interface with API Gateway using Mangum.
@@ -31,8 +23,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         Dict[str, Any]: Response dictionary for API Gateway
     """
     try:
-        logger.info("event: %s", json.dumps(event, default=str))
-        logger.info("context: %s", json.dumps(context, default=str))
+        if settings.DEBUG == True:
+            logger.debug("event: %s", json.dumps(event, default=str))
+            logger.debug("context: %s", json.dumps(context, default=str))
 
         # Get stage from different possible locations
         request_context = event.get('requestContext', {})
@@ -83,3 +76,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 "X-Request-ID": event.get("requestContext", {}).get("requestId", "unknown"),
             },
         }
+
+# Ensure we add the base path if we are running in Lambda
+if settings.IS_LAMBDA:
+    mangum_handler = Mangum(app, custom_handlers=[lambda_handler], api_gateway_base_path=f"/{settings.ENVIRONMENT}")
+else:
+    mangum_handler = Mangum(app, custom_handlers=[lambda_handler])
