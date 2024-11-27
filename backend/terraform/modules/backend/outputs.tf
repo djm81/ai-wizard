@@ -3,6 +3,11 @@ output "lambda_function_name" {
   value       = aws_lambda_function.api_v2.function_name
 }
 
+output "lambda_function_version" {
+  description = "Version of the Lambda function"
+  value       = aws_lambda_function.api_v2.version
+}
+
 output "lambda_function_arn" {
   description = "ARN of the Lambda function"
   value       = aws_lambda_function.api_v2.arn
