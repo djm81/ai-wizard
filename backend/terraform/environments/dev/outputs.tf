@@ -35,6 +35,11 @@ output "lambda_function_name" {
   value       = module.backend.lambda_function_name
 }
 
+output "lambda_function_id" {
+  description = "ID of the Lambda function"
+  value       = module.backend.lambda_function_id
+}
+
 # Shared outputs
 output "dynamodb_table_name" {
   description = "Name of the DynamoDB table"

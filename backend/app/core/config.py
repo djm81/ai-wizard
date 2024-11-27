@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     OPENAPI_VERSION: str = "3.0.4"
 
     # Environment
-    ENVIRONMENT: str = "development"
+    ENVIRONMENT: str = "dev"
     PORT: int = 8000
     ALLOW_ALL_INTERFACES: bool = False
 
@@ -95,6 +95,8 @@ class Settings(BaseSettings):
                 self.OPENAI_MODEL = os.environ["OPENAI_MODEL"]
             if "OPENAI_API_KEY" in os.environ:
                 self.OPENAI_API_KEY = SecretStr(os.environ["OPENAI_API_KEY"])
+            if "ENVIRONMENT" in os.environ:
+                self.ENVIRONMENT = os.environ["ENVIRONMENT"]
 
 
 # Initialize settings

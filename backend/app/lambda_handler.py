@@ -23,24 +23,19 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         Dict[str, Any]: Response dictionary for API Gateway
     """
     try:
-        if settings.DEBUG == True:
-            logger.debug("event: %s", json.dumps(event, default=str))
-            logger.debug("context: %s", json.dumps(context, default=str))
+        logger.info("event: %s", json.dumps(event, default=str))
+        logger.info("context: %s", json.dumps(context, default=str))
 
-        # Get stage from different possible locations
-        request_context = event.get('requestContext', {})
-        stage = request_context.get('stage', '')
-
-        # If stage is not found in requestContext, try to extract from path
-        if not stage and 'path' in event:
-            path_parts = event['path'].split('/')
-            if len(path_parts) > 1 and path_parts[1]:  # Check if path has segments
-                stage = path_parts[1]  # Extract stage from path (e.g. /dev/projects -> dev)
+        if settings.IS_LAMBDA:
+            asgi_handler = Mangum(app, api_gateway_base_path=f"/{settings.ENVIRONMENT}")
+        else:
+            asgi_handler = Mangum(app)
 
         # Note: Since Mangum is already instantiated, avoid re-instantiating it here
-        response = mangum_handler(event, context)
+        response = asgi_handler(event, context)
 
         # Add correlation ID to successful responses
+        request_context = event.get('requestContext', {})
         request_id = request_context.get("requestId", "unknown")
 
         if isinstance(response.get("body"), str):
@@ -76,9 +71,3 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 "X-Request-ID": event.get("requestContext", {}).get("requestId", "unknown"),
             },
         }
-
-# Ensure we add the base path if we are running in Lambda
-if settings.IS_LAMBDA:
-    mangum_handler = Mangum(app, custom_handlers=[lambda_handler], api_gateway_base_path=f"/{settings.ENVIRONMENT}")
-else:
-    mangum_handler = Mangum(app, custom_handlers=[lambda_handler])

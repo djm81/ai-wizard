@@ -14,7 +14,7 @@ resource "aws_lambda_function" "api_v2" {
   filename         = "${path.module}/lambda/lambda_package.zip"
   function_name    = "${var.lambda_function_name_prefix}-${var.environment}-v2"
   role             = aws_iam_role.lambda_exec.arn
-  handler          = "app.lambda_handler.mangum_handler"
+  handler          = "app.lambda_handler.lambda_handler"
   runtime          = "python3.12"
   source_code_hash = var.lambda_source_code_hash
   publish          = true
@@ -26,6 +26,7 @@ resource "aws_lambda_function" "api_v2" {
       STAGE           = var.environment
       DATABASE_URL    = var.database_url
       ALLOWED_ORIGINS = "https://${var.domain_name},https://api.${var.domain_name}"
+      ENVIRONMENT     = var.environment
     }
   }
 
