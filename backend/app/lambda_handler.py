@@ -7,11 +7,18 @@ from typing import Any, Dict
 from fastapi import HTTPException
 from mangum import Mangum
 
+from app.core.config import settings
+from app.core.logging_config import logger, setup_logging
 from app.main import app
-from app.utils.logging_config import setup_logging
 
-# Initialize default handler without stage prefix
-mangum_handler = Mangum(app)
+# Initialize logging once at module load
+setup_logging()
+
+# Ensure we add the base path if we are running in Lambda
+if settings.IS_LAMBDA:
+    mangum_handler = Mangum(app, api_gateway_base_path=f"/{settings.ENVIRONMENT}")
+else:
+    mangum_handler = Mangum(app)
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """AWS Lambda handler to interface with API Gateway using Mangum.
@@ -23,9 +30,6 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Response dictionary for API Gateway
     """
-    setup_logging()
-    logger = logging.getLogger(__name__)
-
     try:
         logger.info("event: %s", json.dumps(event, default=str))
         logger.info("context: %s", json.dumps(context, default=str))
@@ -40,12 +44,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             if len(path_parts) > 1 and path_parts[1]:  # Check if path has segments
                 stage = path_parts[1]  # Extract stage from path (e.g. /dev/projects -> dev)
 
-        # Create Mangum handler with stage prefix
-        root_path = f'/{stage}' if stage else ''
-        # pylint: disable=unexpected-keyword-arg
-        mangum_handler = Mangum(app, root_path=root_path)
-        # pylint: enable=unexpected-keyword-arg
-
+        # Note: Since Mangum is already instantiated, avoid re-instantiating it here
         response = mangum_handler(event, context)
 
         # Add correlation ID to successful responses

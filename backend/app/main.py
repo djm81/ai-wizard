@@ -8,9 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import router
 from app.core.config import settings
 from app.core.firebase import initialize_firebase
+from app.core.logging_config import logger
 from app.db.database import setup_database
 from app.db.init_db import init_db
-from app.utils.logging_config import logger
 
 # Initialize Firebase Admin SDK
 initialize_firebase()
