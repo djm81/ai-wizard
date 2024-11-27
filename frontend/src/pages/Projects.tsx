@@ -69,16 +69,22 @@ const Projects: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      console.log('Creating project with name:', newProjectName);
       const projectData: ProjectCreate = {
-        name: newProjectName,
+        name: newProjectName.trim(),
         description: ''
       };
+
+      console.log('Attempting to create project:', projectData);
+
       const newProject = await createProject(projectData);
+      console.log('Project created successfully:', newProject);
+
       setProjects(prev => [...prev, newProject]);
       setNewProjectName('');
     } catch (err) {
-      setError('Failed to create project');
-      console.error('Error creating project:', err);
+      console.error('Failed to create project:', err);
+      setError('Failed to create project. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

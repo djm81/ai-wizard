@@ -33,12 +33,23 @@ export const useProjects = () => {
 
   const createProject = async (project: ProjectCreate): Promise<Project> => {
     try {
-      return await apiCall(`${API_URL}/projects/`, {
+      console.log('Making POST request to create project:', project);
+      const response = await apiCall(`${API_URL}/projects/`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         data: project,
       });
+      console.log('Create project response:', response);
+      return response;
     } catch (error) {
       console.error('Error creating project:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
       throw error;
     }
   };
@@ -82,18 +93,25 @@ export const useAIInteractions = () => {
     }
   };
 
-  const createInteraction = async (
-    projectId: number,
-    interaction: AIInteractionCreate
-  ): Promise<AIInteraction> => {
+  const createInteraction = async (projectId: number, interaction: AIInteractionCreate): Promise<AIInteraction> => {
     try {
-      // Validate the interaction data before sending
-      const validatedData = aiInteractionSchema.parse(interaction);
+      // Validate the interaction data
+      const validationResult = aiInteractionSchema.safeParse(interaction);
+      if (!validationResult.success) {
+        const errorMessage = validationResult.error.errors.map(e => e.message).join(', ');
+        console.error('Validation error:', errorMessage);
+        throw new Error(errorMessage);
+      }
 
-      return await apiCall(`${API_URL}/projects/${projectId}/ai-interactions/`, {
+      const response = await apiCall(`${API_URL}/projects/${projectId}/ai-interactions/`, {
         method: 'POST',
-        data: validatedData,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        data: interaction,
       });
+      return response;
     } catch (error) {
       if (error instanceof z.ZodError) {
         // Handle validation errors
@@ -102,9 +120,6 @@ export const useAIInteractions = () => {
         throw new Error(errorMessage);
       }
       console.error('Error creating AI interaction:', error);
-      if (axios.isAxiosError(error) && error.response) {
-        console.error('Response data:', error.response.data);
-      }
       throw error;
     }
   };

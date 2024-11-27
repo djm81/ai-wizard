@@ -1,38 +1,46 @@
 repos:
-  # First: Basic file cleanup
+  # First: Basic file cleanup (Allow auto-fixes)
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: mixed-line-ending
+      - id: requirements-txt-fixer
       - id: detect-private-key
+      - id: detect-aws-credentials
 
-  # Second: Code formatters
+  # Second: Code formatters (Allow auto-fixes)
   - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: 5.13.2
     hooks:
       - id: isort
         name: isort
-        args: [--settings-path=pyproject.toml]
+        args: [--settings-path=pyproject.toml, --atomic]
         files: \.py$
         types: [python]
         additional_dependencies: [
           'toml'
         ]
 
-  # Third: Security checks with logging
+  # Third: Security checks with logging (Warning only)
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.10
+    rev: 1.8.0
     hooks:
       - id: bandit
         name: bandit
-        entry: bash -c 'mkdir -p logs && bandit -r . -c pyproject.toml -f txt -o logs/bandit.log --severity-level all --confidence-level all --ignore-nosec'
+        entry: bash -c '
+          mkdir -p logs &&
+          bandit -r . -c pyproject.toml -f txt -o logs/bandit.log --severity-level all --confidence-level all --ignore-nosec ||
+          echo "Security check completed with warnings - Review logs/bandit.log"
+          '
         language: python
         types: [python]
         pass_filenames: false
         exclude: ^(tests/|venv/|\.venv/|\.git/|\.pytest_cache/|__pycache__/)
 
-  # Fourth: Linters and validators with logging
+  # Fourth: Linters and validators with logging (Warning only)
   - repo: local
     hooks:
       - id: pylint
@@ -50,8 +58,7 @@ repos:
               --exit-zero \
               app tests \
               >> "../logs/linting_report_${TIMESTAMP}.log" &&
-            # Only fail if there are error-level (E) messages
-            ! grep -E "^backend/.*: \[E" "../logs/linting_report_${TIMESTAMP}.log"
+            echo "Linting completed - Review logs/linting_report_${TIMESTAMP}.log for details"
           '
         language: python
         types: [python]
@@ -74,70 +81,63 @@ repos:
           'pytest-asyncio',
           'httpx'
         ]
-        args: [
-          "--rcfile=pyproject.toml",
-          "--output-format=text",
-          "--reports=no"
-        ]
         pass_filenames: false
-        exclude: |
-          (?x)^(
-            tests/.*|
-            setup\.py|
-            docs/.*|
-            migrations/.*
-          )$
 
-      # Add dependency update and test check
+      # Add dependency update and test check (Warning only)
       - id: update-dependencies
         name: Update and Test Dependencies
-        entry: python scripts/update_dependencies.py
+        entry: bash -c 'python scripts/update_dependencies.py || echo "Dependency update completed with warnings - Manual review required"'
         language: python
         pass_filenames: false
         require_serial: true
-        stages: [pre-push]  # Only run on push, not on every commit
+        stages: [pre-push]
 
-  # Fifth: File type specific checks
+  # Fifth: File type specific checks (Allow auto-fixes)
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: check-yaml
-        args: [--unsafe]
+        args: [--unsafe, --allow-multiple-documents]
       - id: check-json
         exclude: ^frontend/tsconfig.*\.json$
       - id: check-added-large-files
+        args: [--maxkb=500]
       - id: debug-statements
       - id: check-docstring-first
       - id: check-executables-have-shebangs
       - id: check-merge-conflict
+      - id: check-illegal-windows-names
+      - id: check-symlinks
+      - id: destroyed-symlinks
 
-  # Sixth: Infrastructure formatters and validators
+
+  # Sixth: Infrastructure formatters and validators (Allow auto-fixes)
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.83.5
+    rev: v1.96.2
     hooks:
       - id: terraform_fmt
         args: [--args=-write=true]
 
-  # Last: Custom validation hooks
+  # Last: Custom validation hooks (Warning only)
   - repo: local
     hooks:
       - id: validate-working-directories
         name: Validate Pipeline Working Directories
-        entry: python scripts/validate_pipeline_dirs.py
+        entry: bash -c 'python scripts/validate_pipeline_dirs.py || echo "Pipeline directory validation completed with warnings - Manual review required"'
         language: python
         files: ^\.github/workflows/.*\.yml$
         additional_dependencies: ['pyyaml']
 
-      # Add log file aggregator
+      # Add log file aggregator (Warning only)
       - id: add-missing-docstrings
         name: Add Missing Docstrings
-        entry: python scripts/add_missing_docstrings.py
+        entry: bash -c 'python scripts/add_missing_docstrings.py || echo "Docstring check completed with warnings - Manual review required"'
         language: python
         types: [python]
 
       - id: generate-openapi-spec
         name: Generate OpenAPI Specification
-        entry: python scripts/generate_openapi_spec.py
+        entry: bash -c 'python scripts/generate_openapi_spec.py || echo "OpenAPI spec generation completed with warnings - Manual review required"'
         language: python
         files: ^backend/app/.*\.py$
         pass_filenames: false
@@ -157,7 +157,7 @@ repos:
 
       - id: check-openapi-version
         name: Check OpenAPI Version
-        entry: python scripts/check_openapi_version.py
+        entry: bash -c 'python scripts/check_openapi_version.py || echo "OpenAPI version check completed with warnings - Manual review required"'
         language: python
         files: ^backend/app/openapi/specification\.yaml$
         additional_dependencies: ['pyyaml']

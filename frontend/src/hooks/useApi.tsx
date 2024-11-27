@@ -13,19 +13,21 @@ export const useApi = () => {
   const apiCall = async (url: string, options: ApiCallOptions = {}) => {
     try {
       const token = await getAuthToken();
-      const config: AxiosRequestConfig = {
+      console.log('Making API call to:', url, 'with method:', options.method || 'GET');
+
+      const response = await axios({
         url,
         method: options.method || 'GET',
         headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          ...options.headers,
+          ...(options.headers || {})
         },
         data: options.data,
-        withCredentials: true, // Enable sending cookies and auth headers
-      };
+        withCredentials: true
+      });
 
-      const response = await axios(config);
+      console.log('API response:', response.status, response.data);
       return response.data;
     } catch (error) {
       console.error('API call error:', error);

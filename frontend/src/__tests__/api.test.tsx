@@ -60,6 +60,10 @@ describe('API hooks', () => {
 
       expect(mockApiCall).toHaveBeenCalledWith(`${ENV.PUBLIC_API_URL}/projects/`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         data: projectData,
       });
     });
@@ -94,7 +98,7 @@ describe('API hooks', () => {
 
     test('createInteraction validates minimum prompt length', async () => {
       const { createInteraction } = useAIInteractions();
-      const shortPrompt = { prompt: 'Short' }; // Less than 10 characters
+      const shortPrompt: AIInteractionCreate = { prompt: 'Short' }; // Less than 10 characters
 
       await expect(createInteraction(projectId, shortPrompt)).rejects.toThrow(
         'Prompt must be at least 10 characters long'
@@ -103,7 +107,7 @@ describe('API hooks', () => {
 
     test('createInteraction validates maximum prompt length', async () => {
       const { createInteraction } = useAIInteractions();
-      const longPrompt = { prompt: 'a'.repeat(1001) }; // More than 1000 characters
+      const longPrompt: AIInteractionCreate = { prompt: 'a'.repeat(1001) }; // More than 1000 characters
 
       await expect(createInteraction(projectId, longPrompt)).rejects.toThrow(
         'Prompt must not exceed 1000 characters'
@@ -112,7 +116,7 @@ describe('API hooks', () => {
 
     test('createInteraction calls apiCall with valid data', async () => {
       const { createInteraction } = useAIInteractions();
-      const validInteractionData = {
+      const validInteractionData: AIInteractionCreate = {
         prompt: 'This is a valid prompt with more than 10 characters'
       };
 
@@ -122,6 +126,10 @@ describe('API hooks', () => {
         `${ENV.PUBLIC_API_URL}/projects/${projectId}/ai-interactions/`,
         {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
           data: validInteractionData,
         }
       );
