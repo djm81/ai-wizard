@@ -1,14 +1,18 @@
 """conftest module for AI Wizard backend."""
 
+import logging
 import os
 from typing import Generator
+from unittest.mock import MagicMock, patch
 
 import pytest
+import structlog
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
+from app.core.logging_config import logger
 from app.db.database import get_db
 from app.main import app
 from app.models.ai_interaction import AIInteraction
@@ -137,6 +141,51 @@ def ai_service(db_session):
     service.client = None  # Will be mocked in individual tests
     service.model = "test-model"
     return service
+
+
+@pytest.fixture
+def test_client():
+    return TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def mock_logger():
+    """Mock logger to prevent actual logging during tests"""
+    with patch('app.core.logging_config.logger', autospec=True) as mock_log:
+        # Create a proper structlog-like mock
+        mock_log.info = MagicMock()
+        mock_log.error = MagicMock()
+        mock_log.debug = MagicMock()
+        mock_log.warning = MagicMock()
+        mock_log.bind = MagicMock(return_value=mock_log)
+
+        # Make the mock return itself for method chaining
+        mock_log.bind.return_value = mock_log
+        mock_log.new.return_value = mock_log
+
+        # Ensure the mock is used throughout the test
+        with patch('app.api.endpoints.logs.logger', mock_log), \
+             patch('app.middleware.logging.logger', mock_log):
+            yield mock_log
+
+
+@pytest.fixture(autouse=True)
+def mock_logging_middleware():
+    """Mock the logging middleware to prevent actual logging during tests"""
+    with patch('app.middleware.logging.logger') as mock_log:
+        # Create a proper structlog-like mock
+        mock_log = MagicMock()
+        mock_log.info = MagicMock()
+        mock_log.error = MagicMock()
+        mock_log.debug = MagicMock()
+        mock_log.warning = MagicMock()
+        mock_log.bind = MagicMock(return_value=mock_log)
+
+        # Make the mock return itself for method chaining
+        mock_log.bind.return_value = mock_log
+        mock_log.new.return_value = mock_log
+
+        yield mock_log
 
 
 # ruff: noqa: B101

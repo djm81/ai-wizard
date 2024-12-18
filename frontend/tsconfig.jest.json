@@ -1,18 +1,33 @@
 {
     "extends": "./tsconfig.json",
     "compilerOptions": {
-      "module": "ES2022",
-      "moduleResolution": "node",
+      "module": "es2022",
+      "target": "es2022",
       "jsx": "react-jsx",
       "esModuleInterop": true,
-      "allowSyntheticDefaultImports": true,
+      "allowJs": true,
+      "moduleResolution": "node",
       "isolatedModules": true,
-      "types": ["jest", "node", "@testing-library/jest-dom"],
+      "allowSyntheticDefaultImports": true,
+      "strict": true,
+      "types": [
+        "jest",
+        "node",
+        "@testing-library/jest-dom"
+      ],
+      "baseUrl": ".",
       "paths": {
-        "config": ["config.tsx"],
-        "auth/*": ["auth/*"],
-        "jest.setup": ["jest.setup.ts"]
+        "@/*": ["src/*"],
+        "config": ["src/config"],
+        "auth/*": ["src/auth/*"],
+        "hooks/*": ["src/hooks/*"],
+        "services/*": ["src/services/*"]
       }
     },
-    "include": ["src", "src/globals.d.ts", "src/jest.setup.ts"]
-  }
+    "include": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.jsx"
+    ]
+}

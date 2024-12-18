@@ -1,14 +1,11 @@
-import type { Auth, User as FirebaseUser, NextOrObserver, Unsubscribe } from 'firebase/auth';
+import { jest } from '@jest/globals';
+import type { GoogleAuthAPI, GoogleTokenClient, GoogleOAuthResponse } from '../../types/google-auth';
+import type { MockFirebaseUser, MockAuthState, IdTokenResult } from '../../types/firebase-auth';
 import type { User } from '../../types/auth';
+import { mockApp } from '../firebase/app';
 
-// Define the Google OAuth response type
-interface GoogleOAuthResponse {
-  access_token?: string;
-  error?: string;
-}
-
-// Create mock Firebase user
-export const mockFirebaseUser: FirebaseUser = {
+// Create the complete mock user
+export const mockUser: MockFirebaseUser = {
   uid: 'test-uid',
   email: 'test@example.com',
   displayName: 'Test User',
@@ -31,8 +28,8 @@ export const mockFirebaseUser: FirebaseUser = {
   tenantId: null,
   phoneNumber: null,
   providerId: 'google.com',
-  getIdToken: jest.fn().mockResolvedValue('mock-id-token'),
-  getIdTokenResult: jest.fn().mockResolvedValue({
+  getIdToken: jest.fn(() => Promise.resolve('mock-id-token')),
+  getIdTokenResult: jest.fn(() => Promise.resolve({
     token: 'mock-id-token',
     authTime: new Date().toISOString(),
     issuedAtTime: new Date().toISOString(),
@@ -40,172 +37,92 @@ export const mockFirebaseUser: FirebaseUser = {
     signInProvider: 'google.com',
     claims: {},
     signInSecondFactor: null
-  }),
-  reload: jest.fn().mockResolvedValue(undefined),
-  delete: jest.fn().mockResolvedValue(undefined),
-  toJSON: jest.fn().mockReturnValue({})
+  })),
+  delete: jest.fn(() => Promise.resolve()),
+  reload: jest.fn(() => Promise.resolve()),
+  toJSON: jest.fn(() => ({}))
 };
 
-// Create mock auth user
-export const mockAuthUser: User = {
-  displayName: mockFirebaseUser.displayName,
-  email: mockFirebaseUser.email,
-  photoURL: mockFirebaseUser.photoURL,
-  uid: mockFirebaseUser.uid
-};
+// Export the auth state manager
+export class AuthStateManager {
+  private static instance: AuthStateManager;
+  private currentUser: MockFirebaseUser | null = null;
+  private listeners = new Set<(user: MockFirebaseUser | null) => void>();
 
-// Create auth mock instance with proper state management
-const createAuthMock = () => {
-  let internalCurrentUser: FirebaseUser | null = null;
-  let isLoading = true;
-  const listeners: Array<NextOrObserver<FirebaseUser | null>> = [];
+  private constructor() {}
 
-  const notifyListeners = (user: FirebaseUser | null, loading?: boolean) => {
-    if (loading !== undefined) {
-      isLoading = loading;
+  static getInstance(): AuthStateManager {
+    if (!AuthStateManager.instance) {
+      AuthStateManager.instance = new AuthStateManager();
     }
-    listeners.forEach(listener => {
-      if (typeof listener === 'function') {
-        listener(user);
-      } else {
-        listener.next?.(user);
-      }
-    });
-  };
+    return AuthStateManager.instance;
+  }
 
-  return {
-    auth: {
-      get currentUser() {
-        return internalCurrentUser;
-      },
-      get loading() {
-        return isLoading;
-      },
-      onAuthStateChanged: jest.fn((nextOrObserver: NextOrObserver<FirebaseUser | null>): Unsubscribe => {
-        listeners.push(nextOrObserver);
+  getCurrentUser(): MockFirebaseUser | null {
+    return this.currentUser;
+  }
 
-        // First notify with initial state (loading: true)
-        if (typeof nextOrObserver === 'function') {
-          nextOrObserver(null);
-        } else {
-          nextOrObserver.next?.(null);
-        }
+  updateUser(user: MockFirebaseUser | null): void {
+    this.currentUser = user;
+    this.notifyListeners();
+  }
 
-        // Ensure loading state change is synchronous for tests
-        isLoading = false;
-        if (typeof nextOrObserver === 'function') {
-          nextOrObserver(internalCurrentUser);
-        } else {
-          nextOrObserver.next?.(internalCurrentUser);
-        }
+  addListener(listener: (user: MockFirebaseUser | null) => void): () => void {
+    this.listeners.add(listener);
+    listener(this.currentUser);
+    return () => this.listeners.delete(listener);
+  }
 
-        return () => {
-          const index = listeners.indexOf(nextOrObserver);
-          if (index > -1) listeners.splice(index, 1);
-        };
-      }),
-      signOut: jest.fn().mockImplementation((): Promise<void> => {
-        internalCurrentUser = null;
-        notifyListeners(null, false);
-        return Promise.resolve();
-      }),
-      updateCurrentUser: jest.fn().mockImplementation((user: FirebaseUser | null): Promise<void> => {
-        internalCurrentUser = user;
-        notifyListeners(internalCurrentUser, false);
-        return Promise.resolve();
-      })
-    } as Partial<Auth>
-  };
+  private notifyListeners(): void {
+    this.listeners.forEach(listener => listener(this.currentUser));
+  }
+
+  reset(): void {
+    this.currentUser = null;
+    this.listeners.clear();
+  }
+}
+
+export const authState = AuthStateManager.getInstance();
+
+// Export the mock auth
+export const mockAuth = {
+  app: mockApp,
+  currentUser: authState.getCurrentUser(),
+  onAuthStateChanged: authState.addListener.bind(authState),
+  signOut: jest.fn(() => {
+    authState.updateUser(null);
+    return Promise.resolve();
+  })
 };
 
-// Create a single instance of auth mock
-export const authMock = createAuthMock();
+// Export the Google Provider
+export const GoogleAuthProvider = {
+  credential: jest.fn(() => ({
+    providerId: 'google.com',
+    signInMethod: 'google.com'
+  }))
+};
 
-// Mock Firebase Auth module
-jest.mock('firebase/auth', () => ({
-  getAuth: jest.fn(() => authMock.auth),
-  signInWithCredential: jest.fn().mockResolvedValue({ user: mockFirebaseUser }),
-  onAuthStateChanged: jest.fn((auth, callback) => {
-    // Use the same auth mock instance
-    return auth.onAuthStateChanged(callback);
-  }),
-  signOut: jest.fn().mockResolvedValue(undefined),
-  GoogleAuthProvider: {
-    PROVIDER_ID: 'google.com',
-    credential: jest.fn(() => ({
-      providerId: 'google.com',
-      signInMethod: 'google.com',
-      toJSON: () => ({
-        providerId: 'google.com',
-        signInMethod: 'google.com',
-        accessToken: 'mock_token'
-      })
-    }))
-  }
-}));
+// Export converted user for auth context
+export const mockAuthUser: User = {
+  displayName: mockUser.displayName,
+  email: mockUser.email,
+  photoURL: mockUser.photoURL,
+  uid: mockUser.uid
+};
 
-// Mock Google Identity Services
+// Export Google mock
 export const googleAuthMock: GoogleAuthAPI = {
   accounts: {
     oauth2: {
-      initTokenClient: jest.fn().mockReturnValue({
-        requestAccessToken: jest.fn(() => {
-          return { access_token: 'mock_token' };
-        })
-      }),
+      initTokenClient: jest.fn((config) => ({
+        requestAccessToken: jest.fn(() => Promise.resolve({ access_token: 'mock_token' }))
+      })),
       revoke: jest.fn()
     }
   }
 };
 
-// Export mock functions
-export const mockFunctions = {
-  signInWithGoogle: jest.fn().mockImplementation(async () => {
-    // First simulate the OAuth flow
-    const tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: 'test-client-id',
-      scope: 'email profile',
-      callback: (response: GoogleOAuthResponse) => {}
-    });
-
-    // Then simulate token request
-    const { access_token } = await tokenClient.requestAccessToken();
-
-    // Then proceed with Firebase auth
-    const { getAuth, GoogleAuthProvider, signInWithCredential } = require('firebase/auth');
-    const credential = GoogleAuthProvider.credential(null, access_token);
-    const { user } = await signInWithCredential(getAuth(), credential);
-
-    if (authMock.auth?.updateCurrentUser) {
-      await authMock.auth.updateCurrentUser(user);
-    }
-
-    return convertFirebaseUserToUser(user);
-  }),
-  signOut: jest.fn().mockImplementation(async () => {
-    const { getAuth, signOut } = require('firebase/auth');
-    const auth = getAuth();
-    await signOut(auth);
-    window.google?.accounts?.oauth2?.revoke('mock_token', () => {});
-  }),
-  initializeGoogleAuth: jest.fn().mockResolvedValue(undefined),
-  getIdToken: jest.fn().mockResolvedValue('mock-token')
-};
-
-// Helper function to convert Firebase user to our User type
-function convertFirebaseUserToUser(firebaseUser: FirebaseUser): User {
-  return {
-    displayName: firebaseUser.displayName,
-    email: firebaseUser.email,
-    photoURL: firebaseUser.photoURL,
-    uid: firebaseUser.uid
-  };
-}
-
-// Setup global mocks
-(global as any).mockFirebaseUser = mockFirebaseUser;
-Object.defineProperty(window, 'google', {
-  value: googleAuthMock,
-  writable: true,
-  configurable: true
-});
+// Add mockFirebaseUser export
+export { mockUser as mockFirebaseUser };

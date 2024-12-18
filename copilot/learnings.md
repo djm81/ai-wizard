@@ -288,3 +288,55 @@ To maintain consistent import ordering across the codebase:
 3. First party imports (from app.*)
 
 This is enforced by isort and pylint configurations in pyproject.toml.
+
+## Jest Environment Web APIs
+
+### Error
+When using Firebase Auth in Jest tests, errors like "TextEncoder is not defined" or "ReadableStream is not defined" occur because Node.js environment lacks web APIs.
+
+### Root Cause
+1. Jest runs in Node.js environment which doesn't have web APIs by default
+2. Firebase Auth requires web APIs like TextEncoder and ReadableStream
+3. JSDOM provides some web APIs but not all
+4. Mixing Node.js and web APIs can cause type conflicts
+
+### Solution
+1. Use JSDOM's built-in web APIs where available (Blob, FormData)
+2. Import Node.js implementations for missing APIs (ReadableStream)
+3. Create proper type definitions for global objects
+4. Use custom wrapper classes to handle type incompatibilities
+
+### Prevention
+When setting up Jest with web APIs:
+1. Always check which APIs are provided by JSDOM
+2. Create proper type definitions in a separate .d.ts file
+3. Use custom wrapper classes for incompatible APIs
+4. Document web API requirements in test setup
+5. Consider using web-streams-polyfill for better compatibility
+
+Example pattern:
+```typescript
+// In test-env.d.ts
+declare global {
+  var TextEncoder: {
+    new (): TextEncoder;
+    prototype: TextEncoder;
+  };
+}
+
+// In jest.setup.ts
+import { TextEncoder as NodeTextEncoder } from 'util';
+
+class CustomTextEncoder extends NodeTextEncoder {
+  encode(input?: string): Uint8Array {
+    return super.encode(input);
+  }
+}
+
+global.TextEncoder = CustomTextEncoder as any;
+```
+
+## Jest Environment and Import.meta Resolution
+
+### Error
+When testing modules that use `import.meta.env`, Jest tests fail with:

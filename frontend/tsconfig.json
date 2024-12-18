@@ -14,11 +14,24 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": "src",
+    "baseUrl": ".",
     "paths": {
-      "config": ["config.tsx"],
-      "auth/*": ["auth/*"]
-    }
+      "@/*": ["src/*"],
+      "config": ["src/config.ts"],
+      "auth/*": ["src/auth/*"],
+      "__mocks__/*": ["src/__mocks__/*"]
+    },
+    "types": ["jest", "node", "@testing-library/jest-dom"],
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ]
   },
-  "include": ["src", "src/globals.d.ts", "rsbuild.config.ts"]
+  "include": [
+    "src",
+    "src/env.d.ts",
+    "src/globals.d.ts",
+    "rsbuild.config.ts",
+    "cypress/**/*.ts"
+  ]
 }

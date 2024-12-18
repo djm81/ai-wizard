@@ -241,6 +241,7 @@ jobs:
         PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
         PUBLIC_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}
         PUBLIC_API_URL=https://api.${{ env.DOMAIN_NAME }}
+        PUBLIC_ENVIRONMENT=${{ env.ENVIRONMENT }}
         EOL
       working-directory: ${{ env.WORKING_DIRECTORY }}
 

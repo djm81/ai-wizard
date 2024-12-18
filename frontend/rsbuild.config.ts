@@ -11,7 +11,6 @@ export default defineConfig({
       '/api': 'http://localhost:8000',
     },
   },
-  // Add this section to explicitly define environment variables
   source: {
     define: {
       'import.meta.env.PUBLIC_FIREBASE_API_KEY': JSON.stringify(process.env.PUBLIC_FIREBASE_API_KEY),
@@ -22,6 +21,7 @@ export default defineConfig({
       'import.meta.env.PUBLIC_FIREBASE_APP_ID': JSON.stringify(process.env.PUBLIC_FIREBASE_APP_ID),
       'import.meta.env.PUBLIC_GOOGLE_CLIENT_ID': JSON.stringify(process.env.PUBLIC_GOOGLE_CLIENT_ID),
       'import.meta.env.PUBLIC_API_URL': JSON.stringify(process.env.PUBLIC_API_URL),
+      'import.meta.env.PUBLIC_ENVIRONMENT': JSON.stringify(process.env.PUBLIC_ENVIRONMENT || 'development'),
     },
   },
 });

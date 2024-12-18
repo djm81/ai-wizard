@@ -248,18 +248,26 @@ resource "aws_apigatewayv2_stage" "lambda" {
   }
 
   access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.api_gw.arn
+    destination_arn = aws_cloudwatch_log_group.api_logs.arn
     format = jsonencode({
-      requestId      = "$context.requestId"
-      ip             = "$context.identity.sourceIp"
-      requestTime    = "$context.requestTime"
-      httpMethod     = "$context.httpMethod"
-      routeKey       = "$context.routeKey"
-      status         = "$context.status"
-      protocol       = "$context.protocol"
-      responseLength = "$context.responseLength"
-      path           = "$context.path"
-      authorization  = "$context.authorizer.error"
+      requestId            = "$context.requestId"
+      sourceIp             = "$context.identity.sourceIp"
+      requestTime          = "$context.requestTime"
+      protocol             = "$context.protocol"
+      httpMethod           = "$context.httpMethod"
+      resourcePath         = "$context.resourcePath"
+      routeKey             = "$context.routeKey"
+      status               = "$context.status"
+      responseLength       = "$context.responseLength"
+      integrationError     = "$context.integration.error"
+      integrationStatus    = "$context.integration.status"
+      integrationLatency   = "$context.integration.latency"
+      integrationRequestId = "$context.integration.requestId"
+      xrayTraceId          = "$context.xrayTraceId"
+      responseLatency      = "$context.responseLatency"
+      authorizer           = "$context.authorizer.error"
+      authorizerLatency    = "$context.authorizer.latency"
+      authorizerStatus     = "$context.authorizer.status"
     })
   }
 

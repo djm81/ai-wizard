@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useProjects } from '../api';
 import { Project, ProjectCreate } from '../types/project';
 import {
@@ -15,23 +15,51 @@ import {
   DialogActions,
   Typography,
   Paper,
-  DialogContentText
+  DialogContentText,
+  CircularProgress,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import { Link } from 'react-router-dom';
+import type { ApiResponse } from '../types/api';
+
+interface ApiError {
+  message: string;
+  code?: string;
+  details?: unknown;
+}
 
 const Projects: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [newProjectName, setNewProjectName] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { getProjects, createProject, deleteProject } = useProjects();
+  const projectsApi = useProjects();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   // Validation state
   const isValidProjectName = newProjectName.trim().length >= 3;
+
+  const handleError = useCallback((error: unknown, context: string) => {
+    console.error(`Error in ${context}:`, error);
+    const apiError: ApiError = {
+      message: 'An unexpected error occurred',
+      details: error
+    };
+
+    if (error instanceof Error) {
+      apiError.message = error.message;
+    } else if (typeof error === 'string') {
+      apiError.message = error;
+    }
+
+    setError(apiError);
+    setSnackbarOpen(true);
+  }, []);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -40,14 +68,13 @@ const Projects: React.FC = () => {
     const fetchProjects = async () => {
       try {
         setError(null);
-        const data = await getProjects();
+        const data = await projectsApi.getProjects();
         if (mounted) {
           setProjects(data);
         }
       } catch (err) {
         if (mounted) {
-          setError('Failed to fetch projects');
-          console.error('Error fetching projects:', err);
+          handleError(err, 'fetching projects');
         }
       } finally {
         if (mounted) {
@@ -62,29 +89,26 @@ const Projects: React.FC = () => {
       mounted = false;
       abortController.abort();
     };
-  }, []);
+  }, [projectsApi, handleError]);
 
   const handleCreateProject = async () => {
     if (!isValidProjectName || isSubmitting) return;
 
     setIsSubmitting(true);
+    setError(null);
+
     try {
-      console.log('Creating project with name:', newProjectName);
       const projectData: ProjectCreate = {
         name: newProjectName.trim(),
         description: ''
       };
 
-      console.log('Attempting to create project:', projectData);
-
-      const newProject = await createProject(projectData);
-      console.log('Project created successfully:', newProject);
-
+      const newProject = await projectsApi.createProject(projectData);
       setProjects(prev => [...prev, newProject]);
       setNewProjectName('');
+      setSnackbarOpen(true);
     } catch (err) {
-      console.error('Failed to create project:', err);
-      setError('Failed to create project. Please try again.');
+      handleError(err, 'creating project');
     } finally {
       setIsSubmitting(false);
     }
@@ -103,22 +127,29 @@ const Projects: React.FC = () => {
     if (!selectedProject || isSubmitting) return;
 
     setIsSubmitting(true);
+    setError(null);
+
     try {
-      await deleteProject(selectedProject.id);
+      await projectsApi.deleteProject(selectedProject.id);
       setProjects(prev => prev.filter(p => p.id !== selectedProject.id));
       setDeleteConfirmOpen(false);
       setDialogOpen(false);
       setSelectedProject(null);
+      setSnackbarOpen(true);
     } catch (err) {
-      setError('Failed to delete project');
-      console.error('Error deleting project:', err);
+      handleError(err, 'deleting project');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -265,6 +296,20 @@ const Projects: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity={error ? "error" : "success"}
+          sx={{ width: '100%' }}
+        >
+          {error ? error.message : "Operation completed successfully"}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -32,7 +32,11 @@ const AIInteractions: React.FC = () => {
       } catch (err) {
         if (!abortController.signal.aborted) {
           setError('Failed to fetch interactions');
-          console.error('Error:', err);
+          if (err instanceof Error) {
+            console.error('Error:', err.message);
+          } else {
+            console.error('Unknown error occurred');
+          }
         }
       } finally {
         if (!abortController.signal.aborted) {
@@ -41,13 +45,17 @@ const AIInteractions: React.FC = () => {
       }
     };
 
-    fetchInteractions();
+    fetchInteractions().catch(err => {
+      if (!abortController.signal.aborted) {
+        console.error('Unhandled error in fetchInteractions:', err);
+        setError('An unexpected error occurred');
+      }
+    });
 
-    // Cleanup function
     return () => {
       abortController.abort();
     };
-  }, [projectId]); // Only depend on projectId
+  }, [projectId, getProjectInteractions]); // Add getProjectInteractions to deps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
