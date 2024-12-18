@@ -3,32 +3,53 @@ jest.mock('firebase/auth');
 jest.mock('../config/firebase');
 
 // Import dependencies after mocks
-import { createAuthMocks } from '../__mocks__/auth/mockFactory';
-import type { GoogleTokenClient } from '../types/google-auth';
+import { mockUser } from '../__mocks__/auth';
+import type { UserCredential } from 'firebase/auth';
+import type { User } from '../types/auth';
 
-const { mockRequestAccessToken, mockSignInWithCredential } = createAuthMocks();
+// Setup synchronous mocks
+const mockCredential = jest.fn().mockReturnValue('mock-credential');
+
+// Create expected converted user
+const convertedUser: User = {
+  displayName: mockUser.displayName,
+  email: mockUser.email,
+  photoURL: mockUser.photoURL,
+  uid: mockUser.uid
+};
+
+const mockSignInWithCredential = jest.fn().mockResolvedValue({
+  user: mockUser,
+  operationType: 'signIn',
+  providerId: 'google.com'
+} as UserCredential);
 
 // Mock Google API synchronously
-global.window.google = {
-  accounts: {
-    oauth2: {
-      initTokenClient: () => ({
-        requestAccessToken: mockRequestAccessToken
-      } satisfies GoogleTokenClient)
+Object.defineProperty(window, 'google', {
+  value: {
+    accounts: {
+      oauth2: {
+        initTokenClient: (config: any) => ({
+          requestAccessToken: () => {
+            config.callback({ access_token: 'test-token' });
+          }
+        })
+      }
     }
-  }
-} as any;
+  },
+  writable: true
+});
 
 jest.mock('firebase/auth', () => ({
   getAuth: () => ({
     signInWithCredential: mockSignInWithCredential
   }),
   GoogleAuthProvider: {
-    credential: jest.fn().mockReturnValue('mock-credential')
-  }
+    credential: mockCredential
+  },
+  signInWithCredential: mockSignInWithCredential
 }));
 
-// Now import tested module
 import { signInWithGoogle } from '../auth/fedcmAuth';
 
 describe('fedcmAuth', () => {
@@ -37,12 +58,13 @@ describe('fedcmAuth', () => {
   });
 
   it('handles Google sign-in flow', async () => {
-    await signInWithGoogle();
+    const result = await signInWithGoogle();
 
-    expect(mockRequestAccessToken).toHaveBeenCalledWith(
-      expect.objectContaining({
-        callback: expect.any(Function)
-      })
+    expect(mockCredential).toHaveBeenCalledWith(null, 'test-token');
+    expect(mockSignInWithCredential).toHaveBeenCalledWith(
+      expect.any(Object),
+      'mock-credential'
     );
+    expect(result).toEqual(convertedUser);
   });
 });

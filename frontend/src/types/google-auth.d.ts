@@ -23,6 +23,6 @@ export interface GoogleAuthAPI {
 
 declare global {
   interface Window {
-    google?: GoogleAuthAPI;
+    google: GoogleAuthAPI;
   }
 }

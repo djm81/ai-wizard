@@ -29,5 +29,8 @@ module.exports = {
   },
   transformIgnorePatterns: [
     '/node_modules/(?!(@firebase|firebase|@testing-library|node-fetch|web-streams-polyfill)/)'
-  ]
+  ],
+  resetMocks: false,
+  restoreMocks: false,
+  clearMocks: false
 };

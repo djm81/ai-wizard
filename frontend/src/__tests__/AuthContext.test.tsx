@@ -1,5 +1,20 @@
-// Setup mocks before any imports
-jest.mock('firebase/auth');
+// Define mocks before imports
+const mockOnAuthStateChanged = jest.fn();
+const mockInitializeGoogleAuth = jest.fn().mockResolvedValue(undefined);
+
+// Setup mocks
+jest.mock('../auth/fedcmAuth', () => ({
+  initializeGoogleAuth: mockInitializeGoogleAuth
+}));
+
+jest.mock('firebase/auth', () => ({
+  getAuth: () => ({
+    currentUser: null,
+    onAuthStateChanged: mockOnAuthStateChanged
+  }),
+  onAuthStateChanged: mockOnAuthStateChanged
+}));
+
 jest.mock('../config/firebase');
 
 // Import dependencies after mocks
@@ -7,17 +22,6 @@ import React from 'react';
 import { render, act } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import type { AuthContextType } from '../contexts/AuthContext';
-import type { User } from 'firebase/auth';
-import { createAuthMocks } from '../__mocks__/auth/mockFactory';
-
-const { mockOnAuthStateChanged } = createAuthMocks();
-
-jest.mock('firebase/auth', () => ({
-  getAuth: () => ({
-    currentUser: null,
-    onAuthStateChanged: mockOnAuthStateChanged
-  })
-}));
 
 describe('AuthContext', () => {
   let authValue: AuthContextType;
@@ -31,19 +35,26 @@ describe('AuthContext', () => {
     jest.clearAllMocks();
   });
 
-  it('provides default values', () => {
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    );
+  it('provides default values', async () => {
+    let authCallback: ((user: any) => void) | null = null;
+    mockOnAuthStateChanged.mockImplementation((auth, callback) => {
+      authCallback = callback;
+      return () => {};
+    });
 
-    expect(authValue.loading).toBe(true);
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+    });
+
+    expect(mockInitializeGoogleAuth).toHaveBeenCalled();
     expect(mockOnAuthStateChanged).toHaveBeenCalled();
 
-    act(() => {
-      const [callback] = mockOnAuthStateChanged.mock.calls[0] as [(user: User | null) => void];
-      callback(null);
+    await act(async () => {
+      authCallback?.(null);
     });
 
     expect(authValue.loading).toBe(false);

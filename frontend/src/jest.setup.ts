@@ -93,4 +93,5 @@ beforeAll(() => {
 beforeEach(() => {
   TestEnvironment.reset();
   authState.reset();
+  jest.clearAllMocks();
 });
